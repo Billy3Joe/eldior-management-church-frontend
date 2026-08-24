@@ -1,227 +1,579 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+
 import Layout from "../components/Layout";
 import API from "../api/axios";
 
+const AVAILABLE_DAYS = [1, 2, 3, 7];
+
 export default function Settings() {
-  const [profileData, setProfileData] = useState({
-    name: "",
-    email: "",
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [settings, setSettings] = useState({
+    churchName: "ElDior Management Church",
+    reminderEnabled: true,
+    reminderDays: [2, 1],
+    reminderHour: 9,
+    timezone: "Europe/Paris",
   });
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  // ======================================================
+  // CHARGER LES PARAMÈTRES
+  // ======================================================
 
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
-
-  const fetchProfile = async () => {
+  const fetchSettings = async () => {
     try {
-      setLoadingProfile(true);
-      const res = await API.get("/auth/profile");
+      setLoading(true);
 
-      const profile = res.data?.data || {};
+      const res = await API.get("/settings");
 
-      setProfileData({
-        name: profile.name || "",
-        email: profile.email || "",
-      });
+      if (res.data?.data) {
+        setSettings({
+          churchName:
+            res.data.data.churchName ||
+            "ElDior Management Church",
 
-      localStorage.setItem("admin", JSON.stringify(profile));
+          reminderEnabled:
+            res.data.data.reminderEnabled !== false,
+
+          reminderDays:
+            res.data.data.reminderDays || [2, 1],
+
+          reminderHour:
+            res.data.data.reminderHour ?? 9,
+
+          timezone:
+            res.data.data.timezone ||
+            "Europe/Paris",
+        });
+      }
     } catch (error) {
-      console.error("Erreur chargement profil :", error);
+      console.error(
+        "Erreur chargement paramètres :",
+        error
+      );
+
       toast.error(
-        error.response?.data?.message || "Erreur lors du chargement du profil"
+        error.response?.data?.message ||
+          "Impossible de charger les paramètres"
       );
     } finally {
-      setLoadingProfile(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProfile();
+    fetchSettings();
   }, []);
 
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
+  // ======================================================
+  // CHANGEMENT NOM ÉGLISE
+  // ======================================================
 
-    setProfileData((prev) => ({
+  const handleChurchNameChange = (e) => {
+    setSettings((prev) => ({
       ...prev,
-      [name]: value,
+      churchName: e.target.value,
     }));
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
+  // ======================================================
+  // ACTIVER / DÉSACTIVER RAPPELS
+  // ======================================================
 
-    setPasswordData((prev) => ({
+  const handleReminderEnabled = (e) => {
+    setSettings((prev) => ({
       ...prev,
-      [name]: value,
+      reminderEnabled: e.target.checked,
     }));
   };
 
-  const handleSaveProfile = async (e) => {
+  // ======================================================
+  // JOURS DE RAPPEL
+  // ======================================================
+
+  const handleReminderDay = (day) => {
+    setSettings((prev) => {
+      const exists =
+        prev.reminderDays.includes(day);
+
+      let newDays;
+
+      if (exists) {
+        newDays = prev.reminderDays.filter(
+          (item) => item !== day
+        );
+      } else {
+        newDays = [
+          ...prev.reminderDays,
+          day,
+        ];
+      }
+
+      newDays.sort((a, b) => b - a);
+
+      return {
+        ...prev,
+        reminderDays: newDays,
+      };
+    });
+  };
+
+  // ======================================================
+  // HEURE
+  // ======================================================
+
+  const handleHourChange = (e) => {
+    setSettings((prev) => ({
+      ...prev,
+      reminderHour: Number(e.target.value),
+    }));
+  };
+
+  // ======================================================
+  // FUSEAU HORAIRE
+  // ======================================================
+
+  const handleTimezoneChange = (e) => {
+    setSettings((prev) => ({
+      ...prev,
+      timezone: e.target.value,
+    }));
+  };
+
+  // ======================================================
+  // ENREGISTRER
+  // ======================================================
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    setSavingProfile(true);
+
+    if (!settings.churchName.trim()) {
+      toast.warning(
+        "Le nom de l'église est obligatoire"
+      );
+
+      return;
+    }
+
+    if (
+      settings.reminderEnabled &&
+      settings.reminderDays.length === 0
+    ) {
+      toast.warning(
+        "Sélectionnez au moins un jour de rappel"
+      );
+
+      return;
+    }
 
     try {
-      const res = await API.put("/auth/profile", profileData);
+      setSaving(true);
 
-      const updatedProfile = res.data?.data || profileData;
-      localStorage.setItem("admin", JSON.stringify(updatedProfile));
+      const payload = {
+        churchName:
+          settings.churchName.trim(),
 
-      setProfileData({
-        name: updatedProfile.name || "",
-        email: updatedProfile.email || "",
-      });
+        reminderEnabled:
+          settings.reminderEnabled,
 
-      toast.success(res.data?.message || "Profil mis à jour avec succès");
+        reminderDays:
+          settings.reminderDays,
+
+        reminderHour:
+          Number(settings.reminderHour),
+
+        timezone:
+          settings.timezone,
+      };
+
+      const res = await API.put(
+        "/settings",
+        payload
+      );
+
+      if (res.data?.data) {
+        setSettings({
+          churchName:
+            res.data.data.churchName,
+
+          reminderEnabled:
+            res.data.data.reminderEnabled,
+
+          reminderDays:
+            res.data.data.reminderDays,
+
+          reminderHour:
+            res.data.data.reminderHour,
+
+          timezone:
+            res.data.data.timezone,
+        });
+      }
+
+      toast.success(
+        res.data?.message ||
+          "Paramètres enregistrés avec succès"
+      );
     } catch (error) {
+      console.error(
+        "Erreur enregistrement paramètres :",
+        error
+      );
+
       toast.error(
         error.response?.data?.message ||
-          "Erreur lors de la mise à jour du profil"
+          "Impossible d'enregistrer les paramètres"
       );
     } finally {
-      setSavingProfile(false);
+      setSaving(false);
     }
   };
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
+  // ======================================================
+  // LOADING
+  // ======================================================
 
-    if (!passwordData.currentPassword || !passwordData.newPassword) {
-      toast.error("Veuillez remplir tous les champs requis");
-      return;
-    }
+  if (loading) {
+    return (
+      <Layout>
+        <div className="card">
+          <p>Chargement des paramètres...</p>
+        </div>
+      </Layout>
+    );
+  }
 
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("La confirmation du mot de passe ne correspond pas");
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Le nouveau mot de passe doit contenir au moins 6 caractères");
-      return;
-    }
-
-    setChangingPassword(true);
-
-    try {
-      const res = await API.put("/auth/change-password", {
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      });
-
-      toast.success(res.data.message || "Mot de passe modifié avec succès");
-
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-          "Erreur lors du changement de mot de passe"
-      );
-    } finally {
-      setChangingPassword(false);
-    }
-  };
+  // ======================================================
+  // AFFICHAGE
+  // ======================================================
 
   return (
     <Layout>
       <div className="section-header">
         <div>
-          <h2>Paramètres du compte</h2>
-          <p style={{ color: "#6b7280", marginTop: 6 }}>
-            Gérez les informations du profil administrateur
+          <h2>Paramètres</h2>
+
+          <p className="page-subtitle">
+            Configurez votre église et les rappels
+            automatiques des programmations.
           </p>
         </div>
       </div>
 
-      {loadingProfile ? (
-        <div className="card">Chargement du profil...</div>
-      ) : (
-        <div className="content-grid">
-          <div className="card">
-            <h2>Profil administrateur</h2>
+      <form onSubmit={handleSave}>
+        {/* ========================================= */}
+        {/* INFORMATIONS ÉGLISE */}
+        {/* ========================================= */}
 
-            <div className="settings-profile-box">
-              <div className="settings-avatar">
-                {(profileData.name || "A").charAt(0).toUpperCase()}
-              </div>
+        <div className="card section-gap">
+          <div className="section-header">
+            <div>
+              <h2>Informations de l'église</h2>
 
-              <div>
-                <h3>{profileData.name || "Administrateur"}</h3>
-                <p>{profileData.email || "Email non disponible"}</p>
-              </div>
+              <p className="page-subtitle">
+                Informations générales de votre
+                organisation.
+              </p>
             </div>
-
-            <form className="settings-form" onSubmit={handleSaveProfile}>
-              <input
-                type="text"
-                name="name"
-                placeholder="Nom complet"
-                value={profileData.name}
-                onChange={handleProfileChange}
-              />
-
-              <input
-                type="email"
-                name="email"
-                placeholder="Adresse email"
-                value={profileData.email}
-                onChange={handleProfileChange}
-              />
-
-              <button type="submit" disabled={savingProfile}>
-                {savingProfile ? "Enregistrement..." : "Enregistrer le profil"}
-              </button>
-            </form>
           </div>
 
-          <div className="card">
-            <h2>Changer le mot de passe</h2>
+          <div className="form-group">
+            <label>Nom de l'église</label>
 
-            <form className="settings-form" onSubmit={handleChangePassword}>
-              <input
-                type="password"
-                name="currentPassword"
-                placeholder="Mot de passe actuel"
-                value={passwordData.currentPassword}
-                onChange={handlePasswordChange}
-              />
-
-              <input
-                type="password"
-                name="newPassword"
-                placeholder="Nouveau mot de passe"
-                value={passwordData.newPassword}
-                onChange={handlePasswordChange}
-              />
-
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirmer le nouveau mot de passe"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-              />
-
-              <button type="submit" disabled={changingPassword}>
-                {changingPassword
-                  ? "Modification..."
-                  : "Mettre à jour le mot de passe"}
-              </button>
-            </form>
+            <input
+              type="text"
+              value={settings.churchName}
+              onChange={handleChurchNameChange}
+              placeholder="Nom de l'église"
+            />
           </div>
         </div>
-      )}
+
+        {/* ========================================= */}
+        {/* RAPPELS */}
+        {/* ========================================= */}
+
+        <div className="card section-gap">
+          <div className="section-header">
+            <div>
+              <h2>🔔 Rappels automatiques</h2>
+
+              <p className="page-subtitle">
+                Relancez automatiquement les membres
+                qui n'ont pas encore répondu à leur
+                programmation.
+              </p>
+            </div>
+          </div>
+
+          {/* ACTIVATION */}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "25px",
+            }}
+          >
+            <input
+              type="checkbox"
+              id="reminderEnabled"
+              checked={
+                settings.reminderEnabled
+              }
+              onChange={
+                handleReminderEnabled
+              }
+              style={{
+                width: "20px",
+                height: "20px",
+              }}
+            />
+
+            <label
+              htmlFor="reminderEnabled"
+              style={{
+                cursor: "pointer",
+                fontWeight: "600",
+              }}
+            >
+              Activer les rappels automatiques
+            </label>
+          </div>
+
+          {settings.reminderEnabled && (
+            <>
+              {/* =============================== */}
+              {/* JOURS */}
+              {/* =============================== */}
+
+              <div className="form-group">
+                <label>
+                  Jours d'envoi des rappels
+                </label>
+
+                <p
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "13px",
+                    marginTop: "5px",
+                    marginBottom: "15px",
+                  }}
+                >
+                  Sélectionnez quand relancer les
+                  membres qui n'ont pas répondu.
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {AVAILABLE_DAYS.map(
+                    (day) => {
+                      const selected =
+                        settings.reminderDays.includes(
+                          day
+                        );
+
+                      return (
+                        <label
+                          key={day}
+                          style={{
+                            display: "flex",
+                            alignItems:
+                              "center",
+                            gap: "7px",
+                            padding:
+                              "10px 14px",
+                            border:
+                              "1px solid #e5e7eb",
+                            borderRadius:
+                              "8px",
+                            cursor:
+                              "pointer",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              selected
+                            }
+                            onChange={() =>
+                              handleReminderDay(
+                                day
+                              )
+                            }
+                          />
+
+                          J-{day}
+                        </label>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+
+              {/* =============================== */}
+              {/* HEURE */}
+              {/* =============================== */}
+
+              <div
+                className="form-group"
+                style={{
+                  marginTop: "25px",
+                }}
+              >
+                <label>
+                  Heure d'envoi
+                </label>
+
+                <select
+                  value={
+                    settings.reminderHour
+                  }
+                  onChange={
+                    handleHourChange
+                  }
+                >
+                  {Array.from(
+                    { length: 24 },
+                    (_, hour) => (
+                      <option
+                        key={hour}
+                        value={hour}
+                      >
+                        {String(
+                          hour
+                        ).padStart(
+                          2,
+                          "0"
+                        )}
+                        :00
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* =============================== */}
+              {/* TIMEZONE */}
+              {/* =============================== */}
+
+              <div
+                className="form-group"
+                style={{
+                  marginTop: "20px",
+                }}
+              >
+                <label>
+                  Fuseau horaire
+                </label>
+
+                <select
+                  value={
+                    settings.timezone
+                  }
+                  onChange={
+                    handleTimezoneChange
+                  }
+                >
+                  <option value="Europe/Paris">
+                    Europe / Paris
+                  </option>
+
+                  <option value="Africa/Douala">
+                    Afrique / Douala
+                  </option>
+
+                  <option value="Europe/London">
+                    Europe / Londres
+                  </option>
+
+                  <option value="America/New_York">
+                    Amérique / New York
+                  </option>
+
+                  <option value="America/Toronto">
+                    Amérique / Toronto
+                  </option>
+                </select>
+              </div>
+
+              {/* =============================== */}
+              {/* RÉSUMÉ */}
+              {/* =============================== */}
+
+              <div
+                style={{
+                  marginTop: "25px",
+                  padding: "16px",
+                  background: "#f8fafc",
+                  borderRadius: "10px",
+                  border:
+                    "1px solid #e5e7eb",
+                }}
+              >
+                <strong>
+                  Configuration actuelle
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "8px",
+                    marginBottom: "0",
+                  }}
+                >
+                  Les membres sans réponse
+                  recevront un rappel à{" "}
+                  <strong>
+                    {String(
+                      settings.reminderHour
+                    ).padStart(2, "0")}
+                    :00
+                  </strong>{" "}
+                  à{" "}
+                  {settings.reminderDays
+                    .sort(
+                      (a, b) => b - a
+                    )
+                    .map(
+                      (day) =>
+                        `J-${day}`
+                    )
+                    .join(", ")}
+                  .
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ========================================= */}
+        {/* BOUTON SAVE */}
+        {/* ========================================= */}
+
+        <div
+          className="form-actions"
+          style={{
+            marginTop: "25px",
+          }}
+        >
+          <button
+            type="submit"
+            disabled={saving}
+          >
+            {saving
+              ? "Enregistrement..."
+              : "Enregistrer les paramètres"}
+          </button>
+        </div>
+      </form>
     </Layout>
   );
 }

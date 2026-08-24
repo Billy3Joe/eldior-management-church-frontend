@@ -1066,3 +1066,40 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+.response-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+  position: relative;
+  z-index: 5;
+}
+
+.confirm-response-btn,
+.decline-response-btn {
+  position: relative;
+  z-index: 6;
+  pointer-events: auto;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 18px;
+  font-weight: 700;
+}
+
+.confirm-response-btn {
+  background: #16a34a;
+  color: white;
+}
+
+.decline-response-btn {
+  background: #dc2626;
+  color: white;
+}
+
+.confirm-response-btn:disabled,
+.decline-response-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

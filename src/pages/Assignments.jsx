@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+
 import Layout from "../components/Layout";
 import API from "../api/axios";
-import { toast } from "react-toastify";
 
 const initialForm = {
   member: "",
@@ -19,6 +20,7 @@ export default function Assignments() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resendingId, setResendingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
   const [form, setForm] = useState(initialForm);
@@ -28,10 +30,6 @@ export default function Assignments() {
     department: "",
     status: "",
   });
-
-  // =========================
-  // CHARGEMENT
-  // =========================
 
   const fetchAssignments = async (customFilters = filters) => {
     try {
@@ -57,7 +55,10 @@ export default function Assignments() {
 
       setAssignments(res.data.data || []);
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Erreur chargement programmations :",
+        error
+      );
 
       toast.error(
         error.response?.data?.message ||
@@ -79,34 +80,35 @@ export default function Assignments() {
       setEvents(eventsRes.data.data || []);
       setDepartments(departmentsRes.data.data || []);
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Erreur chargement options :",
+        error
+      );
 
       toast.error(
-        "Impossible de charger les données nécessaires"
+        "Impossible de charger les membres, événements ou départements"
       );
     }
   };
 
   useEffect(() => {
     const loadPage = async () => {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      await Promise.all([
-        fetchAssignments(),
-        fetchOptions(),
-      ]);
-
-      setLoading(false);
+        await Promise.all([
+          fetchAssignments(),
+          fetchOptions(),
+        ]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadPage();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // =========================
-  // FORMULAIRE
-  // =========================
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -117,8 +119,6 @@ export default function Assignments() {
     }));
   };
 
-  // Quand on choisit un membre,
-  // sélectionner automatiquement son département
   const handleMemberChange = (e) => {
     const memberId = e.target.value;
 
@@ -140,17 +140,17 @@ export default function Assignments() {
     e.preventDefault();
 
     if (!form.member) {
-      toast.warning("Sélectionne un membre");
+      toast.warning("Sélectionnez un membre");
       return;
     }
 
     if (!form.event) {
-      toast.warning("Sélectionne un événement");
+      toast.warning("Sélectionnez un événement");
       return;
     }
 
     if (!form.role.trim()) {
-      toast.warning("Indique le rôle ou le poste");
+      toast.warning("Indiquez le rôle ou le poste");
       return;
     }
 
@@ -168,16 +168,35 @@ export default function Assignments() {
         payload.department = form.department;
       }
 
-      await API.post("/assignments", payload);
+      const res = await API.post(
+        "/assignments",
+        payload
+      );
 
-      toast.success("Programmation créée avec succès");
+      const emailStatus =
+        res.data?.data?.emailStatus || "not_sent";
+
+      if (emailStatus === "sent") {
+        toast.success(
+          "Programmation créée et email envoyé"
+        );
+      } else if (emailStatus === "failed") {
+        toast.warning(
+          "Programmation créée mais l'email a échoué"
+        );
+      } else {
+        toast.success("Programmation créée");
+      }
 
       setForm(initialForm);
       setShowForm(false);
 
-      await fetchAssignments();
+      await fetchAssignments(filters);
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Erreur création programmation :",
+        error
+      );
 
       toast.error(
         error.response?.data?.message ||
@@ -188,43 +207,34 @@ export default function Assignments() {
     }
   };
 
-  // =========================
-  // STATUT
-  // =========================
-
-  const confirmAssignment = async (id) => {
+  const resendEmail = async (assignment) => {
     try {
-      await API.put(`/assignments/${id}/confirm`);
+      setResendingId(assignment._id);
 
-      toast.success("Participation confirmée");
+      const res = await API.post(
+        `/assignments/${assignment._id}/resend-email`
+      );
+
+      toast.success(
+        res.data?.message ||
+          "Email renvoyé avec succès"
+      );
 
       await fetchAssignments(filters);
     } catch (error) {
+      console.error(
+        "Erreur renvoi email :",
+        error
+      );
+
       toast.error(
         error.response?.data?.message ||
-          "Impossible de confirmer"
+          "Impossible de renvoyer l'email"
       );
+    } finally {
+      setResendingId(null);
     }
   };
-
-  const declineAssignment = async (id) => {
-    try {
-      await API.put(`/assignments/${id}/decline`);
-
-      toast.success("Participation refusée");
-
-      await fetchAssignments(filters);
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-          "Impossible de modifier la programmation"
-      );
-    }
-  };
-
-  // =========================
-  // SUPPRESSION
-  // =========================
 
   const deleteAssignment = async (assignment) => {
     const memberName = `${
@@ -232,7 +242,9 @@ export default function Assignments() {
     } ${assignment.member?.lastName || ""}`.trim();
 
     const confirmed = window.confirm(
-      `Supprimer la programmation de ${memberName} ?`
+      `Supprimer la programmation de ${
+        memberName || "ce membre"
+      } ?`
     );
 
     if (!confirmed) return;
@@ -246,16 +258,17 @@ export default function Assignments() {
 
       await fetchAssignments(filters);
     } catch (error) {
+      console.error(
+        "Erreur suppression programmation :",
+        error
+      );
+
       toast.error(
         error.response?.data?.message ||
           "Impossible de supprimer la programmation"
       );
     }
   };
-
-  // =========================
-  // FILTRES
-  // =========================
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -280,36 +293,26 @@ export default function Assignments() {
     fetchAssignments(emptyFilters);
   };
 
-  // =========================
-  // FORMAT
-  // =========================
-
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString(
-      "fr-FR",
-      {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    );
+    return new Date(date).toLocaleString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const getStatusLabel = (status) => {
     switch (status) {
       case "confirmed":
         return "Confirmé";
-
       case "declined":
         return "Refusé";
-
       case "cancelled":
         return "Annulé";
-
       default:
         return "En attente";
     }
@@ -319,30 +322,45 @@ export default function Assignments() {
     switch (status) {
       case "confirmed":
         return "assignment-status confirmed";
-
       case "declined":
         return "assignment-status declined";
-
       case "cancelled":
         return "assignment-status cancelled";
-
       default:
         return "assignment-status pending";
     }
   };
 
-  // =========================
-  // STATISTIQUES
-  // =========================
+  const getEmailLabel = (status) => {
+    switch (status) {
+      case "sent":
+        return "Email envoyé";
+      case "failed":
+        return "Échec email";
+      default:
+        return "Non envoyé";
+    }
+  };
+
+  const getEmailClass = (status) => {
+    switch (status) {
+      case "sent":
+        return "assignment-status confirmed";
+      case "failed":
+        return "assignment-status declined";
+      default:
+        return "assignment-status pending";
+    }
+  };
 
   const total = assignments.length;
 
-  const confirmed = assignments.filter(
-    (item) => item.status === "confirmed"
-  ).length;
-
   const pending = assignments.filter(
     (item) => item.status === "pending"
+  ).length;
+
+  const confirmed = assignments.filter(
+    (item) => item.status === "confirmed"
   ).length;
 
   const declined = assignments.filter(
@@ -351,14 +369,13 @@ export default function Assignments() {
 
   return (
     <Layout>
-      {/* HEADER */}
-
       <div className="section-header">
         <div>
           <h2>Programmations</h2>
 
           <p className="page-subtitle">
-            Organisez les équipes et suivez les confirmations.
+            Organisez les équipes, envoyez les invitations
+            et suivez les réponses des membres.
           </p>
         </div>
 
@@ -373,8 +390,6 @@ export default function Assignments() {
             : "+ Nouvelle programmation"}
         </button>
       </div>
-
-      {/* STATS */}
 
       <div className="assignment-stats">
         <div className="card assignment-stat">
@@ -398,8 +413,6 @@ export default function Assignments() {
         </div>
       </div>
 
-      {/* FORMULAIRE */}
-
       {showForm && (
         <div className="card section-gap">
           <div className="section-header">
@@ -407,8 +420,8 @@ export default function Assignments() {
               <h2>Nouvelle programmation</h2>
 
               <p className="page-subtitle">
-                Sélectionnez la personne et son
-                affectation.
+                Le membre reçoit automatiquement un email
+                s’il possède une adresse email.
               </p>
             </div>
           </div>
@@ -435,8 +448,10 @@ export default function Assignments() {
                     key={member._id}
                     value={member._id}
                   >
-                    {member.firstName}{" "}
-                    {member.lastName}
+                    {member.firstName} {member.lastName}
+                    {member.email
+                      ? ` — ${member.email}`
+                      : " — sans email"}
                   </option>
                 ))}
               </select>
@@ -460,8 +475,7 @@ export default function Assignments() {
                     key={event._id}
                     value={event._id}
                   >
-                    {event.title} —{" "}
-                    {formatDate(event.date)}
+                    {event.title} — {formatDate(event.date)}
                   </option>
                 ))}
               </select>
@@ -498,7 +512,7 @@ export default function Assignments() {
                 name="role"
                 value={form.role}
                 onChange={handleChange}
-                placeholder="Ex : Accueil - Entrée principale"
+                placeholder="Ex : Alto, Accueil, Piano..."
                 required
               />
             </div>
@@ -510,8 +524,8 @@ export default function Assignments() {
                 name="note"
                 value={form.note}
                 onChange={handleChange}
-                placeholder="Ex : Arriver 30 minutes avant..."
                 rows="3"
+                placeholder="Ex : Arriver 30 minutes avant..."
               />
             </div>
 
@@ -521,7 +535,7 @@ export default function Assignments() {
                 disabled={saving}
               >
                 {saving
-                  ? "Enregistrement..."
+                  ? "Programmation..."
                   : "Programmer"}
               </button>
 
@@ -539,8 +553,6 @@ export default function Assignments() {
           </form>
         </div>
       )}
-
-      {/* FILTRES */}
 
       <div className="card section-gap">
         <div className="filters-panel">
@@ -618,8 +630,6 @@ export default function Assignments() {
         </div>
       </div>
 
-      {/* LISTE */}
-
       <div className="card section-gap">
         <div className="section-header">
           <div>
@@ -632,16 +642,15 @@ export default function Assignments() {
         </div>
 
         {loading ? (
-          <p className="assignment-empty">
+          <div className="assignment-empty">
             Chargement...
-          </p>
+          </div>
         ) : assignments.length === 0 ? (
           <div className="assignment-empty">
             <h3>Aucune programmation</h3>
 
             <p>
-              Commencez par programmer une personne
-              sur un événement.
+              Commencez par programmer une personne.
             </p>
           </div>
         ) : (
@@ -654,7 +663,8 @@ export default function Assignments() {
                   <th>Date</th>
                   <th>Département</th>
                   <th>Poste</th>
-                  <th>Statut</th>
+                  <th>Notification</th>
+                  <th>Réponse</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -667,6 +677,18 @@ export default function Assignments() {
                         {assignment.member?.firstName}{" "}
                         {assignment.member?.lastName}
                       </strong>
+
+                      {assignment.member?.email && (
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: 12,
+                            color: "#6b7280",
+                          }}
+                        >
+                          {assignment.member.email}
+                        </div>
+                      )}
                     </td>
 
                     <td>
@@ -680,11 +702,83 @@ export default function Assignments() {
                     </td>
 
                     <td>
-                      {assignment.department?.name ||
-                        "-"}
+                      {assignment.department?.name || "-"}
                     </td>
 
-                    <td>{assignment.role}</td>
+                    <td>
+                      {assignment.role}
+                    </td>
+
+                    <td>
+                      <span
+                        className={getEmailClass(
+                          assignment.emailStatus
+                        )}
+                      >
+                        {getEmailLabel(
+                          assignment.emailStatus
+                        )}
+                      </span>
+
+                      <div
+                        style={{
+                          marginTop: 7,
+                          fontSize: 12,
+                          color: "#6b7280",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <div>
+                          Envois :{" "}
+                          <strong>
+                            {assignment.emailSendCount || 0}
+                          </strong>
+                        </div>
+
+                        {assignment.firstEmailSentAt && (
+                          <div>
+                            Premier :{" "}
+                            {formatDate(
+                              assignment.firstEmailSentAt
+                            )}
+                          </div>
+                        )}
+
+                        {assignment.emailSentAt && (
+                          <div>
+                            Dernier :{" "}
+                            {formatDate(
+                              assignment.emailSentAt
+                            )}
+                          </div>
+                        )}
+
+                        {assignment.reminderCount > 0 && (
+                          <div
+                            style={{
+                              marginTop: 8,
+                              paddingTop: 8,
+                              borderTop:
+                                "1px solid #e5e7eb",
+                            }}
+                          >
+                            🔔 Rappels :{" "}
+                            <strong>
+                              {assignment.reminderCount}
+                            </strong>
+
+                            {assignment.lastReminderAt && (
+                              <div>
+                                Dernier rappel :{" "}
+                                {formatDate(
+                                  assignment.lastReminderAt
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
 
                     <td>
                       <span
@@ -696,47 +790,66 @@ export default function Assignments() {
                           assignment.status
                         )}
                       </span>
+
+                      {assignment.status === "pending" && (
+                        <div className="waiting-response">
+                          En attente du membre
+                        </div>
+                      )}
+
+                      {assignment.status === "confirmed" && (
+                        <div className="confirmed-response">
+                          Confirmé par le membre
+
+                          {assignment.confirmedAt && (
+                            <>
+                              <br />
+                              {formatDate(
+                                assignment.confirmedAt
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {assignment.status === "declined" && (
+                        <div className="declined-response">
+                          Indisponible
+
+                          {assignment.declinedAt && (
+                            <>
+                              <br />
+                              {formatDate(
+                                assignment.declinedAt
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     <td>
                       <div className="assignment-actions">
-                        {assignment.status !==
-                          "confirmed" && (
-                          <button
-                            type="button"
-                            className="small-btn"
-                            onClick={() =>
-                              confirmAssignment(
-                                assignment._id
-                              )
-                            }
-                          >
-                            Confirmer
-                          </button>
-                        )}
-
-                        {assignment.status !==
-                          "declined" && (
-                          <button
-                            type="button"
-                            className="secondary-btn small-btn"
-                            onClick={() =>
-                              declineAssignment(
-                                assignment._id
-                              )
-                            }
-                          >
-                            Refuser
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="secondary-btn small-btn"
+                          disabled={
+                            resendingId === assignment._id
+                          }
+                          onClick={() =>
+                            resendEmail(assignment)
+                          }
+                        >
+                          {resendingId === assignment._id
+                            ? "Envoi..."
+                            : "Renvoyer l'email"}
+                        </button>
 
                         <button
                           type="button"
                           className="danger-btn small-btn"
                           onClick={() =>
-                            deleteAssignment(
-                              assignment
-                            )
+                            deleteAssignment(assignment)
                           }
                         >
                           Supprimer
