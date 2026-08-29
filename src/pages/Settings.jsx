@@ -3,20 +3,43 @@ import { toast } from "react-toastify";
 
 import Layout from "../components/Layout";
 import API from "../api/axios";
+import { getCurrentAdmin } from "../utils/auth";
 
 const AVAILABLE_DAYS = [1, 2, 3, 7];
 
 export default function Settings() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const currentUser = getCurrentAdmin();
 
-  const [settings, setSettings] = useState({
-    churchName: "ElDior Management Church",
-    reminderEnabled: true,
-    reminderDays: [2, 1],
-    reminderHour: 9,
-    timezone: "Europe/Paris",
-  });
+  const isAdmin =
+    currentUser?.role === "admin";
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [settings, setSettings] =
+    useState({
+      churchName:
+        "ElDior Management Church",
+
+      reminderEnabled: true,
+
+      reminderDays: [2, 1],
+
+      reminderHour: 9,
+
+      timezone:
+        "Europe/Paris",
+
+      emailNotificationsEnabled:
+        true,
+
+      primaryColor: "",
+
+      logo: "",
+    });
 
   // ======================================================
   // CHARGER LES PARAMÈTRES
@@ -26,26 +49,56 @@ export default function Settings() {
     try {
       setLoading(true);
 
-      const res = await API.get("/settings");
+      const res =
+        await API.get(
+          "/settings"
+        );
 
       if (res.data?.data) {
         setSettings({
           churchName:
-            res.data.data.churchName ||
+            res.data.data
+              .churchName ||
             "ElDior Management Church",
 
           reminderEnabled:
-            res.data.data.reminderEnabled !== false,
+            res.data.data
+              .reminderEnabled !==
+            false,
 
           reminderDays:
-            res.data.data.reminderDays || [2, 1],
+            Array.isArray(
+              res.data.data
+                .reminderDays
+            )
+              ? res.data.data
+                  .reminderDays
+              : [2, 1],
 
           reminderHour:
-            res.data.data.reminderHour ?? 9,
+            res.data.data
+              .reminderHour ??
+            9,
 
           timezone:
-            res.data.data.timezone ||
+            res.data.data
+              .timezone ||
             "Europe/Paris",
+
+          emailNotificationsEnabled:
+            res.data.data
+              .emailNotificationsEnabled !==
+            false,
+
+          primaryColor:
+            res.data.data
+              .primaryColor ||
+            "",
+
+          logo:
+            res.data.data
+              .logo ||
+            "",
         });
       }
     } catch (error) {
@@ -55,7 +108,8 @@ export default function Settings() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de charger les paramètres"
       );
     } finally {
@@ -68,42 +122,86 @@ export default function Settings() {
   }, []);
 
   // ======================================================
-  // CHANGEMENT NOM ÉGLISE
+  // NOM ÉGLISE
   // ======================================================
 
-  const handleChurchNameChange = (e) => {
+  const handleChurchNameChange = (
+    e
+  ) => {
+    if (!isAdmin) {
+      return;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      churchName: e.target.value,
+
+      churchName:
+        e.target.value,
     }));
   };
 
   // ======================================================
-  // ACTIVER / DÉSACTIVER RAPPELS
+  // RAPPELS ON / OFF
   // ======================================================
 
-  const handleReminderEnabled = (e) => {
+  const handleReminderEnabled = (
+    e
+  ) => {
+    if (!isAdmin) {
+      return;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      reminderEnabled: e.target.checked,
+
+      reminderEnabled:
+        e.target.checked,
     }));
   };
+
+  // ======================================================
+  // EMAILS ON / OFF
+  // ======================================================
+
+  const handleEmailNotifications =
+    (e) => {
+      if (!isAdmin) {
+        return;
+      }
+
+      setSettings((prev) => ({
+        ...prev,
+
+        emailNotificationsEnabled:
+          e.target.checked,
+      }));
+    };
 
   // ======================================================
   // JOURS DE RAPPEL
   // ======================================================
 
-  const handleReminderDay = (day) => {
+  const handleReminderDay = (
+    day
+  ) => {
+    if (!isAdmin) {
+      return;
+    }
+
     setSettings((prev) => {
       const exists =
-        prev.reminderDays.includes(day);
+        prev.reminderDays.includes(
+          day
+        );
 
       let newDays;
 
       if (exists) {
-        newDays = prev.reminderDays.filter(
-          (item) => item !== day
-        );
+        newDays =
+          prev.reminderDays.filter(
+            (item) =>
+              item !== day
+          );
       } else {
         newDays = [
           ...prev.reminderDays,
@@ -111,11 +209,15 @@ export default function Settings() {
         ];
       }
 
-      newDays.sort((a, b) => b - a);
+      newDays.sort(
+        (a, b) =>
+          b - a
+      );
 
       return {
         ...prev,
-        reminderDays: newDays,
+        reminderDays:
+          newDays,
       };
     });
   };
@@ -124,21 +226,39 @@ export default function Settings() {
   // HEURE
   // ======================================================
 
-  const handleHourChange = (e) => {
+  const handleHourChange = (
+    e
+  ) => {
+    if (!isAdmin) {
+      return;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      reminderHour: Number(e.target.value),
+
+      reminderHour:
+        Number(
+          e.target.value
+        ),
     }));
   };
 
   // ======================================================
-  // FUSEAU HORAIRE
+  // TIMEZONE
   // ======================================================
 
-  const handleTimezoneChange = (e) => {
+  const handleTimezoneChange = (
+    e
+  ) => {
+    if (!isAdmin) {
+      return;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      timezone: e.target.value,
+
+      timezone:
+        e.target.value,
     }));
   };
 
@@ -146,10 +266,22 @@ export default function Settings() {
   // ENREGISTRER
   // ======================================================
 
-  const handleSave = async (e) => {
+  const handleSave = async (
+    e
+  ) => {
     e.preventDefault();
 
-    if (!settings.churchName.trim()) {
+    if (!isAdmin) {
+      toast.warning(
+        "Seul un administrateur peut modifier les paramètres"
+      );
+
+      return;
+    }
+
+    if (
+      !settings.churchName.trim()
+    ) {
       toast.warning(
         "Le nom de l'église est obligatoire"
       );
@@ -159,7 +291,8 @@ export default function Settings() {
 
     if (
       settings.reminderEnabled &&
-      settings.reminderDays.length === 0
+      settings.reminderDays
+        .length === 0
     ) {
       toast.warning(
         "Sélectionnez au moins un jour de rappel"
@@ -182,33 +315,65 @@ export default function Settings() {
           settings.reminderDays,
 
         reminderHour:
-          Number(settings.reminderHour),
+          Number(
+            settings.reminderHour
+          ),
 
         timezone:
           settings.timezone,
+
+        emailNotificationsEnabled:
+          settings.emailNotificationsEnabled,
+
+        primaryColor:
+          settings.primaryColor,
+
+        logo:
+          settings.logo,
       };
 
-      const res = await API.put(
-        "/settings",
-        payload
-      );
+      const res =
+        await API.put(
+          "/settings",
+          payload
+        );
 
       if (res.data?.data) {
         setSettings({
           churchName:
-            res.data.data.churchName,
+            res.data.data
+              .churchName,
 
           reminderEnabled:
-            res.data.data.reminderEnabled,
+            res.data.data
+              .reminderEnabled,
 
           reminderDays:
-            res.data.data.reminderDays,
+            res.data.data
+              .reminderDays,
 
           reminderHour:
-            res.data.data.reminderHour,
+            res.data.data
+              .reminderHour,
 
           timezone:
-            res.data.data.timezone,
+            res.data.data
+              .timezone,
+
+          emailNotificationsEnabled:
+            res.data.data
+              .emailNotificationsEnabled !==
+            false,
+
+          primaryColor:
+            res.data.data
+              .primaryColor ||
+            "",
+
+          logo:
+            res.data.data
+              .logo ||
+            "",
         });
       }
 
@@ -223,7 +388,8 @@ export default function Settings() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible d'enregistrer les paramètres"
       );
     } finally {
@@ -239,56 +405,152 @@ export default function Settings() {
     return (
       <Layout>
         <div className="card">
-          <p>Chargement des paramètres...</p>
+          <p>
+            Chargement des paramètres...
+          </p>
         </div>
       </Layout>
     );
   }
 
   // ======================================================
-  // AFFICHAGE
+  // RENDER
   // ======================================================
 
   return (
     <Layout>
       <div className="section-header">
         <div>
-          <h2>Paramètres</h2>
+          <h2>
+            Paramètres
+          </h2>
 
           <p className="page-subtitle">
-            Configurez votre église et les rappels
-            automatiques des programmations.
+            Configurez votre église
+            et les notifications
+            automatiques.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSave}>
+      {!isAdmin && (
+        <div
+          className="card section-gap"
+          style={{
+            borderLeft:
+              "4px solid #f59e0b",
+          }}
+        >
+          <strong>
+            Consultation uniquement
+          </strong>
+
+          <p
+            style={{
+              marginBottom: 0,
+              marginTop: 6,
+            }}
+          >
+            Vous êtes connecté en
+            tant que manager. Seul
+            un administrateur peut
+            modifier les paramètres
+            de l'église.
+          </p>
+        </div>
+      )}
+
+      <form
+        onSubmit={
+          handleSave
+        }
+      >
         {/* ========================================= */}
-        {/* INFORMATIONS ÉGLISE */}
+        {/* ÉGLISE */}
         {/* ========================================= */}
 
         <div className="card section-gap">
           <div className="section-header">
             <div>
-              <h2>Informations de l'église</h2>
+              <h2>
+                Informations de
+                l'église
+              </h2>
 
               <p className="page-subtitle">
-                Informations générales de votre
-                organisation.
+                Informations générales
+                de votre organisation.
               </p>
             </div>
           </div>
 
           <div className="form-group">
-            <label>Nom de l'église</label>
+            <label>
+              Nom de l'église
+            </label>
 
             <input
               type="text"
-              value={settings.churchName}
-              onChange={handleChurchNameChange}
-              placeholder="Nom de l'église"
+              value={
+                settings.churchName
+              }
+              onChange={
+                handleChurchNameChange
+              }
+              disabled={
+                !isAdmin
+              }
             />
           </div>
+        </div>
+
+        {/* ========================================= */}
+        {/* EMAILS */}
+        {/* ========================================= */}
+
+        <div className="card section-gap">
+          <div className="section-header">
+            <div>
+              <h2>
+                Notifications email
+              </h2>
+
+              <p className="page-subtitle">
+                Activez ou désactivez
+                les notifications
+                envoyées aux membres.
+              </p>
+            </div>
+          </div>
+
+          <label
+            style={{
+              display: "flex",
+              alignItems:
+                "center",
+              gap: 12,
+              cursor:
+                isAdmin
+                  ? "pointer"
+                  : "default",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={
+                settings.emailNotificationsEnabled
+              }
+              onChange={
+                handleEmailNotifications
+              }
+              disabled={
+                !isAdmin
+              }
+            />
+
+            Activer les notifications
+            email
+          </label>
         </div>
 
         {/* ========================================= */}
@@ -298,80 +560,63 @@ export default function Settings() {
         <div className="card section-gap">
           <div className="section-header">
             <div>
-              <h2>🔔 Rappels automatiques</h2>
+              <h2>
+                🔔 Rappels
+                automatiques
+              </h2>
 
               <p className="page-subtitle">
-                Relancez automatiquement les membres
-                qui n'ont pas encore répondu à leur
+                Relancez les membres
+                qui n'ont pas encore
+                répondu à leur
                 programmation.
               </p>
             </div>
           </div>
 
-          {/* ACTIVATION */}
-
-          <div
+          <label
             style={{
               display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "25px",
+              alignItems:
+                "center",
+              gap: 12,
+              marginBottom:
+                25,
             }}
           >
             <input
               type="checkbox"
-              id="reminderEnabled"
               checked={
                 settings.reminderEnabled
               }
               onChange={
                 handleReminderEnabled
               }
-              style={{
-                width: "20px",
-                height: "20px",
-              }}
+              disabled={
+                !isAdmin
+              }
             />
 
-            <label
-              htmlFor="reminderEnabled"
-              style={{
-                cursor: "pointer",
-                fontWeight: "600",
-              }}
-            >
-              Activer les rappels automatiques
-            </label>
-          </div>
+            Activer les rappels
+            automatiques
+          </label>
 
           {settings.reminderEnabled && (
             <>
-              {/* =============================== */}
-              {/* JOURS */}
-              {/* =============================== */}
-
               <div className="form-group">
                 <label>
-                  Jours d'envoi des rappels
+                  Jours de rappel
                 </label>
-
-                <p
-                  style={{
-                    color: "#6b7280",
-                    fontSize: "13px",
-                    marginTop: "5px",
-                    marginBottom: "15px",
-                  }}
-                >
-                  Sélectionnez quand relancer les
-                  membres qui n'ont pas répondu.
-                </p>
 
                 <div
                   style={{
-                    display: "flex",
-                    gap: "12px",
-                    flexWrap: "wrap",
+                    display:
+                      "flex",
+                    gap: 12,
+                    flexWrap:
+                      "wrap",
+                    marginTop:
+                      12,
                   }}
                 >
                   {AVAILABLE_DAYS.map(
@@ -383,26 +628,34 @@ export default function Settings() {
 
                       return (
                         <label
-                          key={day}
+                          key={
+                            day
+                          }
                           style={{
-                            display: "flex",
+                            display:
+                              "flex",
                             alignItems:
                               "center",
-                            gap: "7px",
+                            gap: 7,
                             padding:
                               "10px 14px",
                             border:
                               "1px solid #e5e7eb",
                             borderRadius:
-                              "8px",
+                              8,
                             cursor:
-                              "pointer",
+                              isAdmin
+                                ? "pointer"
+                                : "default",
                           }}
                         >
                           <input
                             type="checkbox"
                             checked={
                               selected
+                            }
+                            disabled={
+                              !isAdmin
                             }
                             onChange={() =>
                               handleReminderDay(
@@ -419,14 +672,11 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* =============================== */}
-              {/* HEURE */}
-              {/* =============================== */}
-
               <div
                 className="form-group"
                 style={{
-                  marginTop: "25px",
+                  marginTop:
+                    25,
                 }}
               >
                 <label>
@@ -440,13 +690,25 @@ export default function Settings() {
                   onChange={
                     handleHourChange
                   }
+                  disabled={
+                    !isAdmin
+                  }
                 >
                   {Array.from(
-                    { length: 24 },
-                    (_, hour) => (
+                    {
+                      length: 24,
+                    },
+                    (
+                      _,
+                      hour
+                    ) => (
                       <option
-                        key={hour}
-                        value={hour}
+                        key={
+                          hour
+                        }
+                        value={
+                          hour
+                        }
                       >
                         {String(
                           hour
@@ -461,14 +723,11 @@ export default function Settings() {
                 </select>
               </div>
 
-              {/* =============================== */}
-              {/* TIMEZONE */}
-              {/* =============================== */}
-
               <div
                 className="form-group"
                 style={{
-                  marginTop: "20px",
+                  marginTop:
+                    20,
                 }}
               >
                 <label>
@@ -481,6 +740,9 @@ export default function Settings() {
                   }
                   onChange={
                     handleTimezoneChange
+                  }
+                  disabled={
+                    !isAdmin
                   }
                 >
                   <option value="Europe/Paris">
@@ -505,48 +767,66 @@ export default function Settings() {
                 </select>
               </div>
 
-              {/* =============================== */}
-              {/* RÉSUMÉ */}
-              {/* =============================== */}
-
               <div
                 style={{
-                  marginTop: "25px",
-                  padding: "16px",
-                  background: "#f8fafc",
-                  borderRadius: "10px",
+                  marginTop:
+                    25,
+                  padding:
+                    16,
+                  background:
+                    "#f8fafc",
+                  borderRadius:
+                    10,
                   border:
                     "1px solid #e5e7eb",
                 }}
               >
                 <strong>
-                  Configuration actuelle
+                  Configuration
+                  actuelle
                 </strong>
 
                 <p
                   style={{
-                    marginTop: "8px",
-                    marginBottom: "0",
+                    marginTop:
+                      8,
+                    marginBottom:
+                      0,
                   }}
                 >
-                  Les membres sans réponse
-                  recevront un rappel à{" "}
+                  Les membres sans
+                  réponse recevront
+                  un rappel à{" "}
                   <strong>
                     {String(
                       settings.reminderHour
-                    ).padStart(2, "0")}
+                    ).padStart(
+                      2,
+                      "0"
+                    )}
                     :00
                   </strong>{" "}
                   à{" "}
-                  {settings.reminderDays
+                  {[
+                    ...settings.reminderDays,
+                  ]
                     .sort(
-                      (a, b) => b - a
+                      (
+                        a,
+                        b
+                      ) =>
+                        b -
+                        a
                     )
                     .map(
-                      (day) =>
+                      (
+                        day
+                      ) =>
                         `J-${day}`
                     )
-                    .join(", ")}
+                    .join(
+                      ", "
+                    )}
                   .
                 </p>
               </div>
@@ -555,24 +835,29 @@ export default function Settings() {
         </div>
 
         {/* ========================================= */}
-        {/* BOUTON SAVE */}
+        {/* ENREGISTRER */}
         {/* ========================================= */}
 
-        <div
-          className="form-actions"
-          style={{
-            marginTop: "25px",
-          }}
-        >
-          <button
-            type="submit"
-            disabled={saving}
+        {isAdmin && (
+          <div
+            className="form-actions"
+            style={{
+              marginTop:
+                25,
+            }}
           >
-            {saving
-              ? "Enregistrement..."
-              : "Enregistrer les paramètres"}
-          </button>
-        </div>
+            <button
+              type="submit"
+              disabled={
+                saving
+              }
+            >
+              {saving
+                ? "Enregistrement..."
+                : "Enregistrer les paramètres"}
+            </button>
+          </div>
+        )}
       </form>
     </Layout>
   );

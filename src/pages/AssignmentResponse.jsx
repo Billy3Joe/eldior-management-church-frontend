@@ -1,98 +1,186 @@
 import { useEffect, useState } from "react";
-import {
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
-import API from "../api/axios";
+import { useParams, useSearchParams } from "react-router-dom";
+
+import axios from "axios";
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000/api";
 
 export default function AssignmentResponse() {
   const { token } = useParams();
-  const [searchParams] = useSearchParams();
 
-  const actionFromEmail = searchParams.get("action");
+  const [searchParams] =
+    useSearchParams();
 
-  const [assignment, setAssignment] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const initialAction =
+    searchParams.get("action");
 
-  useEffect(() => {
-    const fetchAssignment = async () => {
-      try {
-        setLoading(true);
-        setErrorMessage("");
+  const [loading, setLoading] =
+    useState(true);
 
-        const res = await API.get(
-          `/assignments/public/${token}`
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [assignment, setAssignment] =
+    useState(null);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  // ======================================================
+  // CHARGER LA PROGRAMMATION PUBLIQUE
+  // ======================================================
+
+  const fetchAssignment = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await axios.get(
+        `${API_URL}/assignments/public/${token}`
+      );
+
+      if (response.data?.success) {
+        setAssignment(
+          response.data.data
         );
-
-        setAssignment(res.data.data);
-      } catch (error) {
-        console.error(
-          "Erreur programmation publique :",
-          error
-        );
-
-        setErrorMessage(
-          error.response?.data?.message ||
-            "Ce lien est invalide ou a expiré."
-        );
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error(
+        "Erreur chargement programmation :",
+        err
+      );
 
-    fetchAssignment();
-  }, [token]);
-
-  const respond = async (selectedAction) => {
-    console.log("ACTION CLIQUÉE :", selectedAction);
-
-    if (!["confirm", "decline"].includes(selectedAction)) {
-      return;
+      setError(
+        err.response?.data?.message ||
+          "Impossible de charger cette programmation."
+      );
+    } finally {
+      setLoading(false);
     }
+  };
 
+  // ======================================================
+  // ENVOYER LA RÉPONSE
+  // ======================================================
+
+  const respond = async (action) => {
     try {
       setSubmitting(true);
+      setError("");
       setMessage("");
-      setErrorMessage("");
 
-      const res = await API.post(
-        `/assignments/public/${token}/respond`,
-        {
-          action: selectedAction,
-        }
-      );
+      const response =
+        await axios.post(
+          `${API_URL}/assignments/public/${token}/respond`,
+          {
+            action,
+          }
+        );
 
-      setMessage(res.data.message);
+      if (response.data?.success) {
+        setMessage(
+          response.data.message
+        );
 
-      setAssignment((prev) => ({
-        ...prev,
-        status:
-          selectedAction === "confirm"
-            ? "confirmed"
-            : "declined",
-      }));
-    } catch (error) {
+        setAssignment(
+          (previous) => ({
+            ...previous,
+            status:
+              response.data.data
+                ?.status,
+            confirmedAt:
+              response.data.data
+                ?.confirmedAt,
+            declinedAt:
+              response.data.data
+                ?.declinedAt,
+          })
+        );
+      }
+    } catch (err) {
       console.error(
         "Erreur réponse programmation :",
-        error
+        err
       );
 
-      setErrorMessage(
-        error.response?.data?.message ||
-          "Impossible d’enregistrer votre réponse."
+      setError(
+        err.response?.data?.message ||
+          "Impossible d'enregistrer votre réponse."
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return "-";
+  // ======================================================
+  // CHARGEMENT INITIAL
+  // ======================================================
 
-    return new Date(date).toLocaleString(
+  useEffect(() => {
+    if (!token) {
+      setError(
+        "Lien de programmation invalide."
+      );
+
+      setLoading(false);
+
+      return;
+    }
+
+    fetchAssignment();
+  }, [token]);
+
+  // ======================================================
+  // ACTION DIRECTE DEPUIS URL
+  // ======================================================
+
+  useEffect(() => {
+    if (
+      loading ||
+      !assignment ||
+      submitting
+    ) {
+      return;
+    }
+
+    if (
+      initialAction !==
+        "confirm" &&
+      initialAction !==
+        "decline"
+    ) {
+      return;
+    }
+
+    if (
+      assignment.status !==
+      "pending"
+    ) {
+      return;
+    }
+
+    respond(initialAction);
+  }, [
+    loading,
+    assignment,
+    initialAction,
+  ]);
+
+  // ======================================================
+  // FORMAT DATE
+  // ======================================================
+
+  const formatDate = (date) => {
+    if (!date) {
+      return "Date non renseignée";
+    }
+
+    return new Intl.DateTimeFormat(
       "fr-FR",
       {
         weekday: "long",
@@ -102,221 +190,440 @@ export default function AssignmentResponse() {
         hour: "2-digit",
         minute: "2-digit",
       }
+    ).format(
+      new Date(date)
     );
   };
 
+  // ======================================================
+  // LOADING
+  // ======================================================
+
   if (loading) {
     return (
-      <div className="assignment-response-page">
-        <div className="assignment-response-card">
-          <h2>ElDior Management Church</h2>
-
-          <p>
-            Chargement de votre programmation...
-          </p>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent:
+            "center",
+          padding: 20,
+          background:
+            "#f5f7fb",
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            padding: 30,
+            borderRadius: 16,
+            boxShadow:
+              "0 10px 30px rgba(0,0,0,0.08)",
+            maxWidth: 600,
+            width: "100%",
+            textAlign:
+              "center",
+          }}
+        >
+          Chargement de votre
+          programmation...
         </div>
       </div>
     );
   }
 
-  if (errorMessage && !assignment) {
+  // ======================================================
+  // ERREUR SANS PROGRAMMATION
+  // ======================================================
+
+  if (
+    error &&
+    !assignment
+  ) {
     return (
-      <div className="assignment-response-page">
-        <div className="assignment-response-card">
-          <div className="response-logo">
-            EMC
-          </div>
-
-          <h1>
-            ElDior Management Church
-          </h1>
-
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent:
+            "center",
+          padding: 20,
+          background:
+            "#f5f7fb",
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            padding: 30,
+            borderRadius: 16,
+            boxShadow:
+              "0 10px 30px rgba(0,0,0,0.08)",
+            maxWidth: 600,
+            width: "100%",
+            textAlign:
+              "center",
+          }}
+        >
           <h2>
-            Programmation indisponible
+            Lien indisponible
           </h2>
 
-          <p className="response-error">
-            {errorMessage}
-          </p>
+          <p>{error}</p>
         </div>
       </div>
     );
   }
 
-  if (!assignment) {
-    return null;
-  }
+  // ======================================================
+  // DONNÉES
+  // ======================================================
 
-  const memberName = `${
-    assignment.member?.firstName || ""
-  } ${
-    assignment.member?.lastName || ""
-  }`.trim();
+  const member =
+    assignment?.member;
+
+  const event =
+    assignment?.event;
+
+  const department =
+    assignment?.department;
+
+  const church =
+    assignment?.church;
+
+  const status =
+    assignment?.status;
+
+  // ======================================================
+  // AFFICHAGE
+  // ======================================================
 
   return (
-    <div className="assignment-response-page">
-      <div className="assignment-response-card">
-        <div className="response-logo">
-          EMC
-        </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "#f5f7fb",
+        padding:
+          "40px 20px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 720,
+          margin: "0 auto",
+          background: "#fff",
+          borderRadius: 20,
+          padding: 32,
+          boxShadow:
+            "0 15px 40px rgba(0,0,0,0.08)",
+        }}
+      >
+        {/* ÉGLISE */}
 
-        <h1>
-          ElDior Management Church
-        </h1>
+        <div
+          style={{
+            textAlign:
+              "center",
+            marginBottom: 30,
+          }}
+        >
+          <h1
+            style={{
+              marginBottom: 6,
+            }}
+          >
+            {church?.name ||
+              "ElDior Management Church"}
+          </h1>
 
-        <p className="response-subtitle">
-          Confirmation de programmation
-        </p>
-
-        <div className="response-welcome">
-          <h2>
-            Bonjour{" "}
-            {memberName || "cher membre"}
-          </h2>
-
-          <p>
-            Vous avez été programmé(e)
-            pour participer à l’événement suivant.
+          <p
+            style={{
+              margin: 0,
+              color: "#6b7280",
+            }}
+          >
+            Confirmation de
+            programmation
           </p>
         </div>
 
-        <div className="response-details">
-          <div className="response-detail-line">
-            <span>Événement</span>
-
-            <strong>
-              {assignment.event?.title || "-"}
-            </strong>
-          </div>
-
-          <div className="response-detail-line">
-            <span>Date</span>
-
-            <strong>
-              {formatDate(
-                assignment.event?.date
-              )}
-            </strong>
-          </div>
-
-          <div className="response-detail-line">
-            <span>Lieu</span>
-
-            <strong>
-              {assignment.event?.location || "-"}
-            </strong>
-          </div>
-
-          <div className="response-detail-line">
-            <span>Département</span>
-
-            <strong>
-              {assignment.department?.name || "-"}
-            </strong>
-          </div>
-
-          <div className="response-detail-line">
-            <span>Votre poste</span>
-
-            <strong>
-              {assignment.role || "-"}
-            </strong>
-          </div>
-
-          {assignment.note && (
-            <div className="response-note">
-              <span>Consignes</span>
-
-              <p>{assignment.note}</p>
-            </div>
-          )}
-        </div>
+        {/* MESSAGE */}
 
         {message && (
-          <div className="response-message">
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 10,
+              marginBottom: 20,
+              background:
+                "#ecfdf5",
+              border:
+                "1px solid #a7f3d0",
+            }}
+          >
             {message}
           </div>
         )}
 
-        {errorMessage && (
-          <div className="response-error">
-            {errorMessage}
+        {error && (
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 10,
+              marginBottom: 20,
+              background:
+                "#fef2f2",
+              border:
+                "1px solid #fecaca",
+            }}
+          >
+            {error}
           </div>
         )}
 
-        {assignment.status === "pending" && (
-          <>
-            {actionFromEmail === "confirm" && (
-              <p className="response-hint">
-                Vous avez choisi de confirmer votre disponibilité.
-                Cliquez ci-dessous pour valider.
-              </p>
-            )}
+        {/* MEMBRE */}
 
-            {actionFromEmail === "decline" && (
-              <p className="response-hint">
-                Vous avez indiqué ne pas être disponible.
-                Cliquez ci-dessous pour valider.
-              </p>
-            )}
+        <div
+          style={{
+            marginBottom: 25,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 18,
+              marginBottom: 5,
+            }}
+          >
+            Bonjour
+          </p>
 
-            <div className="response-actions">
-              <button
-                type="button"
-                className="confirm-response-btn"
-                disabled={submitting}
-                onClick={() => respond("confirm")}
-              >
-                {submitting
-                  ? "Enregistrement..."
-                  : "Je confirme ma présence"}
-              </button>
+          <h2
+            style={{
+              marginTop: 0,
+            }}
+          >
+            {member?.firstName}{" "}
+            {member?.lastName}
+          </h2>
+        </div>
 
-              <button
-                type="button"
-                className="decline-response-btn"
-                disabled={submitting}
-                onClick={() => respond("decline")}
-              >
-                Je ne suis pas disponible
-              </button>
+        {/* INFORMATIONS */}
+
+        <div
+          style={{
+            display: "grid",
+            gap: 16,
+            marginBottom: 30,
+          }}
+        >
+          <div>
+            <strong>
+              Événement
+            </strong>
+
+            <div>
+              {event?.title ||
+                "Non renseigné"}
             </div>
-          </>
-        )}
+          </div>
 
-        {assignment.status === "confirmed" && (
-          <div className="response-success">
+          <div>
             <strong>
-              Participation confirmée
+              Date
             </strong>
 
-            <p>
-              Merci. Votre responsable peut maintenant voir votre confirmation.
+            <div>
+              {formatDate(
+                event?.date
+              )}
+            </div>
+          </div>
+
+          <div>
+            <strong>
+              Lieu
+            </strong>
+
+            <div>
+              {event?.location ||
+                "Non renseigné"}
+            </div>
+          </div>
+
+          <div>
+            <strong>
+              Département
+            </strong>
+
+            <div>
+              {department?.name ||
+                "Non renseigné"}
+            </div>
+          </div>
+
+          <div>
+            <strong>
+              Votre poste
+            </strong>
+
+            <div>
+              {assignment?.role ||
+                "Non renseigné"}
+            </div>
+          </div>
+
+          {assignment?.note && (
+            <div>
+              <strong>
+                Note
+              </strong>
+
+              <div>
+                {
+                  assignment.note
+                }
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* STATUT CONFIRMÉ */}
+
+        {status ===
+          "confirmed" && (
+          <div
+            style={{
+              padding: 18,
+              background:
+                "#ecfdf5",
+              border:
+                "1px solid #a7f3d0",
+              borderRadius: 12,
+              textAlign:
+                "center",
+            }}
+          >
+            <strong>
+              ✓ Participation
+              confirmée
+            </strong>
+
+            <p
+              style={{
+                marginBottom: 0,
+              }}
+            >
+              Merci. Votre
+              présence a bien été
+              enregistrée.
             </p>
           </div>
         )}
 
-        {assignment.status === "declined" && (
-          <div className="response-declined">
+        {/* STATUT REFUSÉ */}
+
+        {status ===
+          "declined" && (
+          <div
+            style={{
+              padding: 18,
+              background:
+                "#fff7ed",
+              border:
+                "1px solid #fed7aa",
+              borderRadius: 12,
+              textAlign:
+                "center",
+            }}
+          >
             <strong>
-              Indisponibilité enregistrée
+              Indisponibilité
+              enregistrée
             </strong>
 
-            <p>
-              Votre responsable peut maintenant voir votre réponse.
+            <p
+              style={{
+                marginBottom: 0,
+              }}
+            >
+              Votre réponse a bien
+              été prise en compte.
             </p>
           </div>
         )}
 
-        {assignment.status === "cancelled" && (
-          <div className="response-declined">
-            Cette programmation a été annulée.
+        {/* ACTIONS */}
+
+        {status ===
+          "pending" && (
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              flexWrap: "wrap",
+              marginTop: 25,
+            }}
+          >
+            <button
+              type="button"
+              disabled={
+                submitting
+              }
+              onClick={() =>
+                respond(
+                  "confirm"
+                )
+              }
+              style={{
+                flex: 1,
+                minWidth: 220,
+                padding:
+                  "14px 18px",
+                border: "none",
+                borderRadius: 10,
+                cursor:
+                  submitting
+                    ? "not-allowed"
+                    : "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {submitting
+                ? "Enregistrement..."
+                : "Je confirme ma présence"}
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                submitting
+              }
+              onClick={() =>
+                respond(
+                  "decline"
+                )
+              }
+              style={{
+                flex: 1,
+                minWidth: 220,
+                padding:
+                  "14px 18px",
+                borderRadius: 10,
+                cursor:
+                  submitting
+                    ? "not-allowed"
+                    : "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Je ne suis pas
+              disponible
+            </button>
           </div>
         )}
-
-        <p className="response-footer">
-          ElDior Management Church · Service de programmation
-        </p>
       </div>
     </div>
   );

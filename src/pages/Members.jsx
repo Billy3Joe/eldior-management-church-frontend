@@ -1,518 +1,512 @@
-import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import API from "../api/axios";
+
 import Layout from "../components/Layout";
-import ConfirmModal from "../components/ConfirmModal";
-import { isAdmin } from "../utils/auth";
+import API from "../api/axios";
+import { getCurrentAdmin } from "../utils/auth";
+
+const initialForm = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  status: "active",
+};
 
 export default function Members() {
+  const currentUser = getCurrentAdmin();
+  const isAdmin = currentUser?.role === "admin";
+
   const [members, setMembers] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [editingMemberId, setEditingMemberId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const [filters, setFilters] = useState({
-    search: "",
-    department: "",
-    status: "",
-    page: 1,
-    limit: 10,
-  });
+  const [form, setForm] = useState(initialForm);
 
-  const [pagination, setPagination] = useState({
-    page: 1,
-    totalPages: 1,
-    total: 0,
-    limit: 10,
-  });
+  const [editingId, setEditingId] = useState(null);
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    gender: "Homme",
-    phone: "",
-    email: "",
-    address: "",
-    department: "",
-    status: "Actif",
-  });
+  const [showForm, setShowForm] = useState(false);
 
-  const fetchMembers = async (customFilters = filters) => {
+  // ======================================================
+  // CHARGER LES MEMBRES
+  // ======================================================
+
+  const fetchMembers = async () => {
     try {
       setLoading(true);
 
-      const query = new URLSearchParams();
-
-      if (customFilters.search) query.append("search", customFilters.search);
-      if (customFilters.department) query.append("department", customFilters.department);
-      if (customFilters.status) query.append("status", customFilters.status);
-      query.append("page", customFilters.page);
-      query.append("limit", customFilters.limit);
-
-      const res = await API.get(`/members?${query.toString()}`);
-
-      setMembers(res.data.data || []);
-      setPagination({
-        page: res.data.page || 1,
-        totalPages: res.data.totalPages || 1,
-        total: res.data.total || 0,
-        limit: res.data.limit || 10,
+      const response = await API.get("/members", {
+        params: {
+          limit: 1000,
+        },
       });
-    } catch (err) {
-      console.error("Erreur fetch members :", err);
-      toast.error("Erreur lors du chargement des membres");
+
+      const data =
+        response.data?.data ||
+        response.data?.members ||
+        [];
+
+      setMembers(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Erreur chargement membres :",
+        error
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Impossible de charger les membres"
+      );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const res = await API.get("/departments");
-      setDepartments(res.data.data || []);
-    } catch (err) {
-      console.error("Erreur fetch departments :", err);
     }
   };
 
   useEffect(() => {
     fetchMembers();
-    fetchDepartments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchMembers(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit]);
+  // ======================================================
+  // RECHERCHE
+  // ======================================================
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const filteredMembers = useMemo(() => {
+    const value = search
+      .trim()
+      .toLowerCase();
 
-    setFilters((prev) => ({
-      ...prev,
+    if (!value) {
+      return members;
+    }
+
+    return members.filter((member) => {
+      const text = [
+        member.firstName,
+        member.lastName,
+        member.email,
+        member.phone,
+        member.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return text.includes(value);
+    });
+  }, [members, search]);
+
+  // ======================================================
+  // FORMULAIRE
+  // ======================================================
+
+  const handleChange = (event) => {
+    const { name, value } =
+      event.target;
+
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
-      page: 1,
-    }));
-  };
-
-  const applyFilters = (e) => {
-    e.preventDefault();
-    fetchMembers(filters);
-  };
-
-  const resetFilters = () => {
-    const newFilters = {
-      search: "",
-      department: "",
-      status: "",
-      page: 1,
-      limit: 10,
-    };
-    setFilters(newFilters);
-    fetchMembers(newFilters);
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
     }));
   };
 
   const resetForm = () => {
-    setFormData({
-      firstName: "",
-      lastName: "",
-      gender: "Homme",
-      phone: "",
-      email: "",
-      address: "",
-      department: "",
-      status: "Actif",
-    });
-    setEditingMemberId(null);
+    setForm(initialForm);
+    setEditingId(null);
+    setShowForm(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const openCreateForm = () => {
+    setForm(initialForm);
+    setEditingId(null);
+    setShowForm(true);
+  };
+
+  const openEditForm = (member) => {
+    setEditingId(member._id);
+
+    setForm({
+      firstName:
+        member.firstName || "",
+
+      lastName:
+        member.lastName || "",
+
+      email:
+        member.email || "",
+
+      phone:
+        member.phone || "",
+
+      status:
+        member.status || "active",
+    });
+
+    setShowForm(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  // ======================================================
+  // CRÉER / MODIFIER
+  // ======================================================
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (
+      !form.firstName.trim() ||
+      !form.lastName.trim()
+    ) {
+      toast.warning(
+        "Le prénom et le nom sont obligatoires"
+      );
+
+      return;
+    }
 
     try {
+      setSaving(true);
+
       const payload = {
-        ...formData,
-        department: formData.department || null,
+        firstName:
+          form.firstName.trim(),
+
+        lastName:
+          form.lastName.trim(),
+
+        email:
+          form.email.trim(),
+
+        phone:
+          form.phone.trim(),
+
+        status:
+          form.status,
       };
 
-      if (editingMemberId) {
-        await API.put(`/members/${editingMemberId}`, payload);
-        toast.success("Membre modifié avec succès");
+      if (editingId) {
+        await API.put(
+          `/members/${editingId}`,
+          payload
+        );
+
+        toast.success(
+          "Membre modifié avec succès"
+        );
       } else {
-        await API.post("/members", payload);
-        toast.success("Membre ajouté avec succès");
+        await API.post(
+          "/members",
+          payload
+        );
+
+        toast.success(
+          "Membre ajouté avec succès"
+        );
       }
 
       resetForm();
-      fetchMembers(filters);
-    } catch (err) {
-      console.error("Erreur submit member :", err);
+
+      await fetchMembers();
+    } catch (error) {
+      console.error(
+        "Erreur enregistrement membre :",
+        error
+      );
+
       toast.error(
-        err.response?.data?.message ||
-          "Erreur lors de l’enregistrement du membre"
+        error.response?.data?.message ||
+          "Impossible d'enregistrer le membre"
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleEdit = (member) => {
-    setEditingMemberId(member._id);
-    setFormData({
-      firstName: member.firstName || "",
-      lastName: member.lastName || "",
-      gender: member.gender || "Homme",
-      phone: member.phone || "",
-      email: member.email || "",
-      address: member.address || "",
-      department: member.department?._id || "",
-      status: member.status || "Actif",
-    });
+  // ======================================================
+  // SUPPRESSION
+  // ADMIN UNIQUEMENT
+  // ======================================================
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const handleDelete = async (id) => {
+    if (!isAdmin) {
+      toast.error(
+        "Seul un administrateur peut supprimer un membre"
+      );
 
-  const handleDelete = (memberId) => {
-    setDeleteTargetId(memberId);
-  };
+      return;
+    }
 
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
+    const confirmed =
+      window.confirm(
+        "Voulez-vous vraiment supprimer ce membre ?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
 
     try {
-      setDeleteLoading(true);
-
-      await API.delete(`/members/${deleteTargetId}`);
-      toast.success("Membre supprimé avec succès");
-
-      if (editingMemberId === deleteTargetId) {
-        resetForm();
-      }
-
-      setDeleteTargetId(null);
-      fetchMembers(filters);
-    } catch (err) {
-      console.error("Erreur suppression membre :", err);
-      toast.error(
-        err.response?.data?.message || "Erreur lors de la suppression du membre"
+      await API.delete(
+        `/members/${id}`
       );
-    } finally {
-      setDeleteLoading(false);
+
+      toast.success(
+        "Membre supprimé avec succès"
+      );
+
+      await fetchMembers();
+    } catch (error) {
+      console.error(
+        "Erreur suppression membre :",
+        error
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Impossible de supprimer ce membre"
+      );
     }
-  };
-
-  const goToPage = (page) => {
-    if (page < 1 || page > pagination.totalPages) return;
-
-    setFilters((prev) => ({
-      ...prev,
-      page,
-    }));
-  };
-  const handleExportExcel = () => {
-    const sheetData = [
-      [
-        "Prénom",
-        "Nom",
-        "Genre",
-        "Téléphone",
-        "Email",
-        "Adresse",
-        "Département",
-        "Statut",
-      ],
-      ...members.map((member) => [
-        member.firstName || "",
-        member.lastName || "",
-        member.gender || "",
-        member.phone || "",
-        member.email || "",
-        member.address || "",
-        member.department?.name || "",
-        member.status || "",
-      ]),
-    ];
-  
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-  
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Membres");
-    XLSX.writeFile(workbook, "membres-eldior-management-church.xlsx");
   };
 
   return (
     <Layout>
-      <div className="card">
-        <div className="section-header">
-          <h2>{editingMemberId ? "Modifier un membre" : "Ajouter un membre"}</h2>
-        </div>
-
-        <form className="member-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="firstName"
-            placeholder="Prénom"
-            value={formData.firstName}
-            onChange={handleChange}
-            required
-          />
-
-          <input
-            type="text"
-            name="lastName"
-            placeholder="Nom"
-            value={formData.lastName}
-            onChange={handleChange}
-            required
-          />
-
-          <select name="gender" value={formData.gender} onChange={handleChange}>
-            <option value="Homme">Homme</option>
-            <option value="Femme">Femme</option>
-          </select>
-
-          <input
-            type="text"
-            name="phone"
-            placeholder="Téléphone"
-            value={formData.phone}
-            onChange={handleChange}
-          />
-
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-
-          <input
-            type="text"
-            name="address"
-            placeholder="Adresse"
-            value={formData.address}
-            onChange={handleChange}
-          />
-
-          <select
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-          >
-            <option value="">Sélectionner un département</option>
-            {departments.map((dep) => (
-              <option key={dep._id} value={dep._id}>
-                {dep.name}
-              </option>
-            ))}
-          </select>
-
-          <select name="status" value={formData.status} onChange={handleChange}>
-            <option value="Actif">Actif</option>
-            <option value="Inactif">Inactif</option>
-          </select>
-
-          <div className="form-actions">
-            <button type="submit" disabled={loading}>
-              {loading
-                ? editingMemberId
-                  ? "Modification..."
-                  : "Ajout..."
-                : editingMemberId
-                ? "Mettre à jour"
-                : "Ajouter le membre"}
-            </button>
-
-            {editingMemberId && (
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={resetForm}
-              >
-                Annuler
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="card section-gap">
       <div className="section-header">
         <div>
-          <h2>Gestion des membres</h2>
-          <span className="results-count">
-            {pagination.total} membre(s) au total
-          </span>
+          <h2>Membres</h2>
+
+          <p className="page-subtitle">
+            Gérez les membres de votre
+            église.
+          </p>
         </div>
 
         <button
           type="button"
-          className="export-btn excel-btn"
-          onClick={handleExportExcel}
+          onClick={openCreateForm}
         >
-          Export Excel
+          + Ajouter un membre
         </button>
       </div>
 
-        <form className="filters-panel" onSubmit={applyFilters}>
-          <input
-            type="text"
-            name="search"
-            placeholder="Rechercher un membre..."
-            value={filters.search}
-            onChange={handleFilterChange}
-          />
+      {showForm && (
+        <div className="card section-gap">
+          <h3>
+            {editingId
+              ? "Modifier le membre"
+              : "Nouveau membre"}
+          </h3>
 
-          <select
-            name="department"
-            value={filters.department}
-            onChange={handleFilterChange}
-          >
-            <option value="">Tous les départements</option>
-            {departments.map((dep) => (
-              <option key={dep._id} value={dep._id}>
-                {dep.name}
-              </option>
-            ))}
-          </select>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Prénom</label>
 
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
-          >
-            <option value="">Tous les statuts</option>
-            <option value="Actif">Actif</option>
-            <option value="Inactif">Inactif</option>
-          </select>
+              <input
+                name="firstName"
+                value={form.firstName}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <select
-            name="limit"
-            value={filters.limit}
-            onChange={handleFilterChange}
-          >
-            <option value="5">5 / page</option>
-            <option value="10">10 / page</option>
-            <option value="20">20 / page</option>
-            <option value="50">50 / page</option>
-          </select>
+            <div className="form-group">
+              <label>Nom</label>
 
-          <div className="filter-actions">
-            <button type="submit">Appliquer</button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={resetFilters}
+              <input
+                name="lastName"
+                value={form.lastName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Email</label>
+
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Téléphone</label>
+
+              <input
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Statut</label>
+
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+              >
+                <option value="active">
+                  Actif
+                </option>
+
+                <option value="inactive">
+                  Inactif
+                </option>
+              </select>
+            </div>
+
+            <div
+              className="form-actions"
+              style={{
+                display: "flex",
+                gap: 10,
+                marginTop: 20,
+              }}
             >
-              Réinitialiser
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                disabled={saving}
+              >
+                {saving
+                  ? "Enregistrement..."
+                  : editingId
+                  ? "Enregistrer les modifications"
+                  : "Ajouter le membre"}
+              </button>
 
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Genre</th>
-                <th>Téléphone</th>
-                <th>Email</th>
-                <th>Département</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.length ? (
-                members.map((member) => (
-                  <tr key={member._id}>
-                    <td>
-                      {member.firstName} {member.lastName}
-                    </td>
-                    <td>{member.gender}</td>
-                    <td>{member.phone || "-"}</td>
-                    <td>{member.email || "-"}</td>
-                    <td>{member.department?.name || "-"}</td>
-                    <td>{member.status}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          className="edit-btn"
-                          onClick={() => handleEdit(member)}
-                        >
-                          Modifier
-                        </button>
-                        {isAdmin() && (
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          onClick={() => handleDelete(member._id)}
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+              <button
+                type="button"
+                onClick={resetForm}
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="card section-gap">
+        <div
+          style={{
+            marginBottom: 20,
+          }}
+        >
+          <input
+            type="search"
+            placeholder="Rechercher un membre..."
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
+          />
+        </div>
+
+        {loading ? (
+          <p>
+            Chargement des membres...
+          </p>
+        ) : filteredMembers.length ===
+          0 ? (
+          <p>
+            Aucun membre trouvé.
+          </p>
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+            }}
+          >
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="7">Aucun membre trouvé</td>
+                  <th>Nom</th>
+                  <th>Email</th>
+                  <th>Téléphone</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
 
-        <div className="pagination-bar">
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page - 1)}
-            disabled={pagination.page <= 1}
-          >
-            Précédent
-          </button>
+              <tbody>
+                {filteredMembers.map(
+                  (member) => (
+                    <tr key={member._id}>
+                      <td>
+                        {member.firstName}{" "}
+                        {member.lastName}
+                      </td>
 
-          <span>
-            Page {pagination.page} / {pagination.totalPages}
-          </span>
+                      <td>
+                        {member.email ||
+                          "—"}
+                      </td>
 
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page + 1)}
-            disabled={pagination.page >= pagination.totalPages}
-          >
-            Suivant
-          </button>
-        </div>
+                      <td>
+                        {member.phone ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {member.status ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap:
+                              "wrap",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEditForm(
+                                member
+                              )
+                            }
+                          >
+                            Modifier
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDelete(
+                                  member._id
+                                )
+                              }
+                            >
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      <ConfirmModal
-        isOpen={!!deleteTargetId}
-        title="Supprimer ce membre"
-        message="Cette action supprimera définitivement le membre sélectionné. Voulez-vous continuer ?"
-        confirmText="Supprimer"
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTargetId(null)}
-        loading={deleteLoading}
-      />
     </Layout>
   );
 }

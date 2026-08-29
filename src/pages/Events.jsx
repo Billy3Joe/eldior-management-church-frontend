@@ -1,70 +1,85 @@
-import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import API from "../api/axios";
+
 import Layout from "../components/Layout";
-import ConfirmModal from "../components/ConfirmModal";
-import { isAdmin } from "../utils/auth";
+import API from "../api/axios";
+import { getCurrentAdmin } from "../utils/auth";
+
+const initialForm = {
+  title: "",
+  date: "",
+  type: "",
+  location: "",
+  status: "planned",
+};
 
 export default function Events() {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [editingEventId, setEditingEventId] = useState(null);
+  const currentUser =
+    getCurrentAdmin();
 
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const isAdmin =
+    currentUser?.role ===
+    "admin";
 
-  const [filters, setFilters] = useState({
-    search: "",
-    type: "",
-    status: "",
-    page: 1,
-    limit: 10,
-  });
+  const [events, setEvents] =
+    useState([]);
 
-  const [pagination, setPagination] = useState({
-    page: 1,
-    totalPages: 1,
-    total: 0,
-    limit: 10,
-  });
+  const [loading, setLoading] =
+    useState(true);
 
-  const [formData, setFormData] = useState({
-    title: "",
-    type: "Culte",
-    description: "",
-    date: "",
-    location: "",
-    leader: "",
-    status: "Prévu",
-  });
+  const [saving, setSaving] =
+    useState(false);
 
-  const fetchEvents = async (customFilters = filters) => {
+  const [search, setSearch] =
+    useState("");
+
+  const [form, setForm] =
+    useState(initialForm);
+
+  const [editingId, setEditingId] =
+    useState(null);
+
+  const [showForm, setShowForm] =
+    useState(false);
+
+  // ======================================================
+  // CHARGEMENT
+  // ======================================================
+
+  const fetchEvents = async () => {
     try {
       setLoading(true);
 
-      const query = new URLSearchParams();
+      const response =
+        await API.get(
+          "/events",
+          {
+            params: {
+              limit: 1000,
+            },
+          }
+        );
 
-      if (customFilters.search) query.append("search", customFilters.search);
-      if (customFilters.type) query.append("type", customFilters.type);
-      if (customFilters.status) query.append("status", customFilters.status);
-      query.append("page", customFilters.page);
-      query.append("limit", customFilters.limit);
+      const data =
+        response.data?.data ||
+        response.data?.events ||
+        [];
 
-      const res = await API.get(`/events?${query.toString()}`);
+      setEvents(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Erreur événements :",
+        error
+      );
 
-      setEvents(res.data.data || []);
-      setPagination({
-        page: res.data.page || 1,
-        totalPages: res.data.totalPages || 1,
-        total: res.data.total || 0,
-        limit: res.data.limit || 10,
-      });
-    } catch (err) {
-      console.error("Erreur fetch events :", err);
-      toast.error("Erreur lors du chargement des événements");
-      setEvents([]);
+      toast.error(
+        error.response?.data?.message ||
+          "Impossible de charger les événements"
+      );
     } finally {
       setLoading(false);
     }
@@ -72,449 +87,550 @@ export default function Events() {
 
   useEffect(() => {
     fetchEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchEvents(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit]);
+  // ======================================================
+  // RECHERCHE
+  // ======================================================
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const filteredEvents =
+    useMemo(() => {
+      const value = search
+        .trim()
+        .toLowerCase();
 
-    setFilters((prev) => ({
-      ...prev,
+      if (!value) {
+        return events;
+      }
+
+      return events.filter(
+        (event) =>
+          [
+            event.title,
+            event.type,
+            event.location,
+            event.status,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(value)
+      );
+    }, [events, search]);
+
+  // ======================================================
+  // FORM
+  // ======================================================
+
+  const handleChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
-      page: 1,
-    }));
-  };
-
-  const applyFilters = (e) => {
-    e.preventDefault();
-    fetchEvents(filters);
-  };
-
-  const resetFilters = () => {
-    const newFilters = {
-      search: "",
-      type: "",
-      status: "",
-      page: 1,
-      limit: 10,
-    };
-    setFilters(newFilters);
-    fetchEvents(newFilters);
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
     }));
   };
 
   const resetForm = () => {
-    setFormData({
-      title: "",
-      type: "Culte",
-      description: "",
-      date: "",
-      location: "",
-      leader: "",
-      status: "Prévu",
+    setForm(initialForm);
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const openCreateForm = () => {
+    setForm(initialForm);
+    setEditingId(null);
+    setShowForm(true);
+  };
+
+  const formatDateForInput = (
+    date
+  ) => {
+    if (!date) {
+      return "";
+    }
+
+    const parsed =
+      new Date(date);
+
+    if (
+      Number.isNaN(
+        parsed.getTime()
+      )
+    ) {
+      return "";
+    }
+
+    const offset =
+      parsed.getTimezoneOffset();
+
+    const localDate =
+      new Date(
+        parsed.getTime() -
+          offset * 60000
+      );
+
+    return localDate
+      .toISOString()
+      .slice(0, 16);
+  };
+
+  const openEditForm = (
+    event
+  ) => {
+    setEditingId(
+      event._id
+    );
+
+    setForm({
+      title:
+        event.title || "",
+
+      date:
+        formatDateForInput(
+          event.date
+        ),
+
+      type:
+        event.type || "",
+
+      location:
+        event.location || "",
+
+      status:
+        event.status ||
+        "planned",
     });
-    setEditingEventId(null);
+
+    setShowForm(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
-  const toInputDateTime = (value) => {
-    if (!value) return "";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "";
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-      d.getHours()
-    )}:${pad(d.getMinutes())}`;
-  };
+  // ======================================================
+  // CREATE / UPDATE
+  // ======================================================
 
-  const formatDate = (value) => {
-    if (!value) return "-";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleString();
-  };
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    if (
+      !form.title.trim()
+    ) {
+      toast.warning(
+        "Le titre est obligatoire"
+      );
+
+      return;
+    }
+
+    if (!form.date) {
+      toast.warning(
+        "La date est obligatoire"
+      );
+
+      return;
+    }
 
     try {
-      if (editingEventId) {
-        await API.put(`/events/${editingEventId}`, formData);
-        toast.success("Événement modifié avec succès");
+      setSaving(true);
+
+      const payload = {
+        title:
+          form.title.trim(),
+
+        date:
+          new Date(
+            form.date
+          ).toISOString(),
+
+        type:
+          form.type.trim(),
+
+        location:
+          form.location.trim(),
+
+        status:
+          form.status,
+      };
+
+      if (editingId) {
+        await API.put(
+          `/events/${editingId}`,
+          payload
+        );
+
+        toast.success(
+          "Événement modifié"
+        );
       } else {
-        await API.post("/events", formData);
-        toast.success("Événement ajouté avec succès");
+        await API.post(
+          "/events",
+          payload
+        );
+
+        toast.success(
+          "Événement créé"
+        );
       }
 
       resetForm();
-      fetchEvents(filters);
-    } catch (err) {
-      console.error("Erreur submit event :", err);
+
+      await fetchEvents();
+    } catch (error) {
+      console.error(
+        "Erreur événement :",
+        error
+      );
+
       toast.error(
-        err.response?.data?.message ||
-          "Erreur lors de l’enregistrement de l’événement"
+        error.response?.data?.message ||
+          "Impossible d'enregistrer l'événement"
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleEdit = async (eventId) => {
+  // ======================================================
+  // DELETE ADMIN
+  // ======================================================
+
+  const handleDelete = async (
+    id
+  ) => {
+    if (!isAdmin) {
+      toast.error(
+        "Seul un administrateur peut supprimer un événement"
+      );
+
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Voulez-vous vraiment supprimer cet événement ?"
+      )
+    ) {
+      return;
+    }
+
     try {
-      const res = await API.get(`/events/${eventId}`);
-      const event = res.data.data;
+      await API.delete(
+        `/events/${id}`
+      );
 
-      setEditingEventId(event._id);
-      setFormData({
-        title: event.title || "",
-        type: event.type || "Culte",
-        description: event.description || "",
-        date: toInputDateTime(event.date),
-        location: event.location || "",
-        leader: event.leader || "",
-        status: event.status || "Prévu",
-      });
+      toast.success(
+        "Événement supprimé"
+      );
 
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
-      console.error("Erreur chargement événement :", err);
-      toast.error("Impossible de charger cet événement");
+      await fetchEvents();
+    } catch (error) {
+      console.error(
+        "Erreur suppression :",
+        error
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Impossible de supprimer l'événement"
+      );
     }
   };
 
-  const handleDelete = (eventId) => {
-    setDeleteTargetId(eventId);
-  };
+  // ======================================================
+  // DATE AFFICHAGE
+  // ======================================================
 
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
+  const formatDate = (
+    value
+  ) => {
+    if (!value) {
+      return "—";
+    }
 
-    try {
-      setDeleteLoading(true);
+    const date =
+      new Date(value);
 
-      await API.delete(`/events/${deleteTargetId}`);
-      toast.success("Événement supprimé avec succès");
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return value;
+    }
 
-      if (editingEventId === deleteTargetId) {
-        resetForm();
+    return new Intl.DateTimeFormat(
+      "fr-FR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       }
-
-      setDeleteTargetId(null);
-      fetchEvents(filters);
-    } catch (err) {
-      console.error("Erreur suppression événement :", err);
-      toast.error(
-        err.response?.data?.message ||
-          "Erreur lors de la suppression de l’événement"
-      );
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const handleExportExcel = () => {
-    const sheetData = [
-      [
-        "Titre",
-        "Type",
-        "Date",
-        "Lieu",
-        "Responsable",
-        "Statut",
-        "Description",
-      ],
-      ...events.map((event) => [
-        event.title || "",
-        event.type || "",
-        event.date ? new Date(event.date).toLocaleString() : "",
-        event.location || "",
-        event.leader || "",
-        event.status || "",
-        event.description || "",
-      ]),
-    ];
-  
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-  
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Événements");
-    XLSX.writeFile(workbook, "evenements-eldior-management-church.xlsx");
-  };
-
-  const goToPage = (page) => {
-    if (page < 1 || page > pagination.totalPages) return;
-
-    setFilters((prev) => ({
-      ...prev,
-      page,
-    }));
+    ).format(date);
   };
 
   return (
     <Layout>
-      <div className="card">
-        <div className="section-header">
-          <h2>
-            {editingEventId ? "Modifier un événement" : "Ajouter un événement"}
-          </h2>
-        </div>
-
-        <form className="member-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="title"
-            placeholder="Titre de l’événement"
-            value={formData.title}
-            onChange={handleChange}
-            required
-          />
-
-          <select name="type" value={formData.type} onChange={handleChange}>
-            <option value="Culte">Culte</option>
-            <option value="Réunion">Réunion</option>
-            <option value="Conférence">Conférence</option>
-            <option value="Répétition">Répétition</option>
-            <option value="Veillée">Veillée</option>
-            <option value="Autre">Autre</option>
-          </select>
-
-          <input
-            type="datetime-local"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            required
-          />
-
-          <input
-            type="text"
-            name="location"
-            placeholder="Lieu"
-            value={formData.location}
-            onChange={handleChange}
-          />
-
-          <input
-            type="text"
-            name="leader"
-            placeholder="Responsable"
-            value={formData.leader}
-            onChange={handleChange}
-          />
-
-          <select name="status" value={formData.status} onChange={handleChange}>
-            <option value="Prévu">Prévu</option>
-            <option value="Terminé">Terminé</option>
-            <option value="Annulé">Annulé</option>
-          </select>
-
-          <input
-            type="text"
-            name="description"
-            placeholder="Description"
-            value={formData.description}
-            onChange={handleChange}
-            style={{ gridColumn: "span 2" }}
-          />
-
-          <div className="form-actions">
-            <button type="submit" disabled={loading}>
-              {loading
-                ? editingEventId
-                  ? "Modification..."
-                  : "Ajout..."
-                : editingEventId
-                ? "Mettre à jour"
-                : "Ajouter l’événement"}
-            </button>
-
-            {editingEventId && (
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={resetForm}
-              >
-                Annuler
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="card section-gap">
       <div className="section-header">
         <div>
-          <h2>Liste des événements</h2>
-          <span className="results-count">
-            {pagination.total} événement(s) au total
-          </span>
+          <h2>Événements</h2>
+
+          <p className="page-subtitle">
+            Gérez le calendrier des
+            événements de votre
+            église.
+          </p>
         </div>
 
         <button
           type="button"
-          className="export-btn excel-btn"
-          onClick={handleExportExcel}
+          onClick={openCreateForm}
         >
-          Export Excel
+          + Nouvel événement
         </button>
       </div>
 
-        <form className="filters-panel" onSubmit={applyFilters}>
-          <input
-            type="text"
-            name="search"
-            placeholder="Rechercher un événement..."
-            value={filters.search}
-            onChange={handleFilterChange}
-          />
+      {showForm && (
+        <div className="card section-gap">
+          <h3>
+            {editingId
+              ? "Modifier l'événement"
+              : "Nouvel événement"}
+          </h3>
 
-          <select name="type" value={filters.type} onChange={handleFilterChange}>
-            <option value="">Tous les types</option>
-            <option value="Culte">Culte</option>
-            <option value="Réunion">Réunion</option>
-            <option value="Conférence">Conférence</option>
-            <option value="Répétition">Répétition</option>
-            <option value="Veillée">Veillée</option>
-            <option value="Autre">Autre</option>
-          </select>
-
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
+          <form
+            onSubmit={
+              handleSubmit
+            }
           >
-            <option value="">Tous les statuts</option>
-            <option value="Prévu">Prévu</option>
-            <option value="Terminé">Terminé</option>
-            <option value="Annulé">Annulé</option>
-          </select>
+            <div className="form-group">
+              <label>Titre</label>
 
-          <select
-            name="limit"
-            value={filters.limit}
-            onChange={handleFilterChange}
-          >
-            <option value="5">5 / page</option>
-            <option value="10">10 / page</option>
-            <option value="20">20 / page</option>
-            <option value="50">50 / page</option>
-          </select>
+              <input
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <div className="filter-actions">
-            <button type="submit">Appliquer</button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={resetFilters}
+            <div className="form-group">
+              <label>Date</label>
+
+              <input
+                type="datetime-local"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Type</label>
+
+              <input
+                name="type"
+                value={form.type}
+                onChange={handleChange}
+                placeholder="Culte, conférence, réunion..."
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Lieu</label>
+
+              <input
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Statut</label>
+
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+              >
+                <option value="planned">
+                  Planifié
+                </option>
+
+                <option value="ongoing">
+                  En cours
+                </option>
+
+                <option value="completed">
+                  Terminé
+                </option>
+
+                <option value="cancelled">
+                  Annulé
+                </option>
+              </select>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                marginTop: 20,
+              }}
             >
-              Réinitialiser
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                disabled={saving}
+              >
+                {saving
+                  ? "Enregistrement..."
+                  : editingId
+                  ? "Enregistrer"
+                  : "Créer l'événement"}
+              </button>
 
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Titre</th>
-                <th>Type</th>
-                <th>Date</th>
-                <th>Lieu</th>
-                <th>Responsable</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.length ? (
-                events.map((event) => (
-                  <tr key={event._id}>
-                    <td>{event.title || "-"}</td>
-                    <td>{event.type || "-"}</td>
-                    <td>{formatDate(event.date)}</td>
-                    <td>{event.location || "-"}</td>
-                    <td>{event.leader || "-"}</td>
-                    <td>{event.status || "-"}</td>
-                    <td>
-                      <div className="row-actions">
-                        <Link className="details-btn" to={`/events/${event._id}`}>
-                          Détails
-                        </Link>
-
-                        <button
-                          type="button"
-                          className="edit-btn"
-                          onClick={() => handleEdit(event._id)}
-                        >
-                          Modifier
-                        </button>
-                        {isAdmin() && (
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          onClick={() => handleDelete(event._id)}
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7">Aucun événement trouvé</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              <button
+                type="button"
+                onClick={resetForm}
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
         </div>
+      )}
 
-        <div className="pagination-bar">
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page - 1)}
-            disabled={pagination.page <= 1}
-          >
-            Précédent
-          </button>
+      <div className="card section-gap">
+        <input
+          type="search"
+          placeholder="Rechercher un événement..."
+          value={search}
+          onChange={(event) =>
+            setSearch(
+              event.target.value
+            )
+          }
+        />
 
-          <span>
-            Page {pagination.page} / {pagination.totalPages}
-          </span>
+        <div
+          style={{
+            marginTop: 20,
+            overflowX: "auto",
+          }}
+        >
+          {loading ? (
+            <p>
+              Chargement...
+            </p>
+          ) : filteredEvents.length ===
+            0 ? (
+            <p>
+              Aucun événement.
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Lieu</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
 
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page + 1)}
-            disabled={pagination.page >= pagination.totalPages}
-          >
-            Suivant
-          </button>
+              <tbody>
+                {filteredEvents.map(
+                  (event) => (
+                    <tr
+                      key={
+                        event._id
+                      }
+                    >
+                      <td>
+                        {event.title}
+                      </td>
+
+                      <td>
+                        {formatDate(
+                          event.date
+                        )}
+                      </td>
+
+                      <td>
+                        {event.type ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {event.location ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {event.status ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        <div
+                          style={{
+                            display:
+                              "flex",
+                            gap: 8,
+                            flexWrap:
+                              "wrap",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEditForm(
+                                event
+                              )
+                            }
+                          >
+                            Modifier
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDelete(
+                                  event._id
+                                )
+                              }
+                            >
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
-
-      <ConfirmModal
-        isOpen={!!deleteTargetId}
-        title="Supprimer cet événement"
-        message="Cette action supprimera définitivement l’événement sélectionné. Voulez-vous continuer ?"
-        confirmText="Supprimer"
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTargetId(null)}
-        loading={deleteLoading}
-      />
     </Layout>
   );
 }

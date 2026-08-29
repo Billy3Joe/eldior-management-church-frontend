@@ -1,80 +1,79 @@
-import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import API from "../api/axios";
+
 import Layout from "../components/Layout";
-import ConfirmModal from "../components/ConfirmModal";
-import { isAdmin } from "../utils/auth";
+import API from "../api/axios";
+import { getCurrentAdmin } from "../utils/auth";
+
+const initialForm = {
+  name: "",
+  leader: "",
+  status: "active",
+};
+
 export default function Departments() {
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [editingDepartmentId, setEditingDepartmentId] = useState(null);
+  const currentUser = getCurrentAdmin();
+  const isAdmin = currentUser?.role === "admin";
 
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [departments, setDepartments] =
+    useState([]);
 
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "",
-    leader: "",
-    page: 1,
-    limit: 10,
-  });
+  const [loading, setLoading] =
+    useState(true);
 
-  const [pagination, setPagination] = useState({
-    page: 1,
-    totalPages: 1,
-    total: 0,
-    limit: 10,
-  });
+  const [saving, setSaving] =
+    useState(false);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    leader: "",
-    status: "Actif",
-  });
+  const [search, setSearch] =
+    useState("");
 
-  const fetchDepartments = async (customFilters = filters) => {
+  const [form, setForm] =
+    useState(initialForm);
+
+  const [editingId, setEditingId] =
+    useState(null);
+
+  const [showForm, setShowForm] =
+    useState(false);
+
+  // ======================================================
+  // CHARGEMENT
+  // ======================================================
+
+  const fetchDepartments = async () => {
     try {
       setLoading(true);
 
-      const query = new URLSearchParams();
+      const response =
+        await API.get(
+          "/departments",
+          {
+            params: {
+              limit: 1000,
+            },
+          }
+        );
 
-      if (customFilters.search) query.append("search", customFilters.search);
-      if (customFilters.status) query.append("status", customFilters.status);
-      if (customFilters.leader) query.append("leader", customFilters.leader);
-      query.append("page", customFilters.page);
-      query.append("limit", customFilters.limit);
+      const data =
+        response.data?.data ||
+        response.data?.departments ||
+        [];
 
-      const [listRes, statsRes] = await Promise.all([
-        API.get(`/departments?${query.toString()}`),
-        API.get("/departments/stats/all"),
-      ]);
+      setDepartments(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Erreur départements :",
+        error
+      );
 
-      const pagedDepartments = listRes.data.data || [];
-      const stats = statsRes.data.data || [];
-
-      const merged = pagedDepartments.map((dep) => {
-        const stat = stats.find((s) => s._id === dep._id) || {};
-        return {
-          ...dep,
-          totalMembers: stat.totalMembers || 0,
-          activeMembers: stat.activeMembers || 0,
-          inactiveMembers: stat.inactiveMembers || 0,
-        };
-      });
-
-      setDepartments(merged);
-      setPagination({
-        page: listRes.data.page || 1,
-        totalPages: listRes.data.totalPages || 1,
-        total: listRes.data.total || 0,
-        limit: listRes.data.limit || 10,
-      });
-    } catch (err) {
-      console.error("Erreur fetch departments :", err);
-      toast.error("Erreur lors du chargement des départements");
+      toast.error(
+        error.response?.data?.message ||
+          "Impossible de charger les départements"
+      );
     } finally {
       setLoading(false);
     }
@@ -82,392 +81,404 @@ export default function Departments() {
 
   useEffect(() => {
     fetchDepartments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchDepartments(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit]);
+  // ======================================================
+  // RECHERCHE
+  // ======================================================
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const filteredDepartments =
+    useMemo(() => {
+      const value = search
+        .trim()
+        .toLowerCase();
 
-    setFilters((prev) => ({
-      ...prev,
+      if (!value) {
+        return departments;
+      }
+
+      return departments.filter(
+        (department) =>
+          [
+            department.name,
+            department.leader,
+            department.status,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(value)
+      );
+    }, [departments, search]);
+
+  // ======================================================
+  // FORM
+  // ======================================================
+
+  const handleChange = (event) => {
+    const { name, value } =
+      event.target;
+
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
-      page: 1,
-    }));
-  };
-
-  const applyFilters = (e) => {
-    e.preventDefault();
-    fetchDepartments(filters);
-  };
-
-  const resetFilters = () => {
-    const newFilters = {
-      search: "",
-      status: "",
-      leader: "",
-      page: 1,
-      limit: 10,
-    };
-    setFilters(newFilters);
-    fetchDepartments(newFilters);
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
     }));
   };
 
   const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      leader: "",
-      status: "Actif",
-    });
-    setEditingDepartmentId(null);
+    setForm(initialForm);
+    setEditingId(null);
+    setShowForm(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const openCreateForm = () => {
+    setForm(initialForm);
+    setEditingId(null);
+    setShowForm(true);
+  };
+
+  const openEditForm = (
+    department
+  ) => {
+    setEditingId(
+      department._id
+    );
+
+    setForm({
+      name:
+        department.name || "",
+
+      leader:
+        department.leader || "",
+
+      status:
+        department.status ||
+        "active",
+    });
+
+    setShowForm(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  // ======================================================
+  // CREATE / UPDATE
+  // ======================================================
+
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.warning(
+        "Le nom du département est obligatoire"
+      );
+
+      return;
+    }
 
     try {
-      if (editingDepartmentId) {
-        await API.put(`/departments/${editingDepartmentId}`, formData);
-        toast.success("Département modifié avec succès");
+      setSaving(true);
+
+      const payload = {
+        name:
+          form.name.trim(),
+
+        leader:
+          form.leader.trim(),
+
+        status:
+          form.status,
+      };
+
+      if (editingId) {
+        await API.put(
+          `/departments/${editingId}`,
+          payload
+        );
+
+        toast.success(
+          "Département modifié"
+        );
       } else {
-        await API.post("/departments", formData);
-        toast.success("Département ajouté avec succès");
+        await API.post(
+          "/departments",
+          payload
+        );
+
+        toast.success(
+          "Département créé"
+        );
       }
 
       resetForm();
-      fetchDepartments(filters);
-    } catch (err) {
-      console.error("Erreur submit department :", err);
+
+      await fetchDepartments();
+    } catch (error) {
+      console.error(
+        "Erreur département :",
+        error
+      );
+
       toast.error(
-        err.response?.data?.message ||
-          "Erreur lors de l’enregistrement du département"
+        error.response?.data?.message ||
+          "Impossible d'enregistrer le département"
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleEdit = async (departmentId) => {
-    try {
-      const res = await API.get(`/departments/${departmentId}`);
-      const department = res.data.data;
+  // ======================================================
+  // DELETE ADMIN
+  // ======================================================
 
-      setEditingDepartmentId(department._id);
-      setFormData({
-        name: department.name || "",
-        description: department.description || "",
-        leader: department.leader || "",
-        status: department.status || "Actif",
-      });
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
-      console.error("Erreur chargement département :", err);
-      toast.error("Impossible de charger ce département");
-    }
-  };
-
-  const handleDelete = (departmentId) => {
-    setDeleteTargetId(departmentId);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
-
-    try {
-      setDeleteLoading(true);
-
-      await API.delete(`/departments/${deleteTargetId}`);
-      toast.success("Département supprimé avec succès");
-
-      if (editingDepartmentId === deleteTargetId) {
-        resetForm();
-      }
-
-      setDeleteTargetId(null);
-      fetchDepartments(filters);
-    } catch (err) {
-      console.error("Erreur suppression département :", err);
+  const handleDelete = async (
+    id
+  ) => {
+    if (!isAdmin) {
       toast.error(
-        err.response?.data?.message ||
-          "Erreur lors de la suppression du département"
+        "Suppression réservée aux administrateurs"
       );
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-  const handleExportExcel = () => {
-    const sheetData = [
-      [
-        "Nom",
-        "Leader",
-        "Statut",
-        "Total membres",
-        "Actifs",
-        "Inactifs",
-        "Description",
-      ],
-      ...departments.map((dep) => [
-        dep.name || "",
-        dep.leader || "",
-        dep.status || "",
-        dep.totalMembers || 0,
-        dep.activeMembers || 0,
-        dep.inactiveMembers || 0,
-        dep.description || "",
-      ]),
-    ];
-  
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-  
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Départements");
-    XLSX.writeFile(workbook, "departements-eldior-management-church.xlsx");
-  };
-  const goToPage = (page) => {
-    if (page < 1 || page > pagination.totalPages) return;
 
-    setFilters((prev) => ({
-      ...prev,
-      page,
-    }));
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Supprimer ce département ?"
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await API.delete(
+        `/departments/${id}`
+      );
+
+      toast.success(
+        "Département supprimé"
+      );
+
+      await fetchDepartments();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          "Impossible de supprimer le département"
+      );
+    }
   };
 
   return (
     <Layout>
-      <div className="card">
-        <div className="section-header">
-          <h2>
-            {editingDepartmentId
-              ? "Modifier un département"
-              : "Ajouter un département"}
-          </h2>
-        </div>
-
-        <form className="member-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="name"
-            placeholder="Nom du département"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
-
-          <input
-            type="text"
-            name="leader"
-            placeholder="Responsable / Leader"
-            value={formData.leader}
-            onChange={handleChange}
-          />
-
-          <input
-            type="text"
-            name="description"
-            placeholder="Description"
-            value={formData.description}
-            onChange={handleChange}
-          />
-
-          <select name="status" value={formData.status} onChange={handleChange}>
-            <option value="Actif">Actif</option>
-            <option value="Inactif">Inactif</option>
-          </select>
-
-          <div className="form-actions">
-            <button type="submit" disabled={loading}>
-              {loading
-                ? editingDepartmentId
-                  ? "Modification..."
-                  : "Ajout..."
-                : editingDepartmentId
-                ? "Mettre à jour"
-                : "Ajouter le département"}
-            </button>
-
-            {editingDepartmentId && (
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={resetForm}
-              >
-                Annuler
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="card section-gap">
       <div className="section-header">
         <div>
           <h2>Départements</h2>
-          <span className="results-count">
-            {pagination.total} département(s) au total
-          </span>
+
+          <p className="page-subtitle">
+            Organisez les différents
+            départements de l'église.
+          </p>
         </div>
 
         <button
           type="button"
-          className="export-btn excel-btn"
-          onClick={handleExportExcel}
+          onClick={openCreateForm}
         >
-          Export Excel
+          + Nouveau département
         </button>
       </div>
 
-        <form className="filters-panel" onSubmit={applyFilters}>
-          <input
-            type="text"
-            name="search"
-            placeholder="Rechercher un département..."
-            value={filters.search}
-            onChange={handleFilterChange}
-          />
+      {showForm && (
+        <div className="card section-gap">
+          <h3>
+            {editingId
+              ? "Modifier le département"
+              : "Créer un département"}
+          </h3>
 
-          <input
-            type="text"
-            name="leader"
-            placeholder="Filtrer par leader..."
-            value={filters.leader}
-            onChange={handleFilterChange}
-          />
-
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
+          <form
+            onSubmit={handleSubmit}
           >
-            <option value="">Tous les statuts</option>
-            <option value="Actif">Actif</option>
-            <option value="Inactif">Inactif</option>
-          </select>
+            <div className="form-group">
+              <label>Nom</label>
 
-          <select
-            name="limit"
-            value={filters.limit}
-            onChange={handleFilterChange}
-          >
-            <option value="5">5 / page</option>
-            <option value="10">10 / page</option>
-            <option value="20">20 / page</option>
-            <option value="50">50 / page</option>
-          </select>
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <div className="filter-actions">
-            <button type="submit">Appliquer</button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={resetFilters}
+            <div className="form-group">
+              <label>
+                Responsable
+              </label>
+
+              <input
+                name="leader"
+                value={form.leader}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Statut</label>
+
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+              >
+                <option value="active">
+                  Actif
+                </option>
+
+                <option value="inactive">
+                  Inactif
+                </option>
+              </select>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                marginTop: 20,
+              }}
             >
-              Réinitialiser
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                disabled={saving}
+              >
+                {saving
+                  ? "Enregistrement..."
+                  : editingId
+                  ? "Enregistrer"
+                  : "Créer"}
+              </button>
 
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Leader</th>
-                <th>Statut</th>
-                <th>Total membres</th>
-                <th>Actifs</th>
-                <th>Inactifs</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {departments.length ? (
-                departments.map((dep) => (
-                  <tr key={dep._id}>
-                    <td>{dep.name}</td>
-                    <td>{dep.leader || "-"}</td>
-                    <td>{dep.status}</td>
-                    <td>{dep.totalMembers}</td>
-                    <td>{dep.activeMembers}</td>
-                    <td>{dep.inactiveMembers}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          className="edit-btn"
-                          onClick={() => handleEdit(dep._id)}
-                        >
-                          Modifier
-                        </button>
-                        {isAdmin() && (
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          onClick={() => handleDelete(dep._id)}
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7">Aucun département trouvé</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              <button
+                type="button"
+                onClick={resetForm}
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
         </div>
+      )}
 
-        <div className="pagination-bar">
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page - 1)}
-            disabled={pagination.page <= 1}
-          >
-            Précédent
-          </button>
+      <div className="card section-gap">
+        <input
+          type="search"
+          placeholder="Rechercher un département..."
+          value={search}
+          onChange={(event) =>
+            setSearch(
+              event.target.value
+            )
+          }
+        />
 
-          <span>
-            Page {pagination.page} / {pagination.totalPages}
-          </span>
+        <div
+          style={{
+            marginTop: 20,
+            overflowX: "auto",
+          }}
+        >
+          {loading ? (
+            <p>
+              Chargement...
+            </p>
+          ) : filteredDepartments.length ===
+            0 ? (
+            <p>
+              Aucun département.
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>
+                    Responsable
+                  </th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
 
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page + 1)}
-            disabled={pagination.page >= pagination.totalPages}
-          >
-            Suivant
-          </button>
+              <tbody>
+                {filteredDepartments.map(
+                  (department) => (
+                    <tr
+                      key={
+                        department._id
+                      }
+                    >
+                      <td>
+                        {
+                          department.name
+                        }
+                      </td>
+
+                      <td>
+                        {department.leader ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {department.status ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEditForm(
+                                department
+                              )
+                            }
+                          >
+                            Modifier
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDelete(
+                                  department._id
+                                )
+                              }
+                            >
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
-
-      <ConfirmModal
-        isOpen={!!deleteTargetId}
-        title="Supprimer ce département"
-        message="Cette action supprimera définitivement le département sélectionné. Voulez-vous continuer ?"
-        confirmText="Supprimer"
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTargetId(null)}
-        loading={deleteLoading}
-      />
     </Layout>
   );
 }

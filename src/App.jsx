@@ -13,16 +13,29 @@ import Settings from "./pages/Settings";
 import AdminUsers from "./pages/AdminUsers";
 import ActivityLogs from "./pages/ActivityLogs";
 import Assignments from "./pages/Assignments";
+import AssignmentResponse from "./pages/AssignmentResponse";
 
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
-import AssignmentResponse from "./pages/AssignmentResponse";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* ========================================= */}
+        {/* PUBLIC */}
+        {/* ========================================= */}
+
         <Route path="/" element={<Login />} />
+
+        <Route
+          path="/assignment-response/:token"
+          element={<AssignmentResponse />}
+        />
+
+        {/* ========================================= */}
+        {/* DASHBOARD */}
+        {/* ========================================= */}
 
         <Route
           path="/dashboard"
@@ -33,6 +46,10 @@ export default function App() {
           }
         />
 
+        {/* ========================================= */}
+        {/* MEMBRES */}
+        {/* ========================================= */}
+
         <Route
           path="/members"
           element={
@@ -42,6 +59,10 @@ export default function App() {
           }
         />
 
+        {/* ========================================= */}
+        {/* DÉPARTEMENTS */}
+        {/* ========================================= */}
+
         <Route
           path="/departments"
           element={
@@ -50,6 +71,10 @@ export default function App() {
             </PrivateRoute>
           }
         />
+
+        {/* ========================================= */}
+        {/* ÉVÉNEMENTS */}
+        {/* ========================================= */}
 
         <Route
           path="/events"
@@ -69,6 +94,10 @@ export default function App() {
           }
         />
 
+        {/* ========================================= */}
+        {/* PRÉSENCES */}
+        {/* ========================================= */}
+
         <Route
           path="/attendance"
           element={
@@ -78,23 +107,10 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/reports"
-          element={
-            <PrivateRoute>
-              <Reports />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/settings"
-          element={
-            <PrivateRoute>
-              <Settings />
-            </PrivateRoute>
-          }
-        />
+        {/* ========================================= */}
+        {/* PROGRAMMATIONS */}
+        {/* ADMIN + MANAGER */}
+        {/* ========================================= */}
 
         <Route
           path="/assignments"
@@ -105,6 +121,37 @@ export default function App() {
           }
         />
 
+        {/* ========================================= */}
+        {/* RAPPORTS */}
+        {/* ========================================= */}
+
+        <Route
+          path="/reports"
+          element={
+            <PrivateRoute>
+              <Reports />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ========================================= */}
+        {/* PARAMÈTRES */}
+        {/* ========================================= */}
+
+        <Route
+          path="/settings"
+          element={
+            <PrivateRoute>
+              <Settings />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ========================================= */}
+        {/* ADMIN USERS */}
+        {/* ADMIN UNIQUEMENT */}
+        {/* ========================================= */}
+
         <Route
           path="/admin-users"
           element={
@@ -114,6 +161,11 @@ export default function App() {
           }
         />
 
+        {/* ========================================= */}
+        {/* JOURNAL ACTIVITÉ */}
+        {/* ADMIN UNIQUEMENT */}
+        {/* ========================================= */}
+
         <Route
           path="/activity-logs"
           element={
@@ -121,11 +173,6 @@ export default function App() {
               <ActivityLogs />
             </AdminRoute>
           }
-        />
-
-        <Route
-          path="/assignment-response/:token"
-          element={<AssignmentResponse />}
         />
       </Routes>
 
