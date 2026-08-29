@@ -1,182 +1,719 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  Link,
+  useParams,
+} from "react-router-dom";
+
 import API from "../api/axios";
+
 import Layout from "../components/Layout";
 
+import "../styles/ManagementPages.css";
+
 export default function EventDetails() {
-  const { id } = useParams();
+  const { id } =
+    useParams();
 
-  const [event, setEvent] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [membersAttendance, setMembersAttendance] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [
+    event,
+    setEvent,
+  ] = useState(null);
 
-  const fetchEventDetails = async () => {
-    try {
-      setLoading(true);
+  const [
+    summary,
+    setSummary,
+  ] = useState(null);
 
-      const [eventRes, summaryRes, membersRes] = await Promise.all([
-        API.get(`/events/${id}`),
-        API.get(`/attendances/event/${id}/summary`),
-        API.get(`/attendances/event/${id}/members`),
-      ]);
+  const [
+    membersAttendance,
+    setMembersAttendance,
+  ] = useState([]);
 
-      setEvent(eventRes.data.data || null);
-      setSummary(summaryRes.data.data || null);
-      setMembersAttendance(membersRes.data.data || []);
-    } catch (err) {
-      console.error("Erreur fetch event details :", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  // ======================================================
+  // CHARGER LES DÉTAILS
+  // ======================================================
+
+  const fetchEventDetails =
+    async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [
+          eventRes,
+          summaryRes,
+          membersRes,
+        ] =
+          await Promise.all([
+            API.get(
+              `/events/${id}`
+            ),
+
+            API.get(
+              `/attendances/event/${id}/summary`
+            ),
+
+            API.get(
+              `/attendances/event/${id}/members`
+            ),
+          ]);
+
+        setEvent(
+          eventRes.data?.data ||
+            null
+        );
+
+        setSummary(
+          summaryRes.data?.data ||
+            null
+        );
+
+        setMembersAttendance(
+          membersRes.data?.data ||
+            []
+        );
+      } catch (err) {
+        console.error(
+          "Erreur fetch event details :",
+          err
+        );
+
+        setError(
+          err.response?.data
+            ?.message ||
+            "Impossible de charger les détails de l'événement"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     fetchEventDetails();
   }, [id]);
 
-  const formatDate = (value) => {
-    if (!value) return "-";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleString();
+  // ======================================================
+  // FORMAT DATE
+  // ======================================================
+
+  const formatDate = (
+    value
+  ) => {
+    if (!value) {
+      return "-";
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "-";
+    }
+
+    return date.toLocaleString(
+      "fr-FR",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
   };
 
-  const getStatusClass = (status) => {
-    if (status === "Présent") return "status-badge status-present";
-    if (status === "Absent") return "status-badge status-absent";
-    if (status === "Excusé") return "status-badge status-excused";
-    return "status-badge status-pending";
+  // ======================================================
+  // STATUT PRÉSENCE
+  // ======================================================
+
+  const getStatusClass = (
+    status
+  ) => {
+    switch (status) {
+      case "Présent":
+        return "status-badge status-active";
+
+      case "Absent":
+        return "status-badge status-inactive";
+
+      case "Excusé":
+        return "status-badge status-warning";
+
+      case "En retard":
+        return "status-badge status-planned";
+
+      default:
+        return "status-badge status-pending";
+    }
   };
+
+  // ======================================================
+  // STATUT ÉVÉNEMENT
+  // ======================================================
+
+  const getEventStatusClass = (
+    status
+  ) => {
+    switch (status) {
+      case "completed":
+        return "status-badge status-completed";
+
+      case "cancelled":
+        return "status-badge status-cancelled";
+
+      case "ongoing":
+        return "status-badge status-active";
+
+      case "planned":
+      default:
+        return "status-badge status-planned";
+    }
+  };
+
+  const getEventStatusLabel = (
+    status
+  ) => {
+    switch (status) {
+      case "planned":
+        return "Planifié";
+
+      case "ongoing":
+        return "En cours";
+
+      case "completed":
+        return "Terminé";
+
+      case "cancelled":
+        return "Annulé";
+
+      default:
+        return status || "-";
+    }
+  };
+
+  // ======================================================
+  // INITIALS MEMBRE
+  // ======================================================
+
+  const getInitials = (
+    member
+  ) => {
+    const first =
+      member?.firstName?.[0] ||
+      "";
+
+    const last =
+      member?.lastName?.[0] ||
+      "";
+
+    return `${first}${last}`.toUpperCase();
+  };
+
+  // ======================================================
+  // LOADING
+  // ======================================================
 
   if (loading) {
     return (
       <Layout>
-        <div className="card">Chargement des détails de l’événement...</div>
+        <div className="management-page">
+          <div className="management-card">
+            <div className="management-loading">
+              <div className="management-spinner" />
+
+              <span>
+                Chargement des détails de
+                l'événement...
+              </span>
+            </div>
+          </div>
+        </div>
       </Layout>
     );
   }
 
-  if (!event) {
+  // ======================================================
+  // ERREUR
+  // ======================================================
+
+  if (
+    error ||
+    !event
+  ) {
     return (
       <Layout>
-        <div className="card">Événement introuvable.</div>
+        <div className="management-page">
+          <div className="management-card">
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                ⚠️
+              </div>
+
+              <h3>
+                Événement introuvable
+              </h3>
+
+              <p>
+                {error ||
+                  "Impossible de trouver cet événement."}
+              </p>
+
+              <Link
+                to="/events"
+                className="btn btn-secondary"
+              >
+                ← Retour aux événements
+              </Link>
+            </div>
+          </div>
+        </div>
       </Layout>
     );
   }
+
+  // ======================================================
+  // RENDER
+  // ======================================================
 
   return (
     <Layout>
-      <div className="card">
-        <div className="section-header">
-          <div>
-            <h2>{event.title}</h2>
-            <p style={{ color: "#6b7280", marginTop: 6 }}>
-              Détails de l’événement
+      <div className="management-page">
+        {/* ================================================
+            HEADER
+        ================================================ */}
+
+        <div className="page-header">
+          <div className="page-header-left">
+            <div
+              style={{
+                display: "flex",
+                alignItems:
+                  "center",
+                gap: 12,
+                flexWrap:
+                  "wrap",
+              }}
+            >
+              <h1 className="page-title">
+                {event.title}
+              </h1>
+
+              <span
+                className={getEventStatusClass(
+                  event.status
+                )}
+              >
+                {getEventStatusLabel(
+                  event.status
+                )}
+              </span>
+            </div>
+
+            <p className="page-subtitle">
+              Consultez les informations,
+              statistiques et présences
+              liées à cet événement.
             </p>
           </div>
 
-          <Link to={`/attendance?eventId=${event._id}`} className="link-button">
-            Ouvrir le pointage
-          </Link>
-        </div>
+          <div className="page-header-actions">
+            <Link
+              to="/events"
+              className="btn btn-secondary"
+            >
+              ← Retour
+            </Link>
 
-        <div className="details-grid">
-          <div className="detail-box">
-            <strong>Type</strong>
-            <span>{event.type || "-"}</span>
-          </div>
-
-          <div className="detail-box">
-            <strong>Date</strong>
-            <span>{formatDate(event.date)}</span>
-          </div>
-
-          <div className="detail-box">
-            <strong>Lieu</strong>
-            <span>{event.location || "-"}</span>
-          </div>
-
-          <div className="detail-box">
-            <strong>Responsable</strong>
-            <span>{event.leader || "-"}</span>
-          </div>
-
-          <div className="detail-box">
-            <strong>Statut</strong>
-            <span>{event.status || "-"}</span>
-          </div>
-
-          <div className="detail-box detail-box-full">
-            <strong>Description</strong>
-            <span>{event.description || "-"}</span>
+            <Link
+              to={`/attendance?eventId=${event._id}`}
+              className="btn btn-primary"
+            >
+              ✓ Ouvrir le pointage
+            </Link>
           </div>
         </div>
-      </div>
 
-      {summary && (
-        <div className="cards-grid section-gap">
-          <div className="stat-card">
-            <h3>Total membres</h3>
-            <p>{summary.totalMembers || 0}</p>
+        {/* ================================================
+            INFORMATIONS ÉVÉNEMENT
+        ================================================ */}
+
+        <div className="management-card">
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                Informations de
+                l'événement
+              </h2>
+
+              <p className="page-subtitle">
+                Informations générales
+                et organisationnelles.
+              </p>
+            </div>
           </div>
 
-          <div className="stat-card">
-            <h3>Présents</h3>
-            <p>{summary.present || 0}</p>
-          </div>
+          <div
+            style={{
+              padding: 24,
+            }}
+          >
+            <div className="management-stats-grid">
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Type
+                </div>
 
-          <div className="stat-card">
-            <h3>Absents</h3>
-            <p>{summary.absent || 0}</p>
-          </div>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                  }}
+                >
+                  {event.type ||
+                    "-"}
+                </div>
+              </div>
 
-          <div className="stat-card">
-            <h3>Excusés</h3>
-            <p>{summary.excused || 0}</p>
-          </div>
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Date
+                </div>
 
-          <div className="stat-card">
-            <h3>Non marqués</h3>
-            <p>{summary.notMarked || 0}</p>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {formatDate(
+                    event.date
+                  )}
+                </div>
+              </div>
+
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Lieu
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                  }}
+                >
+                  {event.location ||
+                    "-"}
+                </div>
+              </div>
+
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Responsable
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                  }}
+                >
+                  {event.leader ||
+                    "-"}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 22,
+                padding: 20,
+                border:
+                  "1px solid #e5e7eb",
+                borderRadius: 12,
+                background:
+                  "#f8fafc",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color:
+                    "#64748b",
+                  marginBottom: 8,
+                }}
+              >
+                Description
+              </div>
+
+              <div
+                style={{
+                  color:
+                    "#374151",
+                  lineHeight: 1.7,
+                }}
+              >
+                {event.description ||
+                  "Aucune description renseignée."}
+              </div>
+            </div>
           </div>
         </div>
-      )}
 
-      <div className="card section-gap">
-        <h2>Présences des membres</h2>
+        {/* ================================================
+            STATISTIQUES
+        ================================================ */}
 
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Département</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {membersAttendance.length ? (
-                membersAttendance.map((item) => (
-                  <tr key={item.member._id}>
-                    <td>
-                      {item.member.firstName} {item.member.lastName}
-                    </td>
-                    <td>{item.member.department?.name || "-"}</td>
-                    <td>
-                      <span className={getStatusClass(item.status)}>
-                        {item.status}
-                      </span>
-                    </td>
+        {summary && (
+          <div
+            style={{
+              marginTop: 24,
+            }}
+          >
+            <div className="management-stats-grid">
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Total membres
+                </div>
+
+                <div className="management-stat-value">
+                  {summary.totalMembers ||
+                    0}
+                </div>
+
+                <div className="management-stat-description">
+                  Membres concernés
+                </div>
+              </div>
+
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Présents
+                </div>
+
+                <div className="management-stat-value">
+                  {summary.present ||
+                    0}
+                </div>
+
+                <div className="management-stat-description">
+                  Présences confirmées
+                </div>
+              </div>
+
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Absents
+                </div>
+
+                <div className="management-stat-value">
+                  {summary.absent ||
+                    0}
+                </div>
+
+                <div className="management-stat-description">
+                  Membres absents
+                </div>
+              </div>
+
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Excusés
+                </div>
+
+                <div className="management-stat-value">
+                  {summary.excused ||
+                    0}
+                </div>
+
+                <div className="management-stat-description">
+                  Absences excusées
+                </div>
+              </div>
+
+              <div className="management-stat-card">
+                <div className="management-stat-label">
+                  Non marqués
+                </div>
+
+                <div className="management-stat-value">
+                  {summary.notMarked ||
+                    0}
+                </div>
+
+                <div className="management-stat-description">
+                  Pointage restant
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================
+            TABLEAU PRÉSENCES
+        ================================================ */}
+
+        <div
+          className="management-card"
+          style={{
+            marginTop: 24,
+          }}
+        >
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                Présences des membres
+              </h2>
+
+              <p className="page-subtitle">
+                Consultez le statut de
+                présence de chaque membre.
+              </p>
+            </div>
+
+            <div>
+              <span className="status-badge status-planned">
+                {membersAttendance.length}{" "}
+                membre
+                {membersAttendance.length >
+                1
+                  ? "s"
+                  : ""}
+              </span>
+            </div>
+          </div>
+
+          {membersAttendance.length >
+          0 ? (
+            <div className="management-table-wrapper">
+              <table className="management-table">
+                <thead>
+                  <tr>
+                    <th>
+                      Membre
+                    </th>
+
+                    <th>
+                      Département
+                    </th>
+
+                    <th>
+                      Statut
+                    </th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="3">Aucune donnée de présence</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+
+                <tbody>
+                  {membersAttendance.map(
+                    (item) => {
+                      const member =
+                        item.member;
+
+                      return (
+                        <tr
+                          key={
+                            member?._id ||
+                            item._id
+                          }
+                        >
+                          <td>
+                            <div className="person-cell">
+                              <div className="person-avatar">
+                                {getInitials(
+                                  member
+                                )}
+                              </div>
+
+                              <div>
+                                <div className="person-name">
+                                  {member?.firstName ||
+                                    ""}{" "}
+                                  {member?.lastName ||
+                                    ""}
+                                </div>
+
+                                <div className="person-secondary">
+                                  {member?.email ||
+                                    member?.phone ||
+                                    "Membre"}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            {member
+                              ?.department
+                              ?.name ||
+                              "-"}
+                          </td>
+
+                          <td>
+                            <span
+                              className={getStatusClass(
+                                item.status
+                              )}
+                            >
+                              {item.status ||
+                                "Non marqué"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                📋
+              </div>
+
+              <h3>
+                Aucune donnée de
+                présence
+              </h3>
+
+              <p>
+                Aucun pointage n'est
+                encore disponible pour
+                cet événement.
+              </p>
+
+              <Link
+                to={`/attendance?eventId=${event._id}`}
+                className="btn btn-primary"
+              >
+                Ouvrir le pointage
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

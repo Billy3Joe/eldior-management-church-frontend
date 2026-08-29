@@ -1,41 +1,98 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+
+// ======================================================
+// AUTHENTIFICATION
+// ======================================================
 
 import Login from "./pages/Login";
+import RegisterChurch from "./pages/RegisterChurch";
+
+// ======================================================
+// PROTECTION DES ROUTES
+// ======================================================
+
+import PrivateRoute from "./components/PrivateRoute";
+import AdminRoute from "./components/AdminRoute";
+import PlatformRoute from "./components/PlatformRoute";
+
+// ======================================================
+// PAGES ÉGLISE
+// ======================================================
+
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import Departments from "./pages/Departments";
 import Events from "./pages/Events";
-import Attendance from "./pages/Attendance";
 import EventDetails from "./pages/EventDetails";
+import Attendance from "./pages/Attendance";
+import Assignments from "./pages/Assignments";
+import AssignmentResponse from "./pages/AssignmentResponse";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import AdminUsers from "./pages/AdminUsers";
 import ActivityLogs from "./pages/ActivityLogs";
-import Assignments from "./pages/Assignments";
-import AssignmentResponse from "./pages/AssignmentResponse";
+import Subscription from "./pages/Subscription";
 
-import PrivateRoute from "./components/PrivateRoute";
-import AdminRoute from "./components/AdminRoute";
+// ======================================================
+// PAGES PLATEFORME
+// ======================================================
 
-export default function App() {
+import PlatformDashboard from "./pages/PlatformDashboard";
+import PlatformChurches from "./pages/PlatformChurches";
+
+// ======================================================
+// APPLICATION
+// ======================================================
+
+function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ========================================= */}
-        {/* PUBLIC */}
-        {/* ========================================= */}
 
-        <Route path="/" element={<Login />} />
+        {/* ==================================================
+            ACCUEIL
+        ================================================== */}
 
         <Route
-          path="/assignment-response/:token"
-          element={<AssignmentResponse />}
+          path="/"
+          element={
+            <Navigate
+              to="/dashboard"
+              replace
+            />
+          }
         />
 
-        {/* ========================================= */}
-        {/* DASHBOARD */}
-        {/* ========================================= */}
+        {/* ==================================================
+            LOGIN
+        ================================================== */}
+
+        <Route
+          path="/login"
+          element={
+            <Login />
+          }
+        />
+
+        {/* ==================================================
+            CRÉATION ÉGLISE
+        ================================================== */}
+
+        <Route
+          path="/register-church"
+          element={
+            <RegisterChurch />
+          }
+        />
+
+        {/* ==================================================
+            DASHBOARD ÉGLISE
+        ================================================== */}
 
         <Route
           path="/dashboard"
@@ -46,9 +103,9 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* MEMBRES */}
-        {/* ========================================= */}
+        {/* ==================================================
+            MEMBRES
+        ================================================== */}
 
         <Route
           path="/members"
@@ -59,9 +116,9 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* DÉPARTEMENTS */}
-        {/* ========================================= */}
+        {/* ==================================================
+            DÉPARTEMENTS
+        ================================================== */}
 
         <Route
           path="/departments"
@@ -72,9 +129,9 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* ÉVÉNEMENTS */}
-        {/* ========================================= */}
+        {/* ==================================================
+            ÉVÉNEMENTS
+        ================================================== */}
 
         <Route
           path="/events"
@@ -94,9 +151,9 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* PRÉSENCES */}
-        {/* ========================================= */}
+        {/* ==================================================
+            PRÉSENCES
+        ================================================== */}
 
         <Route
           path="/attendance"
@@ -107,10 +164,9 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* PROGRAMMATIONS */}
-        {/* ADMIN + MANAGER */}
-        {/* ========================================= */}
+        {/* ==================================================
+            PROGRAMMATIONS
+        ================================================== */}
 
         <Route
           path="/assignments"
@@ -121,9 +177,20 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* RAPPORTS */}
-        {/* ========================================= */}
+        {/* ==================================================
+            RÉPONSE PUBLIQUE
+        ================================================== */}
+
+        <Route
+          path="/assignment-response/:token"
+          element={
+            <AssignmentResponse />
+          }
+        />
+
+        {/* ==================================================
+            RAPPORTS
+        ================================================== */}
 
         <Route
           path="/reports"
@@ -134,9 +201,22 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* PARAMÈTRES */}
-        {/* ========================================= */}
+        {/* ==================================================
+            ABONNEMENT
+        ================================================== */}
+
+        <Route
+          path="/subscription"
+          element={
+            <PrivateRoute>
+              <Subscription />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ==================================================
+            PARAMÈTRES
+        ================================================== */}
 
         <Route
           path="/settings"
@@ -147,44 +227,82 @@ export default function App() {
           }
         />
 
-        {/* ========================================= */}
-        {/* ADMIN USERS */}
-        {/* ADMIN UNIQUEMENT */}
-        {/* ========================================= */}
+        {/* ==================================================
+            UTILISATEURS ÉGLISE
+        ================================================== */}
 
         <Route
-          path="/admin-users"
+          path="/users"
           element={
-            <AdminRoute>
-              <AdminUsers />
-            </AdminRoute>
+            <PrivateRoute>
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            </PrivateRoute>
           }
         />
 
-        {/* ========================================= */}
-        {/* JOURNAL ACTIVITÉ */}
-        {/* ADMIN UNIQUEMENT */}
-        {/* ========================================= */}
+        {/* ==================================================
+            JOURNAL D'ACTIVITÉ
+        ================================================== */}
 
         <Route
           path="/activity-logs"
           element={
-            <AdminRoute>
-              <ActivityLogs />
-            </AdminRoute>
+            <PrivateRoute>
+              <AdminRoute>
+                <ActivityLogs />
+              </AdminRoute>
+            </PrivateRoute>
+          }
+        />
+
+        {/* ==================================================
+            PLATEFORME - DASHBOARD
+        ================================================== */}
+
+        <Route
+          path="/platform"
+          element={
+            <PrivateRoute>
+              <PlatformRoute>
+                <PlatformDashboard />
+              </PlatformRoute>
+            </PrivateRoute>
+          }
+        />
+
+        {/* ==================================================
+            PLATEFORME - ÉGLISES CLIENTES
+        ================================================== */}
+
+        <Route
+          path="/platform/churches"
+          element={
+            <PrivateRoute>
+              <PlatformRoute>
+                <PlatformChurches />
+              </PlatformRoute>
+            </PrivateRoute>
+          }
+        />
+
+        {/* ==================================================
+            ROUTE INCONNUE
+        ================================================== */}
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/dashboard"
+              replace
+            />
           }
         />
       </Routes>
-
-      <ToastContainer
-        position="top-right"
-        autoClose={2500}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
     </BrowserRouter>
   );
 }
+
+export default App;

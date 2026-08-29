@@ -1,0 +1,878 @@
+/* =========================================================
+   ASSIGNMENT RESPONSE - PAGE PUBLIQUE
+========================================================= */
+
+* {
+    box-sizing: border-box;
+  }
+  
+  .assignment-public-page {
+    min-height: 100vh;
+    padding: 42px 20px;
+  
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(79, 70, 229, 0.1),
+        transparent 35%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(59, 130, 246, 0.08),
+        transparent 35%
+      ),
+      #f8fafc;
+  
+    color: #111827;
+  }
+  
+  .assignment-public-wrapper {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  
+  /* =========================================================
+     HEADER / ÉGLISE
+  ========================================================= */
+  
+  .assignment-public-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    gap: 13px;
+  
+    margin-bottom: 28px;
+  }
+  
+  .assignment-church-logo {
+    width: 52px;
+    height: 52px;
+  
+    flex: 0 0 52px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    overflow: hidden;
+  
+    border-radius: 15px;
+  
+    background: linear-gradient(
+      135deg,
+      #4f46e5,
+      #312e81
+    );
+  
+    color: #ffffff;
+  
+    font-size: 22px;
+    font-weight: 900;
+  
+    box-shadow:
+      0 8px 22px rgba(79, 70, 229, 0.2);
+  }
+  
+  .assignment-church-logo img {
+    width: 100%;
+    height: 100%;
+  
+    object-fit: cover;
+  }
+  
+  .assignment-church-name {
+    color: #111827;
+  
+    font-size: 17px;
+    font-weight: 800;
+  }
+  
+  .assignment-brand-subtitle {
+    margin-top: 2px;
+  
+    color: #64748b;
+  
+    font-size: 12px;
+  }
+  
+  /* =========================================================
+     CARTE PRINCIPALE
+  ========================================================= */
+  
+  .assignment-response-card {
+    overflow: hidden;
+  
+    background: #ffffff;
+  
+    border: 1px solid #e5e7eb;
+  
+    border-radius: 24px;
+  
+    box-shadow:
+      0 25px 65px rgba(15, 23, 42, 0.09);
+  }
+  
+  /* =========================================================
+     INTRODUCTION MEMBRE
+  ========================================================= */
+  
+  .assignment-response-top {
+    padding: 36px 38px 28px;
+  
+    display: flex;
+    align-items: center;
+  
+    gap: 18px;
+  
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .assignment-member-avatar {
+    width: 62px;
+    height: 62px;
+  
+    flex: 0 0 62px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    border-radius: 18px;
+  
+    background: #eef2ff;
+  
+    color: #4338ca;
+  
+    font-size: 21px;
+    font-weight: 900;
+  }
+  
+  .assignment-response-intro span {
+    color: #64748b;
+  
+    font-size: 13px;
+  }
+  
+  .assignment-response-intro h1 {
+    margin: 3px 0 7px;
+  
+    color: #111827;
+  
+    font-size: 26px;
+  
+    letter-spacing: -0.5px;
+  }
+  
+  .assignment-response-intro p {
+    margin: 0;
+  
+    color: #64748b;
+  
+    font-size: 14px;
+  
+    line-height: 1.6;
+  }
+  
+  /* =========================================================
+     ALERTES
+  ========================================================= */
+  
+  .assignment-alert {
+    display: flex;
+  
+    gap: 12px;
+  
+    margin: 24px 38px 0;
+  
+    padding: 15px 17px;
+  
+    border-radius: 12px;
+  }
+  
+  .assignment-alert-icon {
+    width: 25px;
+    height: 25px;
+  
+    flex: 0 0 25px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    border-radius: 50%;
+  
+    font-weight: 900;
+  }
+  
+  .assignment-alert strong {
+    display: block;
+  
+    margin-bottom: 3px;
+  
+    font-size: 13px;
+  }
+  
+  .assignment-alert p {
+    margin: 0;
+  
+    font-size: 13px;
+  
+    line-height: 1.5;
+  }
+  
+  .assignment-alert-success {
+    background: #ecfdf5;
+  
+    border: 1px solid #a7f3d0;
+  
+    color: #065f46;
+  }
+  
+  .assignment-alert-success .assignment-alert-icon {
+    background: #d1fae5;
+  }
+  
+  .assignment-alert-error {
+    background: #fef2f2;
+  
+    border: 1px solid #fecaca;
+  
+    color: #991b1b;
+  }
+  
+  .assignment-alert-error .assignment-alert-icon {
+    background: #fee2e2;
+  }
+  
+  /* =========================================================
+     PROGRAMMATION / ÉVÉNEMENT
+  ========================================================= */
+  
+  .assignment-event-card {
+    margin: 28px 38px;
+  
+    padding: 26px;
+  
+    border: 1px solid #e5e7eb;
+  
+    border-radius: 18px;
+  
+    background: #f8fafc;
+  }
+  
+  .assignment-event-label {
+    margin-bottom: 8px;
+  
+    color: #4f46e5;
+  
+    font-size: 10px;
+    font-weight: 900;
+  
+    letter-spacing: 1.6px;
+  }
+  
+  .assignment-event-card h2 {
+    margin: 0 0 24px;
+  
+    color: #111827;
+  
+    font-size: 23px;
+  }
+  
+  /* =========================================================
+     INFORMATIONS
+  ========================================================= */
+  
+  .assignment-information-grid {
+    display: grid;
+  
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  
+    gap: 14px;
+  }
+  
+  .assignment-information-item {
+    display: flex;
+    align-items: flex-start;
+  
+    gap: 11px;
+  
+    min-width: 0;
+  
+    padding: 14px;
+  
+    background: #ffffff;
+  
+    border: 1px solid #e5e7eb;
+  
+    border-radius: 12px;
+  }
+  
+  .assignment-information-icon {
+    width: 34px;
+    height: 34px;
+  
+    flex: 0 0 34px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    background: #f1f5f9;
+  
+    border-radius: 9px;
+  
+    font-size: 15px;
+  }
+  
+  .assignment-information-item span {
+    display: block;
+  
+    margin-bottom: 4px;
+  
+    color: #94a3b8;
+  
+    font-size: 10px;
+    font-weight: 700;
+  
+    text-transform: uppercase;
+  }
+  
+  .assignment-information-item strong {
+    display: block;
+  
+    color: #334155;
+  
+    font-size: 13px;
+  
+    line-height: 1.5;
+  
+    word-break: break-word;
+  }
+  
+  /* =========================================================
+     NOTE
+  ========================================================= */
+  
+  .assignment-note {
+    margin-top: 18px;
+  
+    padding: 16px 18px;
+  
+    background: #fffbeb;
+  
+    border: 1px solid #fde68a;
+  
+    border-radius: 12px;
+  }
+  
+  .assignment-note-title {
+    margin-bottom: 6px;
+  
+    color: #92400e;
+  
+    font-size: 12px;
+    font-weight: 800;
+  }
+  
+  .assignment-note p {
+    margin: 0;
+  
+    color: #78350f;
+  
+    font-size: 13px;
+  
+    line-height: 1.65;
+  }
+  
+  /* =========================================================
+     QUESTION DE CONFIRMATION
+  ========================================================= */
+  
+  .assignment-response-section {
+    padding: 0 38px 38px;
+  }
+  
+  .assignment-question {
+    margin-bottom: 20px;
+  
+    text-align: center;
+  }
+  
+  .assignment-question h3 {
+    margin: 0 0 7px;
+  
+    color: #111827;
+  
+    font-size: 19px;
+  }
+  
+  .assignment-question p {
+    max-width: 520px;
+  
+    margin: 0 auto;
+  
+    color: #64748b;
+  
+    font-size: 13px;
+  
+    line-height: 1.6;
+  }
+  
+  /* =========================================================
+     BOUTONS
+  ========================================================= */
+  
+  .assignment-actions {
+    display: grid;
+  
+    grid-template-columns:
+      1.25fr 1fr;
+  
+    gap: 12px;
+  }
+  
+  .assignment-confirm-button,
+  .assignment-decline-button {
+    min-height: 50px;
+  
+    padding: 13px 18px;
+  
+    border-radius: 12px;
+  
+    font-size: 13px;
+    font-weight: 800;
+  
+    cursor: pointer;
+  
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      opacity 0.2s ease;
+  }
+  
+  .assignment-confirm-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    gap: 8px;
+  
+    border: none;
+  
+    background: linear-gradient(
+      135deg,
+      #16a34a,
+      #15803d
+    );
+  
+    color: #ffffff;
+  
+    box-shadow:
+      0 8px 20px rgba(22, 163, 74, 0.18);
+  }
+  
+  .assignment-decline-button {
+    border: 1px solid #dbe2ea;
+  
+    background: #ffffff;
+  
+    color: #475569;
+  }
+  
+  .assignment-confirm-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  
+    box-shadow:
+      0 12px 25px rgba(22, 163, 74, 0.24);
+  }
+  
+  .assignment-decline-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  
+    background: #f8fafc;
+  
+    border-color: #cbd5e1;
+  }
+  
+  .assignment-confirm-button:disabled,
+  .assignment-decline-button:disabled {
+    opacity: 0.6;
+  
+    cursor: not-allowed;
+  
+    transform: none;
+  }
+  
+  /* =========================================================
+     STATUT FINAL
+  ========================================================= */
+  
+  .assignment-final-status {
+    margin: 28px 38px 38px;
+  
+    padding: 32px 24px;
+  
+    border-radius: 18px;
+  
+    text-align: center;
+  }
+  
+  .assignment-final-icon {
+    width: 56px;
+    height: 56px;
+  
+    margin: 0 auto 15px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    border-radius: 50%;
+  
+    font-size: 23px;
+    font-weight: 900;
+  }
+  
+  .assignment-final-status h2 {
+    margin: 0 0 9px;
+  
+    font-size: 21px;
+  }
+  
+  .assignment-final-status p {
+    max-width: 480px;
+  
+    margin: 0 auto;
+  
+    font-size: 13px;
+  
+    line-height: 1.65;
+  }
+  
+  /* CONFIRMÉ */
+  
+  .assignment-confirmed-status {
+    background: #ecfdf5;
+  
+    border: 1px solid #a7f3d0;
+  
+    color: #065f46;
+  }
+  
+  .assignment-confirmed-status .assignment-final-icon {
+    background: #d1fae5;
+  }
+  
+  /* REFUSÉ */
+  
+  .assignment-declined-status {
+    background: #fff7ed;
+  
+    border: 1px solid #fed7aa;
+  
+    color: #9a3412;
+  }
+  
+  .assignment-declined-status .assignment-final-icon {
+    background: #ffedd5;
+  }
+  
+  /* ANNULÉ */
+  
+  .assignment-cancelled-status {
+    background: #f8fafc;
+  
+    border: 1px solid #cbd5e1;
+  
+    color: #475569;
+  }
+  
+  .assignment-cancelled-status .assignment-final-icon {
+    background: #e2e8f0;
+  }
+  
+  .assignment-final-message {
+    display: inline-block;
+  
+    margin-top: 15px;
+  
+    padding: 8px 13px;
+  
+    border-radius: 8px;
+  
+    background: rgba(255, 255, 255, 0.6);
+  
+    font-size: 12px;
+    font-weight: 700;
+  }
+  
+  /* =========================================================
+     FOOTER
+  ========================================================= */
+  
+  .assignment-public-footer {
+    padding: 26px 15px 10px;
+  
+    text-align: center;
+  }
+  
+  .assignment-public-footer > div:first-child {
+    color: #334155;
+  
+    font-size: 13px;
+    font-weight: 800;
+  }
+  
+  .assignment-public-footer p {
+    margin: 5px 0 12px;
+  
+    color: #94a3b8;
+  
+    font-size: 11px;
+  }
+  
+  .assignment-security {
+    display: inline-flex;
+    align-items: center;
+  
+    gap: 5px;
+  
+    color: #94a3b8;
+  
+    font-size: 10px;
+  }
+  
+  /* =========================================================
+     ÉCRAN DE CHARGEMENT / ERREUR
+  ========================================================= */
+  
+  .assignment-state-card {
+    width: 100%;
+    max-width: 500px;
+  
+    margin: 15vh auto 0;
+  
+    padding: 42px 30px;
+  
+    background: #ffffff;
+  
+    border: 1px solid #e5e7eb;
+  
+    border-radius: 20px;
+  
+    text-align: center;
+  
+    box-shadow:
+      0 20px 50px rgba(15, 23, 42, 0.08);
+  }
+  
+  .assignment-state-card h2 {
+    margin: 16px 0 8px;
+  
+    color: #111827;
+  }
+  
+  .assignment-state-card p {
+    margin: 0;
+  
+    color: #64748b;
+  
+    line-height: 1.6;
+  }
+  
+  .assignment-state-help {
+    margin-top: 18px;
+  
+    padding: 12px;
+  
+    background: #f8fafc;
+  
+    border-radius: 10px;
+  
+    color: #94a3b8;
+  
+    font-size: 12px;
+  }
+  
+  .assignment-state-icon {
+    width: 54px;
+    height: 54px;
+  
+    margin: auto;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    border-radius: 50%;
+  
+    font-size: 22px;
+    font-weight: 900;
+  }
+  
+  .assignment-error-icon {
+    background: #fee2e2;
+  
+    color: #dc2626;
+  }
+  
+  /* =========================================================
+     SPINNERS
+  ========================================================= */
+  
+  .assignment-loader,
+  .assignment-button-loader {
+    border-radius: 50%;
+  
+    animation:
+      assignmentSpin 0.7s linear infinite;
+  }
+  
+  .assignment-loader {
+    width: 38px;
+    height: 38px;
+  
+    margin: auto;
+  
+    border: 3px solid #e5e7eb;
+  
+    border-top-color: #4f46e5;
+  }
+  
+  .assignment-button-loader {
+    width: 16px;
+    height: 16px;
+  
+    border: 2px solid rgba(255, 255, 255, 0.4);
+  
+    border-top-color: #ffffff;
+  }
+  
+  @keyframes assignmentSpin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* =========================================================
+     RESPONSIVE TABLETTE / MOBILE
+  ========================================================= */
+  
+  @media (max-width: 650px) {
+    .assignment-public-page {
+      padding: 24px 12px;
+    }
+  
+    .assignment-public-header {
+      justify-content: flex-start;
+  
+      padding: 0 5px;
+    }
+  
+    .assignment-response-card {
+      border-radius: 18px;
+    }
+  
+    .assignment-response-top {
+      padding: 26px 20px 22px;
+  
+      align-items: flex-start;
+    }
+  
+    .assignment-member-avatar {
+      width: 50px;
+      height: 50px;
+  
+      flex-basis: 50px;
+  
+      border-radius: 14px;
+  
+      font-size: 17px;
+    }
+  
+    .assignment-response-intro h1 {
+      font-size: 21px;
+    }
+  
+    .assignment-alert {
+      margin: 20px 20px 0;
+    }
+  
+    .assignment-event-card {
+      margin: 20px;
+  
+      padding: 20px;
+    }
+  
+    .assignment-information-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .assignment-response-section {
+      padding: 0 20px 26px;
+    }
+  
+    .assignment-actions {
+      grid-template-columns: 1fr;
+    }
+  
+    .assignment-final-status {
+      margin: 20px;
+  
+      padding: 26px 18px;
+    }
+  }
+  
+  /* =========================================================
+     PETITS TÉLÉPHONES
+  ========================================================= */
+  
+  @media (max-width: 400px) {
+    .assignment-public-page {
+      padding: 18px 10px;
+    }
+  
+    .assignment-response-top {
+      gap: 12px;
+    }
+  
+    .assignment-member-avatar {
+      width: 44px;
+      height: 44px;
+  
+      flex-basis: 44px;
+    }
+  
+    .assignment-response-intro h1 {
+      font-size: 19px;
+    }
+  
+    .assignment-event-card {
+      margin: 16px 14px;
+  
+      padding: 17px;
+    }
+  
+    .assignment-response-section {
+      padding: 0 14px 22px;
+    }
+  
+    .assignment-final-status {
+      margin: 16px 14px;
+    }
+  
+    .assignment-church-name {
+      font-size: 15px;
+    }
+  
+    .assignment-church-logo {
+      width: 46px;
+      height: 46px;
+  
+      flex-basis: 46px;
+    }
+  }

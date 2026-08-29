@@ -1,0 +1,131 @@
+.platform-dashboard {
+    padding-bottom: 50px;
+  }
+  
+  .platform-eyebrow {
+    margin-bottom: 7px;
+    color: #6366f1;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.4px;
+  }
+  
+  .platform-owner-badge {
+    padding: 9px 15px;
+    border-radius: 999px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  
+  .platform-section {
+    margin-top: 26px;
+  }
+  
+  .platform-section-header {
+    margin-bottom: 14px;
+  }
+  
+  .platform-section-header h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 900;
+  }
+  
+  .platform-section-header p {
+    margin: 5px 0 0;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  
+  .platform-plan-grid {
+    display: grid;
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+    gap: 16px;
+  }
+  
+  .platform-plan-card {
+    padding: 23px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 17px;
+  }
+  
+  .platform-plan-card.premium {
+    background:
+      linear-gradient(
+        135deg,
+        #111827,
+        #312e81
+      );
+    color: white;
+  }
+  
+  .platform-plan-label {
+    color: #6366f1;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+  }
+  
+  .platform-plan-card.premium
+  .platform-plan-label {
+    color: #c7d2fe;
+  }
+  
+  .platform-plan-card strong {
+    margin-top: 12px;
+    font-size: 32px;
+    font-weight: 900;
+  }
+  
+  .platform-plan-card small {
+    margin-top: 5px;
+    color: #94a3b8;
+  }
+  
+  .platform-mini-grid {
+    display: grid;
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+    gap: 16px;
+  }
+  
+  .platform-mini-card {
+    padding: 22px;
+  }
+  
+  .platform-mini-card span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  
+  .platform-mini-card strong {
+    display: block;
+    margin-top: 10px;
+    color: #0f172a;
+    font-size: 27px;
+    font-weight: 900;
+  }
+  
+  @media (
+    max-width: 900px
+  ) {
+    .platform-plan-grid,
+    .platform-mini-grid {
+      grid-template-columns: 1fr;
+    }
+  }

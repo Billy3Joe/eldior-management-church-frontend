@@ -1,14 +1,25 @@
-import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 
 import axios from "axios";
+
+import "./AssignmentResponse.css";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
   "http://localhost:8000/api";
 
 export default function AssignmentResponse() {
-  const { token } = useParams();
+  const { token } =
+    useParams();
 
   const [searchParams] =
     useSearchParams();
@@ -16,59 +27,83 @@ export default function AssignmentResponse() {
   const initialAction =
     searchParams.get("action");
 
-  const [loading, setLoading] =
-    useState(true);
+  const actionProcessed =
+    useRef(false);
 
-  const [submitting, setSubmitting] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [assignment, setAssignment] =
-    useState(null);
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    assignment,
+    setAssignment,
+  ] = useState(null);
 
-  const [error, setError] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
+
+  const [
+    error,
+    setError,
+  ] = useState("");
 
   // ======================================================
-  // CHARGER LA PROGRAMMATION PUBLIQUE
+  // CHARGER LA PROGRAMMATION
   // ======================================================
 
-  const fetchAssignment = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  const fetchAssignment =
+    async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-      const response = await axios.get(
-        `${API_URL}/assignments/public/${token}`
-      );
+        const response =
+          await axios.get(
+            `${API_URL}/assignments/public/${token}`
+          );
 
-      if (response.data?.success) {
-        setAssignment(
-          response.data.data
+        if (
+          response.data?.success
+        ) {
+          setAssignment(
+            response.data.data
+          );
+        }
+      } catch (err) {
+        console.error(
+          "Erreur chargement programmation :",
+          err
         );
-      }
-    } catch (err) {
-      console.error(
-        "Erreur chargement programmation :",
-        err
-      );
 
-      setError(
-        err.response?.data?.message ||
-          "Impossible de charger cette programmation."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setError(
+          err.response?.data
+            ?.message ||
+            "Impossible de charger cette programmation."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   // ======================================================
   // ENVOYER LA RÉPONSE
   // ======================================================
 
-  const respond = async (action) => {
+  const respond = async (
+    action
+  ) => {
+    if (submitting) {
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError("");
@@ -82,7 +117,9 @@ export default function AssignmentResponse() {
           }
         );
 
-      if (response.data?.success) {
+      if (
+        response.data?.success
+      ) {
         setMessage(
           response.data.message
         );
@@ -90,12 +127,15 @@ export default function AssignmentResponse() {
         setAssignment(
           (previous) => ({
             ...previous,
+
             status:
               response.data.data
                 ?.status,
+
             confirmedAt:
               response.data.data
                 ?.confirmedAt,
+
             declinedAt:
               response.data.data
                 ?.declinedAt,
@@ -109,7 +149,8 @@ export default function AssignmentResponse() {
       );
 
       setError(
-        err.response?.data?.message ||
+        err.response?.data
+          ?.message ||
           "Impossible d'enregistrer votre réponse."
       );
     } finally {
@@ -143,7 +184,8 @@ export default function AssignmentResponse() {
     if (
       loading ||
       !assignment ||
-      submitting
+      submitting ||
+      actionProcessed.current
     ) {
       return;
     }
@@ -164,19 +206,38 @@ export default function AssignmentResponse() {
       return;
     }
 
-    respond(initialAction);
+    actionProcessed.current =
+      true;
+
+    respond(
+      initialAction
+    );
   }, [
     loading,
     assignment,
     initialAction,
+    submitting,
   ]);
 
   // ======================================================
   // FORMAT DATE
   // ======================================================
 
-  const formatDate = (date) => {
+  const formatDate = (
+    date
+  ) => {
     if (!date) {
+      return "Date non renseignée";
+    }
+
+    const parsedDate =
+      new Date(date);
+
+    if (
+      Number.isNaN(
+        parsedDate.getTime()
+      )
+    ) {
       return "Date non renseignée";
     }
 
@@ -191,7 +252,7 @@ export default function AssignmentResponse() {
         minute: "2-digit",
       }
     ).format(
-      new Date(date)
+      parsedDate
     );
   };
 
@@ -201,40 +262,25 @@ export default function AssignmentResponse() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent:
-            "center",
-          padding: 20,
-          background:
-            "#f5f7fb",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            padding: 30,
-            borderRadius: 16,
-            boxShadow:
-              "0 10px 30px rgba(0,0,0,0.08)",
-            maxWidth: 600,
-            width: "100%",
-            textAlign:
-              "center",
-          }}
-        >
-          Chargement de votre
-          programmation...
+      <div className="assignment-public-page">
+        <div className="assignment-state-card">
+          <div className="assignment-loader" />
+
+          <h2>
+            Chargement...
+          </h2>
+
+          <p>
+            Nous préparons votre
+            programmation.
+          </p>
         </div>
       </div>
     );
   }
 
   // ======================================================
-  // ERREUR SANS PROGRAMMATION
+  // ERREUR
   // ======================================================
 
   if (
@@ -242,36 +288,25 @@ export default function AssignmentResponse() {
     !assignment
   ) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent:
-            "center",
-          padding: 20,
-          background:
-            "#f5f7fb",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            padding: 30,
-            borderRadius: 16,
-            boxShadow:
-              "0 10px 30px rgba(0,0,0,0.08)",
-            maxWidth: 600,
-            width: "100%",
-            textAlign:
-              "center",
-          }}
-        >
+      <div className="assignment-public-page">
+        <div className="assignment-state-card">
+          <div className="assignment-state-icon assignment-error-icon">
+            !
+          </div>
+
           <h2>
             Lien indisponible
           </h2>
 
-          <p>{error}</p>
+          <p>
+            {error}
+          </p>
+
+          <div className="assignment-state-help">
+            Ce lien peut être
+            invalide, expiré ou ne
+            plus être disponible.
+          </div>
         </div>
       </div>
     );
@@ -296,334 +331,407 @@ export default function AssignmentResponse() {
   const status =
     assignment?.status;
 
+  const memberName =
+    `${member?.firstName || ""} ${
+      member?.lastName || ""
+    }`.trim() ||
+    "Membre";
+
+  const churchName =
+    church?.name ||
+    "ElDior Management Church";
+
+  const initials =
+    `${member?.firstName?.[0] || ""}${
+      member?.lastName?.[0] || ""
+    }`.toUpperCase() ||
+    "M";
+
   // ======================================================
-  // AFFICHAGE
+  // RENDER
   // ======================================================
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "#f5f7fb",
-        padding:
-          "40px 20px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 720,
-          margin: "0 auto",
-          background: "#fff",
-          borderRadius: 20,
-          padding: 32,
-          boxShadow:
-            "0 15px 40px rgba(0,0,0,0.08)",
-        }}
-      >
-        {/* ÉGLISE */}
+    <div className="assignment-public-page">
+      <div className="assignment-public-wrapper">
+        {/* ================================================
+            BRAND
+        ================================================ */}
 
-        <div
-          style={{
-            textAlign:
-              "center",
-            marginBottom: 30,
-          }}
-        >
-          <h1
-            style={{
-              marginBottom: 6,
-            }}
-          >
-            {church?.name ||
-              "ElDior Management Church"}
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#6b7280",
-            }}
-          >
-            Confirmation de
-            programmation
-          </p>
-        </div>
-
-        {/* MESSAGE */}
-
-        {message && (
-          <div
-            style={{
-              padding: 16,
-              borderRadius: 10,
-              marginBottom: 20,
-              background:
-                "#ecfdf5",
-              border:
-                "1px solid #a7f3d0",
-            }}
-          >
-            {message}
-          </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              padding: 16,
-              borderRadius: 10,
-              marginBottom: 20,
-              background:
-                "#fef2f2",
-              border:
-                "1px solid #fecaca",
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {/* MEMBRE */}
-
-        <div
-          style={{
-            marginBottom: 25,
-          }}
-        >
-          <p
-            style={{
-              fontSize: 18,
-              marginBottom: 5,
-            }}
-          >
-            Bonjour
-          </p>
-
-          <h2
-            style={{
-              marginTop: 0,
-            }}
-          >
-            {member?.firstName}{" "}
-            {member?.lastName}
-          </h2>
-        </div>
-
-        {/* INFORMATIONS */}
-
-        <div
-          style={{
-            display: "grid",
-            gap: 16,
-            marginBottom: 30,
-          }}
-        >
-          <div>
-            <strong>
-              Événement
-            </strong>
-
-            <div>
-              {event?.title ||
-                "Non renseigné"}
-            </div>
+        <header className="assignment-public-header">
+          <div className="assignment-church-logo">
+            {church?.logo ? (
+              <img
+                src={
+                  church.logo
+                }
+                alt={
+                  churchName
+                }
+              />
+            ) : (
+              <span>
+                {churchName
+                  .charAt(0)
+                  .toUpperCase()}
+              </span>
+            )}
           </div>
 
           <div>
-            <strong>
-              Date
-            </strong>
+            <div className="assignment-church-name">
+              {churchName}
+            </div>
 
-            <div>
-              {formatDate(
-                event?.date
-              )}
+            <div className="assignment-brand-subtitle">
+              Programmation
+              ministérielle
+            </div>
+          </div>
+        </header>
+
+        {/* ================================================
+            CARTE
+        ================================================ */}
+
+        <main className="assignment-response-card">
+          {/* TOP */}
+
+          <div className="assignment-response-top">
+            <div className="assignment-member-avatar">
+              {initials}
+            </div>
+
+            <div className="assignment-response-intro">
+              <span>
+                Bonjour
+              </span>
+
+              <h1>
+                {memberName}
+              </h1>
+
+              <p>
+                Vous avez été
+                programmé(e) pour
+                participer à
+                l'événement suivant.
+              </p>
             </div>
           </div>
 
-          <div>
-            <strong>
-              Lieu
-            </strong>
+          {/* ================================================
+              MESSAGES
+          ================================================ */}
 
-            <div>
-              {event?.location ||
-                "Non renseigné"}
-            </div>
-          </div>
-
-          <div>
-            <strong>
-              Département
-            </strong>
-
-            <div>
-              {department?.name ||
-                "Non renseigné"}
-            </div>
-          </div>
-
-          <div>
-            <strong>
-              Votre poste
-            </strong>
-
-            <div>
-              {assignment?.role ||
-                "Non renseigné"}
-            </div>
-          </div>
-
-          {assignment?.note && (
-            <div>
-              <strong>
-                Note
-              </strong>
+          {message && (
+            <div className="assignment-alert assignment-alert-success">
+              <div className="assignment-alert-icon">
+                ✓
+              </div>
 
               <div>
-                {
-                  assignment.note
-                }
+                <strong>
+                  Réponse enregistrée
+                </strong>
+
+                <p>
+                  {message}
+                </p>
               </div>
             </div>
           )}
-        </div>
 
-        {/* STATUT CONFIRMÉ */}
+          {error && (
+            <div className="assignment-alert assignment-alert-error">
+              <div className="assignment-alert-icon">
+                !
+              </div>
 
-        {status ===
-          "confirmed" && (
-          <div
-            style={{
-              padding: 18,
-              background:
-                "#ecfdf5",
-              border:
-                "1px solid #a7f3d0",
-              borderRadius: 12,
-              textAlign:
-                "center",
-            }}
-          >
-            <strong>
-              ✓ Participation
-              confirmée
-            </strong>
+              <div>
+                <strong>
+                  Une erreur est
+                  survenue
+                </strong>
 
-            <p
-              style={{
-                marginBottom: 0,
-              }}
-            >
-              Merci. Votre
-              présence a bien été
-              enregistrée.
-            </p>
+                <p>
+                  {error}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================
+              EVENT
+          ================================================ */}
+
+          <section className="assignment-event-card">
+            <div className="assignment-event-label">
+              VOTRE PROGRAMMATION
+            </div>
+
+            <h2>
+              {event?.title ||
+                "Événement"}
+            </h2>
+
+            <div className="assignment-information-grid">
+              <div className="assignment-information-item">
+                <div className="assignment-information-icon">
+                  📅
+                </div>
+
+                <div>
+                  <span>
+                    Date et heure
+                  </span>
+
+                  <strong>
+                    {formatDate(
+                      event?.date
+                    )}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="assignment-information-item">
+                <div className="assignment-information-icon">
+                  📍
+                </div>
+
+                <div>
+                  <span>
+                    Lieu
+                  </span>
+
+                  <strong>
+                    {event?.location ||
+                      "Non renseigné"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="assignment-information-item">
+                <div className="assignment-information-icon">
+                  👥
+                </div>
+
+                <div>
+                  <span>
+                    Département
+                  </span>
+
+                  <strong>
+                    {department?.name ||
+                      "Non renseigné"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="assignment-information-item">
+                <div className="assignment-information-icon">
+                  ⭐
+                </div>
+
+                <div>
+                  <span>
+                    Votre poste
+                  </span>
+
+                  <strong>
+                    {assignment?.role ||
+                      "Non renseigné"}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {assignment?.note && (
+              <div className="assignment-note">
+                <div className="assignment-note-title">
+                  Note du responsable
+                </div>
+
+                <p>
+                  {assignment.note}
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* ================================================
+              PENDING
+          ================================================ */}
+
+          {status ===
+            "pending" && (
+            <section className="assignment-response-section">
+              <div className="assignment-question">
+                <h3>
+                  Êtes-vous disponible ?
+                </h3>
+
+                <p>
+                  Merci de confirmer
+                  votre disponibilité
+                  afin d'aider les
+                  responsables à
+                  organiser le service.
+                </p>
+              </div>
+
+              <div className="assignment-actions">
+                <button
+                  type="button"
+                  className="assignment-confirm-button"
+                  disabled={
+                    submitting
+                  }
+                  onClick={() =>
+                    respond(
+                      "confirm"
+                    )
+                  }
+                >
+                  {submitting ? (
+                    <>
+                      <span className="assignment-button-loader" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        ✓
+                      </span>
+
+                      Je confirme ma
+                      présence
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="assignment-decline-button"
+                  disabled={
+                    submitting
+                  }
+                  onClick={() =>
+                    respond(
+                      "decline"
+                    )
+                  }
+                >
+                  Je ne suis pas
+                  disponible
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* ================================================
+              CONFIRMED
+          ================================================ */}
+
+          {status ===
+            "confirmed" && (
+            <section className="assignment-final-status assignment-confirmed-status">
+              <div className="assignment-final-icon">
+                ✓
+              </div>
+
+              <h2>
+                Participation confirmée
+              </h2>
+
+              <p>
+                Merci{" "}
+                <strong>
+                  {member?.firstName}
+                </strong>
+                . Votre présence a
+                bien été enregistrée.
+              </p>
+
+              <div className="assignment-final-message">
+                Nous comptons sur
+                vous pour cette
+                programmation.
+              </div>
+            </section>
+          )}
+
+          {/* ================================================
+              DECLINED
+          ================================================ */}
+
+          {status ===
+            "declined" && (
+            <section className="assignment-final-status assignment-declined-status">
+              <div className="assignment-final-icon">
+                ✓
+              </div>
+
+              <h2>
+                Indisponibilité
+                enregistrée
+              </h2>
+
+              <p>
+                Merci pour votre
+                réponse. Les
+                responsables ont
+                bien été informés de
+                votre indisponibilité.
+              </p>
+            </section>
+          )}
+
+          {/* ================================================
+              CANCELLED
+          ================================================ */}
+
+          {status ===
+            "cancelled" && (
+            <section className="assignment-final-status assignment-cancelled-status">
+              <div className="assignment-final-icon">
+                !
+              </div>
+
+              <h2>
+                Programmation annulée
+              </h2>
+
+              <p>
+                Cette programmation
+                n'est plus active.
+                Aucune réponse n'est
+                nécessaire.
+              </p>
+            </section>
+          )}
+        </main>
+
+        {/* ================================================
+            FOOTER
+        ================================================ */}
+
+        <footer className="assignment-public-footer">
+          <div>
+            {churchName}
           </div>
-        )}
 
-        {/* STATUT REFUSÉ */}
+          <p>
+            Gestion des
+            programmations avec
+            ElDior Management Church
+          </p>
 
-        {status ===
-          "declined" && (
-          <div
-            style={{
-              padding: 18,
-              background:
-                "#fff7ed",
-              border:
-                "1px solid #fed7aa",
-              borderRadius: 12,
-              textAlign:
-                "center",
-            }}
-          >
-            <strong>
-              Indisponibilité
-              enregistrée
-            </strong>
-
-            <p
-              style={{
-                marginBottom: 0,
-              }}
-            >
-              Votre réponse a bien
-              été prise en compte.
-            </p>
+          <div className="assignment-security">
+            🔒 Lien personnel et
+            sécurisé
           </div>
-        )}
-
-        {/* ACTIONS */}
-
-        {status ===
-          "pending" && (
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              flexWrap: "wrap",
-              marginTop: 25,
-            }}
-          >
-            <button
-              type="button"
-              disabled={
-                submitting
-              }
-              onClick={() =>
-                respond(
-                  "confirm"
-                )
-              }
-              style={{
-                flex: 1,
-                minWidth: 220,
-                padding:
-                  "14px 18px",
-                border: "none",
-                borderRadius: 10,
-                cursor:
-                  submitting
-                    ? "not-allowed"
-                    : "pointer",
-                fontWeight: 600,
-              }}
-            >
-              {submitting
-                ? "Enregistrement..."
-                : "Je confirme ma présence"}
-            </button>
-
-            <button
-              type="button"
-              disabled={
-                submitting
-              }
-              onClick={() =>
-                respond(
-                  "decline"
-                )
-              }
-              style={{
-                flex: 1,
-                minWidth: 220,
-                padding:
-                  "14px 18px",
-                borderRadius: 10,
-                cursor:
-                  submitting
-                    ? "not-allowed"
-                    : "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Je ne suis pas
-              disponible
-            </button>
-          </div>
-        )}
+        </footer>
       </div>
     </div>
   );

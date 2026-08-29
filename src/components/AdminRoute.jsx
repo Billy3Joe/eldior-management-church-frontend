@@ -1,62 +1,74 @@
-import {
-  Navigate,
-} from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-import {
-  getCurrentAdmin,
-} from "../utils/auth";
-
-export default function AdminRoute({
-  children,
-}) {
+const AdminRoute = ({ children }) => {
   const token =
-    localStorage.getItem(
-      "token"
-    );
+    localStorage.getItem("token");
 
-  const admin =
-    getCurrentAdmin();
+  const storedUser =
+    localStorage.getItem("admin");
 
   // Pas connecté
-  if (!token) {
+  if (!token || !storedUser) {
     return (
       <Navigate
-        to="/"
+        to="/login"
         replace
       />
     );
   }
 
-  // Données utilisateur inexistantes
-  if (!admin) {
-    localStorage.removeItem(
-      "token"
+  let user = null;
+
+  try {
+    user = JSON.parse(storedUser);
+  } catch (error) {
+    console.error(
+      "Erreur lecture utilisateur localStorage :",
+      error
     );
 
-    localStorage.removeItem(
-      "admin"
-    );
+    localStorage.removeItem("token");
+    localStorage.removeItem("admin");
 
     return (
       <Navigate
-        to="/"
+        to="/login"
         replace
       />
     );
   }
 
-  // Connecté mais pas admin
+  // ===============================================
+  // SUPER ADMIN PLATEFORME
+  // ===============================================
+
   if (
-    admin.role !==
-    "admin"
+    user?.platformRole ===
+    "superadmin"
   ) {
-    return (
-      <Navigate
-        to="/dashboard"
-        replace
-      />
-    );
+    return children;
   }
 
-  return children;
-}
+  // ===============================================
+  // ADMIN D'UNE ÉGLISE
+  // ===============================================
+
+  if (
+    user?.role === "admin"
+  ) {
+    return children;
+  }
+
+  // ===============================================
+  // AUTRES UTILISATEURS
+  // ===============================================
+
+  return (
+    <Navigate
+      to="/dashboard"
+      replace
+    />
+  );
+};
+
+export default AdminRoute;

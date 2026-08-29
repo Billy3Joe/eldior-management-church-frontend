@@ -1,7 +1,10 @@
-import { useState } from "react";
 import {
-  Link,
-  useLocation,
+  useState,
+} from "react";
+
+import {
+  NavLink,
+  Outlet,
   useNavigate,
 } from "react-router-dom";
 
@@ -10,468 +13,856 @@ import {
   isAdmin,
 } from "../utils/auth";
 
-export default function Layout({ children }) {
-  const location = useLocation();
-  const navigate = useNavigate();
+import "./Layout.css";
 
-  const [mobileMenuOpen, setMobileMenuOpen] =
-    useState(false);
+export default function Layout({
+  children,
+}) {
+  const navigate =
+    useNavigate();
 
-  const admin = getCurrentAdmin();
+  const admin =
+    getCurrentAdmin();
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("admin");
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] = useState(false);
 
-    navigate("/");
-  };
+  // ======================================================
+  // SUPER ADMIN
+  // ======================================================
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
+  const isSuperAdmin =
+    admin?.platformRole ===
+    "superadmin";
 
-  const closeMobileMenu = () => {
-    setMobileMenuOpen(false);
-  };
+  // ======================================================
+  // ÉGLISE CONNECTÉE
+  // ======================================================
 
-  return (
-    <div className="app-shell premium-shell">
-      {/* ========================================= */}
-      {/* SIDEBAR DESKTOP */}
-      {/* ========================================= */}
+  const church =
+    admin?.church || null;
 
-      <aside className="sidebar premium-sidebar desktop-sidebar">
-        <div>
-          <div className="brand premium-brand">
-            <div className="brand-badge">
-              EMC
+  const churchName =
+    church?.name ||
+    "Mon église";
+
+  const churchCity =
+    church?.city ||
+    "";
+
+  const churchCountry =
+    church?.country ||
+    "";
+
+  const churchPlan =
+    String(
+      church?.plan ||
+        "free"
+    ).toUpperCase();
+
+  // ======================================================
+  // INITIALE ÉGLISE
+  // ======================================================
+
+  const getChurchInitial =
+    () => {
+      if (
+        !churchName
+      ) {
+        return "E";
+      }
+
+      return churchName
+        .trim()
+        .charAt(0)
+        .toUpperCase();
+    };
+
+  // ======================================================
+  // LOCALISATION
+  // ======================================================
+
+  const churchLocation =
+    [
+      churchCity,
+      churchCountry,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
+  // ======================================================
+  // DÉCONNEXION
+  // ======================================================
+
+  const handleLogout =
+    () => {
+      localStorage.removeItem(
+        "token"
+      );
+
+      localStorage.removeItem(
+        "admin"
+      );
+
+      navigate(
+        "/login",
+        {
+          replace: true,
+        }
+      );
+    };
+
+  // ======================================================
+  // PLATEFORME ELDIOR
+  // ======================================================
+
+  const platformLinks = [
+    {
+      to: "/platform",
+      label:
+        "Vue plateforme",
+      icon: "🛡️",
+    },
+
+    {
+      to:
+        "/platform/churches",
+      label:
+        "Églises clientes",
+      icon: "⛪",
+    },
+  ];
+
+  // ======================================================
+  // GESTION ÉGLISE
+  // ======================================================
+
+  const mainLinks = [
+    {
+      to: "/dashboard",
+      label:
+        "Tableau de bord",
+      icon: "🏠",
+    },
+
+    {
+      to: "/members",
+      label:
+        "Membres",
+      icon: "👥",
+    },
+
+    {
+      to: "/departments",
+      label:
+        "Départements",
+      icon: "🏢",
+    },
+
+    {
+      to: "/events",
+      label:
+        "Événements",
+      icon: "🗓️",
+    },
+
+    {
+      to: "/attendance",
+      label:
+        "Présences",
+      icon: "✅",
+    },
+
+    {
+      to: "/assignments",
+      label:
+        "Programmations",
+      icon: "📋",
+    },
+
+    {
+      to: "/reports",
+      label:
+        "Rapports",
+      icon: "📊",
+    },
+
+    {
+      to: "/settings",
+      label:
+        "Paramètres",
+      icon: "⚙️",
+    },
+
+    {
+      to: "/subscription",
+      label:
+        "Mon abonnement",
+      icon: "💳",
+    },
+  ];
+
+  // ======================================================
+  // ADMINISTRATION
+  // ======================================================
+
+  const adminLinks = [
+    {
+      to: "/users",
+      label:
+        "Utilisateurs",
+      icon: "👤",
+    },
+
+    {
+      to: "/activity-logs",
+      label:
+        "Journal activité",
+      icon: "📌",
+    },
+  ];
+
+  // ======================================================
+  // RÔLE
+  // ======================================================
+
+  const getRoleLabel =
+    () => {
+      if (
+        isSuperAdmin
+      ) {
+        return (
+          "Super Administrateur"
+        );
+      }
+
+      if (
+        admin?.role ===
+        "admin"
+      ) {
+        return (
+          "Administrateur"
+        );
+      }
+
+      if (
+        admin?.role ===
+        "manager"
+      ) {
+        return "Manager";
+      }
+
+      if (
+        admin?.role ===
+        "member"
+      ) {
+        return "Membre";
+      }
+
+      return "Utilisateur";
+    };
+
+  // ======================================================
+  // STYLE DU PLAN
+  // ======================================================
+
+  const getPlanStyle =
+    () => {
+      switch (
+        String(
+          church?.plan ||
+            "free"
+        ).toLowerCase()
+      ) {
+        case "premium":
+          return {
+            background:
+              "rgba(168, 85, 247, 0.16)",
+
+            color:
+              "#c4b5fd",
+
+            border:
+              "1px solid rgba(196, 181, 253, 0.18)",
+          };
+
+        case "standard":
+          return {
+            background:
+              "rgba(59, 130, 246, 0.16)",
+
+            color:
+              "#93c5fd",
+
+            border:
+              "1px solid rgba(147, 197, 253, 0.18)",
+          };
+
+        default:
+          return {
+            background:
+              "rgba(34, 197, 94, 0.15)",
+
+            color:
+              "#86efac",
+
+            border:
+              "1px solid rgba(134, 239, 172, 0.16)",
+          };
+      }
+    };
+
+  // ======================================================
+  // LIEN SIDEBAR
+  // ======================================================
+
+  const renderLink = (
+    item,
+    closeMobile = false
+  ) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={
+        item.to ===
+        "/platform"
+      }
+      onClick={() => {
+        if (
+          closeMobile
+        ) {
+          setMobileOpen(
+            false
+          );
+        }
+      }}
+      className={({
+        isActive,
+      }) =>
+        `sidebar-link ${
+          isActive
+            ? "active"
+            : ""
+        }`
+      }
+    >
+      <span className="sidebar-link-icon">
+        {item.icon}
+      </span>
+
+      <span className="sidebar-link-label">
+        {item.label}
+      </span>
+    </NavLink>
+  );
+
+  // ======================================================
+  // CARTE ÉGLISE
+  // ======================================================
+
+  const renderChurchCard =
+    () => {
+      if (!church) {
+        return null;
+      }
+
+      return (
+        <div
+          style={{
+            margin:
+              "18px 0 16px",
+
+            padding:
+              "16px",
+
+            borderRadius:
+              "16px",
+
+            background:
+              "linear-gradient(135deg, rgba(91, 72, 238, 0.20), rgba(37, 99, 235, 0.08))",
+
+            border:
+              "1px solid rgba(139, 126, 255, 0.20)",
+
+            boxShadow:
+              "0 10px 25px rgba(0,0,0,0.08)",
+          }}
+        >
+          {/* LABEL */}
+
+          <div
+            style={{
+              marginBottom:
+                "11px",
+
+              color:
+                "#8b93a7",
+
+              fontSize:
+                "9px",
+
+              fontWeight:
+                900,
+
+              textTransform:
+                "uppercase",
+
+              letterSpacing:
+                "1px",
+            }}
+          >
+            {isSuperAdmin
+              ? "Église active"
+              : "Votre église"}
+          </div>
+
+          {/* IDENTITÉ */}
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "center",
+
+              gap:
+                "11px",
+            }}
+          >
+            {/* LOGO / INITIALE */}
+
+            <div
+              style={{
+                width:
+                  "42px",
+
+                minWidth:
+                  "42px",
+
+                height:
+                  "42px",
+
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                borderRadius:
+                  "12px",
+
+                background:
+                  "linear-gradient(135deg, #6d4aff, #4938d7)",
+
+                color:
+                  "#ffffff",
+
+                fontSize:
+                  "17px",
+
+                fontWeight:
+                  900,
+
+                boxShadow:
+                  "0 7px 17px rgba(92, 70, 235, 0.30)",
+              }}
+            >
+              {getChurchInitial()}
             </div>
 
-            <div>
-              <h2>ElDior</h2>
+            {/* INFORMATIONS */}
 
-              <span>
-                Management Church
-              </span>
+            <div
+              style={{
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              <div
+                style={{
+                  color:
+                    "#ffffff",
+
+                  fontSize:
+                    "13px",
+
+                  fontWeight:
+                    900,
+
+                  lineHeight:
+                    1.3,
+
+                  overflow:
+                    "hidden",
+
+                  textOverflow:
+                    "ellipsis",
+                }}
+                title={
+                  churchName
+                }
+              >
+                {churchName}
+              </div>
+
+              {churchLocation && (
+                <div
+                  style={{
+                    marginTop:
+                      "3px",
+
+                    color:
+                      "#9ca8c2",
+
+                    fontSize:
+                      "9px",
+
+                    fontWeight:
+                      600,
+                  }}
+                >
+                  {
+                    churchLocation
+                  }
+                </div>
+              )}
             </div>
           </div>
 
-          <nav className="menu premium-menu">
-            <Link
-              className={
-                isActive("/dashboard")
-                  ? "active"
-                  : ""
-              }
-              to="/dashboard"
+          {/* FOOTER CARTE */}
+
+          <div
+            style={{
+              marginTop:
+                "12px",
+
+              paddingTop:
+                "11px",
+
+              borderTop:
+                "1px solid rgba(255,255,255,0.08)",
+
+              display:
+                "flex",
+
+              justifyContent:
+                "space-between",
+
+              alignItems:
+                "center",
+
+              gap:
+                "8px",
+            }}
+          >
+            <span
+              style={{
+                fontSize:
+                  "9px",
+
+                color:
+                  "#8993aa",
+
+                fontWeight:
+                  700,
+              }}
             >
-              Dashboard
-            </Link>
+              Abonnement
+            </span>
 
-            <Link
-              className={
-                isActive("/members")
-                  ? "active"
-                  : ""
-              }
-              to="/members"
+            <span
+              style={{
+                ...getPlanStyle(),
+
+                padding:
+                  "4px 8px",
+
+                borderRadius:
+                  "999px",
+
+                fontSize:
+                  "8px",
+
+                fontWeight:
+                  900,
+
+                letterSpacing:
+                  "0.5px",
+              }}
             >
-              Membres
-            </Link>
+              {churchPlan}
+            </span>
+          </div>
+        </div>
+      );
+    };
 
-            <Link
-              className={
-                isActive("/departments")
-                  ? "active"
-                  : ""
-              }
-              to="/departments"
-            >
-              Départements
-            </Link>
+  // ======================================================
+  // CONTENU SIDEBAR
+  // ======================================================
 
-            <Link
-              className={
-                isActive("/events")
-                  ? "active"
-                  : ""
-              }
-              to="/events"
-            >
-              Événements
-            </Link>
+  const renderSidebarContent = (
+    mobile = false
+  ) => (
+    <>
+      {/* ==================================================
+          MARQUE ELDIOR
+      ================================================== */}
 
-            <Link
-              className={
-                isActive("/attendance")
-                  ? "active"
-                  : ""
-              }
-              to="/attendance"
-            >
-              Présences
-            </Link>
-
-            <Link
-              className={
-                isActive("/assignments")
-                  ? "active"
-                  : ""
-              }
-              to="/assignments"
-            >
-              Programmations
-            </Link>
-
-            <Link
-              className={
-                isActive("/reports")
-                  ? "active"
-                  : ""
-              }
-              to="/reports"
-            >
-              Rapports
-            </Link>
-
-            <Link
-              className={
-                isActive("/settings")
-                  ? "active"
-                  : ""
-              }
-              to="/settings"
-            >
-              Paramètres
-            </Link>
-
-            {/* ===================================== */}
-            {/* ADMIN UNIQUEMENT */}
-            {/* ===================================== */}
-
-            {isAdmin() && (
-              <>
-                <Link
-                  className={
-                    isActive("/admin-users")
-                      ? "active"
-                      : ""
-                  }
-                  to="/admin-users"
-                >
-                  Admin Users
-                </Link>
-
-                <Link
-                  className={
-                    isActive("/activity-logs")
-                      ? "active"
-                      : ""
-                  }
-                  to="/activity-logs"
-                >
-                  Journal activité
-                </Link>
-              </>
-            )}
-          </nav>
+      <div className="sidebar-brand">
+        <div className="sidebar-logo">
+          E
         </div>
 
-        {/* ========================================= */}
-        {/* UTILISATEUR DESKTOP */}
-        {/* ========================================= */}
-
-        <div className="sidebar-footer premium-sidebar-footer">
-          <div className="user-chip">
-            <div className="avatar-circle">
-              {(admin?.name || "A")
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <div>
-              <p>
-                {admin?.name ||
-                  "Administrateur"}
-              </p>
-
-              <small>
-                {admin?.email ||
-                  "admin"}
-              </small>
-
-              <small
-                style={{
-                  display: "block",
-                  marginTop: 2,
-                }}
-              >
-                {admin?.role === "admin"
-                  ? "Administrateur"
-                  : "Manager"}
-              </small>
-            </div>
+        <div>
+          <div className="sidebar-title">
+            ElDior
           </div>
+
+          <div className="sidebar-subtitle">
+            Management Church
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          ÉGLISE
+      ================================================== */}
+
+      {renderChurchCard()}
+
+      {/* ==================================================
+          UTILISATEUR
+      ================================================== */}
+
+      <div className="sidebar-user">
+        <div className="sidebar-user-name">
+          {admin?.name ||
+            "Utilisateur"}
+        </div>
+
+        <div className="sidebar-user-role">
+          {getRoleLabel()}
+        </div>
+
+        {isSuperAdmin && (
+          <div
+            style={{
+              marginTop:
+                "5px",
+
+              color:
+                "#8b7cff",
+
+              fontSize:
+                "9px",
+
+              fontWeight:
+                900,
+
+              textTransform:
+                "uppercase",
+
+              letterSpacing:
+                "0.8px",
+            }}
+          >
+            Propriétaire ElDior
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          NAVIGATION
+      ================================================== */}
+
+      <nav className="sidebar-nav">
+
+        {/* PLATEFORME */}
+
+        {isSuperAdmin && (
+          <>
+            <div className="sidebar-section-title">
+              Plateforme ElDior
+            </div>
+
+            {platformLinks.map(
+              (item) =>
+                renderLink(
+                  item,
+                  mobile
+                )
+            )}
+
+            <div className="sidebar-section-title">
+              Gestion église
+            </div>
+          </>
+        )}
+
+        {/* ÉGLISE */}
+
+        {!isSuperAdmin && (
+          <div className="sidebar-section-title">
+            Gestion de l'église
+          </div>
+        )}
+
+        {mainLinks.map(
+          (item) =>
+            renderLink(
+              item,
+              mobile
+            )
+        )}
+
+        {/* ADMINISTRATION */}
+
+        {isAdmin() && (
+          <>
+            <div className="sidebar-section-title">
+              Administration
+            </div>
+
+            {adminLinks.map(
+              (item) =>
+                renderLink(
+                  item,
+                  mobile
+                )
+            )}
+          </>
+        )}
+      </nav>
+
+      {/* ==================================================
+          FOOTER
+      ================================================== */}
+
+      <div className="sidebar-footer">
+        <button
+          type="button"
+          className="logout-button"
+          onClick={
+            handleLogout
+          }
+        >
+          🚪 Déconnexion
+        </button>
+      </div>
+    </>
+  );
+
+  // ======================================================
+  // PAGE
+  // ======================================================
+
+  return (
+    <div className="app-layout">
+
+      {/* DESKTOP */}
+
+      <aside className="sidebar desktop-sidebar">
+        {renderSidebarContent(
+          false
+        )}
+      </aside>
+
+      {/* CONTENT */}
+
+      <div className="main-wrapper">
+
+        {/* MOBILE HEADER */}
+
+        <header className="mobile-header">
 
           <button
             type="button"
-            onClick={logout}
+            className="mobile-menu-button"
+            onClick={() =>
+              setMobileOpen(
+                true
+              )
+            }
           >
-            Déconnexion
+            ☰
           </button>
-        </div>
-      </aside>
 
-      {/* ========================================= */}
-      {/* OVERLAY MOBILE */}
-      {/* ========================================= */}
+          <div>
+            <div className="mobile-brand">
+              {church?.name ||
+                "ElDior Management Church"}
+            </div>
+          </div>
 
-      <div
-        className={`mobile-drawer-overlay ${
-          mobileMenuOpen
-            ? "open"
-            : ""
-        }`}
-        onClick={closeMobileMenu}
-      />
+          <div className="mobile-user">
+            {admin?.name ||
+              ""}
+          </div>
 
-      {/* ========================================= */}
-      {/* MENU MOBILE */}
-      {/* ========================================= */}
+        </header>
+
+        {/* PAGE */}
+
+        <main className="main-content">
+          {children ||
+            <Outlet />}
+        </main>
+
+      </div>
+
+      {/* OVERLAY */}
+
+      {mobileOpen && (
+        <div
+          className="mobile-overlay"
+          onClick={() =>
+            setMobileOpen(
+              false
+            )
+          }
+        />
+      )}
+
+      {/* MOBILE SIDEBAR */}
 
       <aside
-        className={`mobile-drawer ${
-          mobileMenuOpen
+        className={`mobile-sidebar ${
+          mobileOpen
             ? "open"
             : ""
         }`}
       >
-        <div>
-          <div className="brand premium-brand">
-            <div className="brand-badge">
-              EMC
-            </div>
+        <div className="mobile-sidebar-header">
 
-            <div>
-              <h2>ElDior</h2>
-
-              <span>
-                Management Church
-              </span>
-            </div>
-          </div>
-
-          <nav className="menu premium-menu">
-            <Link
-              className={
-                isActive("/dashboard")
-                  ? "active"
-                  : ""
-              }
-              to="/dashboard"
-              onClick={closeMobileMenu}
-            >
-              Dashboard
-            </Link>
-
-            <Link
-              className={
-                isActive("/members")
-                  ? "active"
-                  : ""
-              }
-              to="/members"
-              onClick={closeMobileMenu}
-            >
-              Membres
-            </Link>
-
-            <Link
-              className={
-                isActive("/departments")
-                  ? "active"
-                  : ""
-              }
-              to="/departments"
-              onClick={closeMobileMenu}
-            >
-              Départements
-            </Link>
-
-            <Link
-              className={
-                isActive("/events")
-                  ? "active"
-                  : ""
-              }
-              to="/events"
-              onClick={closeMobileMenu}
-            >
-              Événements
-            </Link>
-
-            <Link
-              className={
-                isActive("/attendance")
-                  ? "active"
-                  : ""
-              }
-              to="/attendance"
-              onClick={closeMobileMenu}
-            >
-              Présences
-            </Link>
-
-            <Link
-              className={
-                isActive("/assignments")
-                  ? "active"
-                  : ""
-              }
-              to="/assignments"
-              onClick={closeMobileMenu}
-            >
-              Programmations
-            </Link>
-
-            <Link
-              className={
-                isActive("/reports")
-                  ? "active"
-                  : ""
-              }
-              to="/reports"
-              onClick={closeMobileMenu}
-            >
-              Rapports
-            </Link>
-
-            <Link
-              className={
-                isActive("/settings")
-                  ? "active"
-                  : ""
-              }
-              to="/settings"
-              onClick={closeMobileMenu}
-            >
-              Paramètres
-            </Link>
-
-            {/* ADMIN UNIQUEMENT */}
-
-            {isAdmin() && (
-              <>
-                <Link
-                  className={
-                    isActive("/admin-users")
-                      ? "active"
-                      : ""
-                  }
-                  to="/admin-users"
-                  onClick={closeMobileMenu}
-                >
-                  Admin Users
-                </Link>
-
-                <Link
-                  className={
-                    isActive("/activity-logs")
-                      ? "active"
-                      : ""
-                  }
-                  to="/activity-logs"
-                  onClick={closeMobileMenu}
-                >
-                  Journal activité
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
-
-        {/* ========================================= */}
-        {/* UTILISATEUR MOBILE */}
-        {/* ========================================= */}
-
-        <div className="sidebar-footer premium-sidebar-footer">
-          <div className="user-chip">
-            <div className="avatar-circle">
-              {(admin?.name || "A")
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <div>
-              <p>
-                {admin?.name ||
-                  "Administrateur"}
-              </p>
-
-              <small>
-                {admin?.email ||
-                  "admin"}
-              </small>
-
-              <small
-                style={{
-                  display: "block",
-                  marginTop: 2,
-                }}
-              >
-                {admin?.role === "admin"
-                  ? "Administrateur"
-                  : "Manager"}
-              </small>
-            </div>
-          </div>
+          <strong>
+            Menu
+          </strong>
 
           <button
             type="button"
-            onClick={() => {
-              closeMobileMenu();
-              logout();
-            }}
+            onClick={() =>
+              setMobileOpen(
+                false
+              )
+            }
           >
-            Déconnexion
+            ✕
           </button>
+
         </div>
+
+        {renderSidebarContent(
+          true
+        )}
       </aside>
 
-      {/* ========================================= */}
-      {/* CONTENU PRINCIPAL */}
-      {/* ========================================= */}
-
-      <main className="main-content premium-main">
-        <header className="top-header premium-top-header">
-          <div className="mobile-topbar">
-            <button
-              type="button"
-              className="mobile-menu-btn"
-              onClick={() => {
-                setMobileMenuOpen(true);
-              }}
-            >
-              ☰
-            </button>
-
-            <div>
-              <h1>
-                Administration
-              </h1>
-
-              <p>
-                Plateforme de gestion
-                d’église
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <div className="page-content">
-          {children}
-        </div>
-      </main>
     </div>
   );
 }

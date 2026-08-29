@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { toast } from "react-toastify";
 
 import Layout from "../components/Layout";
+import "../styles/ManagementPages.css";
+
 import API from "../api/axios";
 import { getCurrentAdmin } from "../utils/auth";
 
@@ -14,24 +21,16 @@ const initialForm = {
 };
 
 export default function Events() {
-  const currentUser =
-    getCurrentAdmin();
+  const currentUser = getCurrentAdmin();
+  const isAdmin = currentUser?.role === "admin";
 
-  const isAdmin =
-    currentUser?.role ===
-    "admin";
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [events, setEvents] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [saving, setSaving] =
-    useState(false);
-
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("all");
 
   const [form, setForm] =
     useState(initialForm);
@@ -50,15 +49,14 @@ export default function Events() {
     try {
       setLoading(true);
 
-      const response =
-        await API.get(
-          "/events",
-          {
-            params: {
-              limit: 1000,
-            },
-          }
-        );
+      const response = await API.get(
+        "/events",
+        {
+          params: {
+            limit: 1000,
+          },
+        }
+      );
 
       const data =
         response.data?.data ||
@@ -66,9 +64,7 @@ export default function Events() {
         [];
 
       setEvents(
-        Array.isArray(data)
-          ? data
-          : []
+        Array.isArray(data) ? data : []
       );
     } catch (error) {
       console.error(
@@ -90,45 +86,83 @@ export default function Events() {
   }, []);
 
   // ======================================================
-  // RECHERCHE
+  // STATISTIQUES
   // ======================================================
 
-  const filteredEvents =
-    useMemo(() => {
-      const value = search
-        .trim()
-        .toLowerCase();
+  const stats = useMemo(() => {
+    const total = events.length;
 
-      if (!value) {
-        return events;
+    const planned = events.filter(
+      (event) =>
+        event.status === "planned"
+    ).length;
+
+    const ongoing = events.filter(
+      (event) =>
+        event.status === "ongoing"
+    ).length;
+
+    const completed = events.filter(
+      (event) =>
+        event.status === "completed"
+    ).length;
+
+    const cancelled = events.filter(
+      (event) =>
+        event.status === "cancelled"
+    ).length;
+
+    return {
+      total,
+      planned,
+      ongoing,
+      completed,
+      cancelled,
+    };
+  }, [events]);
+
+  // ======================================================
+  // RECHERCHE + FILTRE
+  // ======================================================
+
+  const filteredEvents = useMemo(() => {
+    const value = search
+      .trim()
+      .toLowerCase();
+
+    return events.filter((event) => {
+      const matchesStatus =
+        statusFilter === "all" ||
+        event.status === statusFilter;
+
+      if (!matchesStatus) {
+        return false;
       }
 
-      return events.filter(
-        (event) =>
-          [
-            event.title,
-            event.type,
-            event.location,
-            event.status,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(value)
-      );
-    }, [events, search]);
+      if (!value) {
+        return true;
+      }
+
+      const searchableText = [
+        event.title,
+        event.type,
+        event.location,
+        event.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(value);
+    });
+  }, [events, search, statusFilter]);
 
   // ======================================================
-  // FORM
+  // FORMULAIRE
   // ======================================================
 
-  const handleChange = (
-    event
-  ) => {
-    const {
-      name,
-      value,
-    } = event.target;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
     setForm((previous) => ({
       ...previous,
@@ -148,20 +182,19 @@ export default function Events() {
     setShowForm(true);
   };
 
-  const formatDateForInput = (
-    date
-  ) => {
+  // ======================================================
+  // DATE POUR INPUT
+  // ======================================================
+
+  const formatDateForInput = (date) => {
     if (!date) {
       return "";
     }
 
-    const parsed =
-      new Date(date);
+    const parsed = new Date(date);
 
     if (
-      Number.isNaN(
-        parsed.getTime()
-      )
+      Number.isNaN(parsed.getTime())
     ) {
       return "";
     }
@@ -169,54 +202,40 @@ export default function Events() {
     const offset =
       parsed.getTimezoneOffset();
 
-    const localDate =
-      new Date(
-        parsed.getTime() -
-          offset * 60000
-      );
+    const localDate = new Date(
+      parsed.getTime() -
+        offset * 60000
+    );
 
     return localDate
       .toISOString()
       .slice(0, 16);
   };
 
-  const openEditForm = (
-    event
-  ) => {
-    setEditingId(
-      event._id
-    );
+  const openEditForm = (event) => {
+    setEditingId(event._id);
 
     setForm({
-      title:
-        event.title || "",
+      title: event.title || "",
 
-      date:
-        formatDateForInput(
-          event.date
-        ),
+      date: formatDateForInput(
+        event.date
+      ),
 
-      type:
-        event.type || "",
+      type: event.type || "",
 
       location:
         event.location || "",
 
       status:
-        event.status ||
-        "planned",
+        event.status || "planned",
     });
 
     setShowForm(true);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
   };
 
   // ======================================================
-  // CREATE / UPDATE
+  // CRÉER / MODIFIER
   // ======================================================
 
   const handleSubmit = async (
@@ -224,9 +243,7 @@ export default function Events() {
   ) => {
     event.preventDefault();
 
-    if (
-      !form.title.trim()
-    ) {
+    if (!form.title.trim()) {
       toast.warning(
         "Le titre est obligatoire"
       );
@@ -246,22 +263,18 @@ export default function Events() {
       setSaving(true);
 
       const payload = {
-        title:
-          form.title.trim(),
+        title: form.title.trim(),
 
-        date:
-          new Date(
-            form.date
-          ).toISOString(),
+        date: new Date(
+          form.date
+        ).toISOString(),
 
-        type:
-          form.type.trim(),
+        type: form.type.trim(),
 
         location:
           form.location.trim(),
 
-        status:
-          form.status,
+        status: form.status,
       };
 
       if (editingId) {
@@ -271,7 +284,7 @@ export default function Events() {
         );
 
         toast.success(
-          "Événement modifié"
+          "Événement modifié avec succès"
         );
       } else {
         await API.post(
@@ -280,7 +293,7 @@ export default function Events() {
         );
 
         toast.success(
-          "Événement créé"
+          "Événement créé avec succès"
         );
       }
 
@@ -303,12 +316,10 @@ export default function Events() {
   };
 
   // ======================================================
-  // DELETE ADMIN
+  // SUPPRESSION
   // ======================================================
 
-  const handleDelete = async (
-    id
-  ) => {
+  const handleDelete = async (id) => {
     if (!isAdmin) {
       toast.error(
         "Seul un administrateur peut supprimer un événement"
@@ -317,11 +328,12 @@ export default function Events() {
       return;
     }
 
-    if (
-      !window.confirm(
+    const confirmed =
+      window.confirm(
         "Voulez-vous vraiment supprimer cet événement ?"
-      )
-    ) {
+      );
+
+    if (!confirmed) {
       return;
     }
 
@@ -331,7 +343,7 @@ export default function Events() {
       );
 
       toast.success(
-        "Événement supprimé"
+        "Événement supprimé avec succès"
       );
 
       await fetchEvents();
@@ -352,20 +364,15 @@ export default function Events() {
   // DATE AFFICHAGE
   // ======================================================
 
-  const formatDate = (
-    value
-  ) => {
+  const formatDate = (value) => {
     if (!value) {
       return "—";
     }
 
-    const date =
-      new Date(value);
+    const date = new Date(value);
 
     if (
-      Number.isNaN(
-        date.getTime()
-      )
+      Number.isNaN(date.getTime())
     ) {
       return value;
     }
@@ -374,7 +381,7 @@ export default function Events() {
       "fr-FR",
       {
         day: "2-digit",
-        month: "2-digit",
+        month: "short",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
@@ -382,94 +389,192 @@ export default function Events() {
     ).format(date);
   };
 
+  // ======================================================
+  // LIBELLÉ STATUT
+  // ======================================================
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "planned":
+        return "Planifié";
+
+      case "ongoing":
+        return "En cours";
+
+      case "completed":
+        return "Terminé";
+
+      case "cancelled":
+        return "Annulé";
+
+      default:
+        return status || "—";
+    }
+  };
+
+  // ======================================================
+  // CLASSE STATUT
+  // ======================================================
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "planned":
+        return "status-planned";
+
+      case "ongoing":
+        return "status-pending";
+
+      case "completed":
+        return "status-completed";
+
+      case "cancelled":
+        return "status-cancelled";
+
+      default:
+        return "status-pending";
+    }
+  };
+
+  // ======================================================
+  // AFFICHAGE
+  // ======================================================
+
   return (
     <Layout>
-      <div className="section-header">
-        <div>
-          <h2>Événements</h2>
+      <div className="management-page">
+        {/* ================================================
+            HEADER
+        ================================================ */}
 
-          <p className="page-subtitle">
-            Gérez le calendrier des
-            événements de votre
-            église.
-          </p>
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              Événements
+            </h1>
+
+            <p className="page-subtitle">
+              Planifiez et gérez le
+              calendrier des événements
+              de votre église.
+            </p>
+          </div>
+
+          <div className="page-header-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openCreateForm}
+            >
+              + Nouvel événement
+            </button>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateForm}
-        >
-          + Nouvel événement
-        </button>
-      </div>
+        {/* ================================================
+            STATISTIQUES
+        ================================================ */}
 
-      {showForm && (
-        <div className="card section-gap">
-          <h3>
-            {editingId
-              ? "Modifier l'événement"
-              : "Nouvel événement"}
-          </h3>
+        <div className="management-stats-grid">
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Total événements
+            </div>
 
-          <form
-            onSubmit={
-              handleSubmit
-            }
-          >
-            <div className="form-group">
-              <label>Titre</label>
+            <div className="management-stat-value">
+              {stats.total}
+            </div>
+
+            <div className="management-stat-description">
+              Tous les événements
+              enregistrés
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              À venir
+            </div>
+
+            <div className="management-stat-value">
+              {stats.planned}
+            </div>
+
+            <div className="management-stat-description">
+              Événements planifiés
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              En cours
+            </div>
+
+            <div className="management-stat-value">
+              {stats.ongoing}
+            </div>
+
+            <div className="management-stat-description">
+              Événements actuellement
+              en cours
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Terminés
+            </div>
+
+            <div className="management-stat-value">
+              {stats.completed}
+            </div>
+
+            <div className="management-stat-description">
+              Événements déjà terminés
+            </div>
+          </div>
+        </div>
+
+        {/* ================================================
+            TABLEAU
+        ================================================ */}
+
+        <div className="management-card">
+          {/* RECHERCHE */}
+
+          <div className="management-toolbar">
+            <div className="management-search">
+              <span className="management-search-icon">
+                🔎
+              </span>
 
               <input
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                required
+                type="search"
+                placeholder="Rechercher un événement..."
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
               />
             </div>
 
-            <div className="form-group">
-              <label>Date</label>
-
-              <input
-                type="datetime-local"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Type</label>
-
-              <input
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                placeholder="Culte, conférence, réunion..."
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Lieu</label>
-
-              <input
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Statut</label>
-
+            <div className="management-filters">
               <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
+                className="management-select"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value
+                  )
+                }
               >
+                <option value="all">
+                  Tous les statuts
+                </option>
+
                 <option value="planned">
-                  Planifié
+                  Planifiés
                 </option>
 
                 <option value="ongoing">
@@ -477,160 +582,373 @@ export default function Events() {
                 </option>
 
                 <option value="completed">
-                  Terminé
+                  Terminés
                 </option>
 
                 <option value="cancelled">
-                  Annulé
+                  Annulés
                 </option>
               </select>
             </div>
+          </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                marginTop: 20,
-              }}
-            >
-              <button
-                type="submit"
-                disabled={saving}
-              >
-                {saving
-                  ? "Enregistrement..."
-                  : editingId
-                  ? "Enregistrer"
-                  : "Créer l'événement"}
-              </button>
+          {/* CHARGEMENT */}
 
-              <button
-                type="button"
-                onClick={resetForm}
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="card section-gap">
-        <input
-          type="search"
-          placeholder="Rechercher un événement..."
-          value={search}
-          onChange={(event) =>
-            setSearch(
-              event.target.value
-            )
-          }
-        />
-
-        <div
-          style={{
-            marginTop: 20,
-            overflowX: "auto",
-          }}
-        >
           {loading ? (
-            <p>
-              Chargement...
-            </p>
+            <div className="management-loading">
+              <div className="management-spinner" />
+
+              <div>
+                Chargement des
+                événements...
+              </div>
+            </div>
           ) : filteredEvents.length ===
             0 ? (
-            <p>
-              Aucun événement.
-            </p>
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                🗓️
+              </div>
+
+              <h3>
+                Aucun événement trouvé
+              </h3>
+
+              <p>
+                Créez un nouvel
+                événement ou modifiez
+                vos critères de
+                recherche.
+              </p>
+            </div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Titre</th>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Lieu</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+            <div className="management-table-wrapper">
+              <table className="management-table">
+                <thead>
+                  <tr>
+                    <th>
+                      Événement
+                    </th>
 
-              <tbody>
-                {filteredEvents.map(
-                  (event) => (
-                    <tr
-                      key={
-                        event._id
-                      }
-                    >
-                      <td>
-                        {event.title}
-                      </td>
+                    <th>
+                      Date
+                    </th>
 
-                      <td>
-                        {formatDate(
-                          event.date
-                        )}
-                      </td>
+                    <th>
+                      Type
+                    </th>
 
-                      <td>
-                        {event.type ||
-                          "—"}
-                      </td>
+                    <th>
+                      Lieu
+                    </th>
 
-                      <td>
-                        {event.location ||
-                          "—"}
-                      </td>
+                    <th>
+                      Statut
+                    </th>
 
-                      <td>
-                        {event.status ||
-                          "—"}
-                      </td>
+                    <th>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-                      <td>
-                        <div
-                          style={{
-                            display:
-                              "flex",
-                            gap: 8,
-                            flexWrap:
-                              "wrap",
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditForm(
-                                event
-                              )
-                            }
+                <tbody>
+                  {filteredEvents.map(
+                    (event) => (
+                      <tr
+                        key={event._id}
+                      >
+                        {/* ÉVÉNEMENT */}
+
+                        <td>
+                          <div className="person-cell">
+                            <div className="person-avatar">
+                              🗓️
+                            </div>
+
+                            <div>
+                              <div className="person-name">
+                                {event.title}
+                              </div>
+
+                              <div className="person-secondary">
+                                Événement
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* DATE */}
+
+                        <td>
+                          <div className="person-name">
+                            {formatDate(
+                              event.date
+                            )}
+                          </div>
+                        </td>
+
+                        {/* TYPE */}
+
+                        <td>
+                          {event.type ||
+                            "—"}
+                        </td>
+
+                        {/* LIEU */}
+
+                        <td>
+                          {event.location ||
+                            "—"}
+                        </td>
+
+                        {/* STATUT */}
+
+                        <td>
+                          <span
+                            className={`status-badge ${getStatusClass(
+                              event.status
+                            )}`}
                           >
-                            Modifier
-                          </button>
+                            {getStatusLabel(
+                              event.status
+                            )}
+                          </span>
+                        </td>
 
-                          {isAdmin && (
+                        {/* ACTIONS */}
+
+                        <td>
+                          <div className="table-actions">
                             <button
                               type="button"
+                              className="btn btn-secondary btn-small"
                               onClick={() =>
-                                handleDelete(
-                                  event._id
+                                openEditForm(
+                                  event
                                 )
                               }
                             >
-                              Supprimer
+                              ✏️ Modifier
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
+
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-small"
+                                onClick={() =>
+                                  handleDelete(
+                                    event._id
+                                  )
+                                }
+                              >
+                                🗑️ Supprimer
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
+
+      {/* ================================================
+          MODAL
+      ================================================ */}
+
+      {showForm && (
+        <div
+          className="management-modal-overlay"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              resetForm();
+            }
+          }}
+        >
+          <div className="management-modal">
+            {/* HEADER */}
+
+            <div className="management-modal-header">
+              <div>
+                <h2>
+                  {editingId
+                    ? "Modifier l'événement"
+                    : "Nouvel événement"}
+                </h2>
+
+                <p className="page-subtitle">
+                  {editingId
+                    ? "Modifiez les informations de cet événement."
+                    : "Planifiez un nouvel événement pour votre église."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="management-modal-close"
+                onClick={resetForm}
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* FORMULAIRE */}
+
+            <form
+              onSubmit={handleSubmit}
+            >
+              <div className="management-modal-body">
+                <div className="management-form-grid">
+                  {/* TITRE */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Titre de
+                      l'événement *
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="title"
+                      value={form.title}
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Ex. Culte du dimanche"
+                      required
+                    />
+                  </div>
+
+                  {/* DATE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Date et heure *
+                    </label>
+
+                    <input
+                      className="form-input"
+                      type="datetime-local"
+                      name="date"
+                      value={form.date}
+                      onChange={
+                        handleChange
+                      }
+                      required
+                    />
+                  </div>
+
+                  {/* TYPE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Type
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="type"
+                      value={form.type}
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Culte, conférence..."
+                    />
+                  </div>
+
+                  {/* LIEU */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Lieu
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="location"
+                      value={
+                        form.location
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Lieu de l'événement"
+                    />
+                  </div>
+
+                  {/* STATUT */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Statut
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="status"
+                      value={
+                        form.status
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      <option value="planned">
+                        Planifié
+                      </option>
+
+                      <option value="ongoing">
+                        En cours
+                      </option>
+
+                      <option value="completed">
+                        Terminé
+                      </option>
+
+                      <option value="cancelled">
+                        Annulé
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* FOOTER */}
+
+              <div className="management-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={resetForm}
+                >
+                  Annuler
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Enregistrement..."
+                    : editingId
+                    ? "Enregistrer les modifications"
+                    : "Créer l'événement"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

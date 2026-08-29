@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { toast } from "react-toastify";
 
 import Layout from "../components/Layout";
+import "../styles/ManagementPages.css";
+
 import API from "../api/axios";
 
 const initialForm = {
@@ -13,38 +20,70 @@ const initialForm = {
 };
 
 export default function Assignments() {
-  const [assignments, setAssignments] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [assignments, setAssignments] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [resendingId, setResendingId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [members, setMembers] =
+    useState([]);
 
-  const [form, setForm] = useState(initialForm);
+  const [events, setEvents] =
+    useState([]);
 
-  const [filters, setFilters] = useState({
-    event: "",
-    department: "",
-    status: "",
-  });
+  const [departments, setDepartments] =
+    useState([]);
 
-  const fetchAssignments = async (customFilters = filters) => {
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [resendingId, setResendingId] =
+    useState(null);
+
+  const [showForm, setShowForm] =
+    useState(false);
+
+  const [form, setForm] =
+    useState(initialForm);
+
+  const [filters, setFilters] =
+    useState({
+      event: "",
+      department: "",
+      status: "",
+    });
+
+  // ======================================================
+  // CHARGER LES PROGRAMMATIONS
+  // ======================================================
+
+  const fetchAssignments = async (
+    customFilters = filters
+  ) => {
     try {
-      const params = new URLSearchParams();
+      const params =
+        new URLSearchParams();
 
       if (customFilters.event) {
-        params.append("event", customFilters.event);
+        params.append(
+          "event",
+          customFilters.event
+        );
       }
 
       if (customFilters.department) {
-        params.append("department", customFilters.department);
+        params.append(
+          "department",
+          customFilters.department
+        );
       }
 
       if (customFilters.status) {
-        params.append("status", customFilters.status);
+        params.append(
+          "status",
+          customFilters.status
+        );
       }
 
       params.append("limit", "100");
@@ -53,7 +92,9 @@ export default function Assignments() {
         `/assignments?${params.toString()}`
       );
 
-      setAssignments(res.data.data || []);
+      setAssignments(
+        res.data?.data || []
+      );
     } catch (error) {
       console.error(
         "Erreur chargement programmations :",
@@ -67,18 +108,44 @@ export default function Assignments() {
     }
   };
 
+  // ======================================================
+  // CHARGER LES OPTIONS
+  // ======================================================
+
   const fetchOptions = async () => {
     try {
-      const [membersRes, eventsRes, departmentsRes] =
-        await Promise.all([
-          API.get("/members?limit=100"),
-          API.get("/events?limit=100"),
-          API.get("/departments?limit=100"),
-        ]);
+      const [
+        membersRes,
+        eventsRes,
+        departmentsRes,
+      ] = await Promise.all([
+        API.get(
+          "/members?limit=100"
+        ),
 
-      setMembers(membersRes.data.data || []);
-      setEvents(eventsRes.data.data || []);
-      setDepartments(departmentsRes.data.data || []);
+        API.get(
+          "/events?limit=100"
+        ),
+
+        API.get(
+          "/departments?limit=100"
+        ),
+      ]);
+
+      setMembers(
+        membersRes.data?.data ||
+          []
+      );
+
+      setEvents(
+        eventsRes.data?.data ||
+          []
+      );
+
+      setDepartments(
+        departmentsRes.data
+          ?.data || []
+      );
     } catch (error) {
       console.error(
         "Erreur chargement options :",
@@ -90,6 +157,10 @@ export default function Assignments() {
       );
     }
   };
+
+  // ======================================================
+  // CHARGEMENT INITIAL
+  // ======================================================
 
   useEffect(() => {
     const loadPage = async () => {
@@ -110,47 +181,83 @@ export default function Assignments() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  // ======================================================
+  // FORMULAIRE
+  // ======================================================
 
-    setForm((prev) => ({
-      ...prev,
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
   };
 
-  const handleMemberChange = (e) => {
-    const memberId = e.target.value;
+  const handleMemberChange = (
+    event
+  ) => {
+    const memberId =
+      event.target.value;
 
-    const selectedMember = members.find(
-      (member) => member._id === memberId
-    );
+    const selectedMember =
+      members.find(
+        (member) =>
+          member._id === memberId
+      );
 
-    setForm((prev) => ({
-      ...prev,
+    setForm((previous) => ({
+      ...previous,
+
       member: memberId,
+
       department:
-        selectedMember?.department?._id ||
-        selectedMember?.department ||
+        selectedMember
+          ?.department?._id ||
+        selectedMember
+          ?.department ||
         "",
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const closeForm = () => {
+    setShowForm(false);
+    setForm(initialForm);
+  };
+
+  // ======================================================
+  // CRÉER PROGRAMMATION
+  // ======================================================
+
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
 
     if (!form.member) {
-      toast.warning("Sélectionnez un membre");
+      toast.warning(
+        "Sélectionnez un membre"
+      );
+
       return;
     }
 
     if (!form.event) {
-      toast.warning("Sélectionnez un événement");
+      toast.warning(
+        "Sélectionnez un événement"
+      );
+
       return;
     }
 
     if (!form.role.trim()) {
-      toast.warning("Indiquez le rôle ou le poste");
+      toast.warning(
+        "Indiquez le rôle ou le poste"
+      );
+
       return;
     }
 
@@ -159,13 +266,19 @@ export default function Assignments() {
 
       const payload = {
         member: form.member,
+
         event: form.event,
-        role: form.role.trim(),
-        note: form.note.trim(),
+
+        role:
+          form.role.trim(),
+
+        note:
+          form.note.trim(),
       };
 
       if (form.department) {
-        payload.department = form.department;
+        payload.department =
+          form.department;
       }
 
       const res = await API.post(
@@ -174,24 +287,33 @@ export default function Assignments() {
       );
 
       const emailStatus =
-        res.data?.data?.emailStatus || "not_sent";
+        res.data?.data
+          ?.emailStatus ||
+        "not_sent";
 
-      if (emailStatus === "sent") {
+      if (
+        emailStatus === "sent"
+      ) {
         toast.success(
           "Programmation créée et email envoyé"
         );
-      } else if (emailStatus === "failed") {
+      } else if (
+        emailStatus === "failed"
+      ) {
         toast.warning(
           "Programmation créée mais l'email a échoué"
         );
       } else {
-        toast.success("Programmation créée");
+        toast.success(
+          "Programmation créée"
+        );
       }
 
-      setForm(initialForm);
-      setShowForm(false);
+      closeForm();
 
-      await fetchAssignments(filters);
+      await fetchAssignments(
+        filters
+      );
     } catch (error) {
       console.error(
         "Erreur création programmation :",
@@ -199,7 +321,8 @@ export default function Assignments() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de créer la programmation"
       );
     } finally {
@@ -207,9 +330,17 @@ export default function Assignments() {
     }
   };
 
-  const resendEmail = async (assignment) => {
+  // ======================================================
+  // RENVOYER EMAIL
+  // ======================================================
+
+  const resendEmail = async (
+    assignment
+  ) => {
     try {
-      setResendingId(assignment._id);
+      setResendingId(
+        assignment._id
+      );
 
       const res = await API.post(
         `/assignments/${assignment._id}/resend-email`
@@ -220,7 +351,9 @@ export default function Assignments() {
           "Email renvoyé avec succès"
       );
 
-      await fetchAssignments(filters);
+      await fetchAssignments(
+        filters
+      );
     } catch (error) {
       console.error(
         "Erreur renvoi email :",
@@ -228,7 +361,8 @@ export default function Assignments() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de renvoyer l'email"
       );
     } finally {
@@ -236,27 +370,45 @@ export default function Assignments() {
     }
   };
 
-  const deleteAssignment = async (assignment) => {
+  // ======================================================
+  // SUPPRIMER
+  // ======================================================
+
+  const deleteAssignment = async (
+    assignment
+  ) => {
     const memberName = `${
-      assignment.member?.firstName || ""
-    } ${assignment.member?.lastName || ""}`.trim();
+      assignment.member
+        ?.firstName || ""
+    } ${
+      assignment.member
+        ?.lastName || ""
+    }`.trim();
 
-    const confirmed = window.confirm(
-      `Supprimer la programmation de ${
-        memberName || "ce membre"
-      } ?`
-    );
+    const confirmed =
+      window.confirm(
+        `Supprimer la programmation de ${
+          memberName ||
+          "ce membre"
+        } ?`
+      );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
       await API.delete(
         `/assignments/${assignment._id}`
       );
 
-      toast.success("Programmation supprimée");
+      toast.success(
+        "Programmation supprimée"
+      );
 
-      await fetchAssignments(filters);
+      await fetchAssignments(
+        filters
+      );
     } catch (error) {
       console.error(
         "Erreur suppression programmation :",
@@ -264,14 +416,24 @@ export default function Assignments() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de supprimer la programmation"
       );
     }
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  // ======================================================
+  // FILTRES
+  // ======================================================
+
+  const handleFilterChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
     const newFilters = {
       ...filters,
@@ -279,7 +441,10 @@ export default function Assignments() {
     };
 
     setFilters(newFilters);
-    fetchAssignments(newFilters);
+
+    fetchAssignments(
+      newFilters
+    );
   };
 
   const resetFilters = () => {
@@ -289,580 +454,1026 @@ export default function Assignments() {
       status: "",
     };
 
-    setFilters(emptyFilters);
-    fetchAssignments(emptyFilters);
+    setFilters(
+      emptyFilters
+    );
+
+    fetchAssignments(
+      emptyFilters
+    );
   };
+
+  // ======================================================
+  // STATISTIQUES
+  // ======================================================
+
+  const stats = useMemo(() => {
+    return {
+      total:
+        assignments.length,
+
+      pending:
+        assignments.filter(
+          (item) =>
+            item.status ===
+            "pending"
+        ).length,
+
+      confirmed:
+        assignments.filter(
+          (item) =>
+            item.status ===
+            "confirmed"
+        ).length,
+
+      declined:
+        assignments.filter(
+          (item) =>
+            item.status ===
+            "declined"
+        ).length,
+    };
+  }, [assignments]);
+
+  // ======================================================
+  // FORMAT DATE
+  // ======================================================
 
   const formatDate = (date) => {
-    if (!date) return "-";
+    if (!date) {
+      return "—";
+    }
 
-    return new Date(date).toLocaleString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const parsed =
+      new Date(date);
+
+    if (
+      Number.isNaN(
+        parsed.getTime()
+      )
+    ) {
+      return "—";
+    }
+
+    return parsed.toLocaleString(
+      "fr-FR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
   };
 
-  const getStatusLabel = (status) => {
+  // ======================================================
+  // STATUT PROGRAMMATION
+  // ======================================================
+
+  const getStatusLabel = (
+    status
+  ) => {
     switch (status) {
       case "confirmed":
         return "Confirmé";
+
       case "declined":
         return "Refusé";
+
       case "cancelled":
         return "Annulé";
+
       default:
         return "En attente";
     }
   };
 
-  const getStatusClass = (status) => {
+  const getStatusClass = (
+    status
+  ) => {
     switch (status) {
       case "confirmed":
-        return "assignment-status confirmed";
+        return "status-active";
+
       case "declined":
-        return "assignment-status declined";
+        return "status-inactive";
+
       case "cancelled":
-        return "assignment-status cancelled";
+        return "status-cancelled";
+
       default:
-        return "assignment-status pending";
+        return "status-pending";
     }
   };
 
-  const getEmailLabel = (status) => {
+  // ======================================================
+  // STATUT EMAIL
+  // ======================================================
+
+  const getEmailLabel = (
+    status
+  ) => {
     switch (status) {
       case "sent":
         return "Email envoyé";
+
       case "failed":
         return "Échec email";
+
       default:
         return "Non envoyé";
     }
   };
 
-  const getEmailClass = (status) => {
+  const getEmailClass = (
+    status
+  ) => {
     switch (status) {
       case "sent":
-        return "assignment-status confirmed";
+        return "status-active";
+
       case "failed":
-        return "assignment-status declined";
+        return "status-inactive";
+
       default:
-        return "assignment-status pending";
+        return "status-pending";
     }
   };
 
-  const total = assignments.length;
+  // ======================================================
+  // INITIALS
+  // ======================================================
 
-  const pending = assignments.filter(
-    (item) => item.status === "pending"
-  ).length;
+  const getInitials = (
+    member
+  ) => {
+    const first =
+      member?.firstName
+        ?.charAt(0)
+        ?.toUpperCase() ||
+      "";
 
-  const confirmed = assignments.filter(
-    (item) => item.status === "confirmed"
-  ).length;
+    const last =
+      member?.lastName
+        ?.charAt(0)
+        ?.toUpperCase() ||
+      "";
 
-  const declined = assignments.filter(
-    (item) => item.status === "declined"
-  ).length;
+    return (
+      `${first}${last}` ||
+      "M"
+    );
+  };
+
+  // ======================================================
+  // AFFICHAGE
+  // ======================================================
 
   return (
     <Layout>
-      <div className="section-header">
-        <div>
-          <h2>Programmations</h2>
+      <div className="management-page">
+        {/* ==================================================
+            HEADER
+        ================================================== */}
 
-          <p className="page-subtitle">
-            Organisez les équipes, envoyez les invitations
-            et suivez les réponses des membres.
-          </p>
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              Programmations
+            </h1>
+
+            <p className="page-subtitle">
+              Organisez les équipes,
+              envoyez les invitations
+              et suivez les réponses
+              des membres.
+            </p>
+          </div>
+
+          <div className="page-header-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setForm(
+                  initialForm
+                );
+
+                setShowForm(
+                  true
+                );
+              }}
+            >
+              + Nouvelle programmation
+            </button>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            setShowForm((prev) => !prev)
-          }
-        >
-          {showForm
-            ? "Fermer"
-            : "+ Nouvelle programmation"}
-        </button>
-      </div>
+        {/* ==================================================
+            STATISTIQUES
+        ================================================== */}
 
-      <div className="assignment-stats">
-        <div className="card assignment-stat">
-          <span>Total</span>
-          <strong>{total}</strong>
+        <div className="management-stats-grid">
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Total
+            </div>
+
+            <div className="management-stat-value">
+              {stats.total}
+            </div>
+
+            <div className="management-stat-description">
+              Programmations
+              enregistrées
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              En attente
+            </div>
+
+            <div className="management-stat-value">
+              {stats.pending}
+            </div>
+
+            <div className="management-stat-description">
+              En attente de réponse
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Confirmées
+            </div>
+
+            <div className="management-stat-value">
+              {stats.confirmed}
+            </div>
+
+            <div className="management-stat-description">
+              Membres disponibles
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Refusées
+            </div>
+
+            <div className="management-stat-value">
+              {stats.declined}
+            </div>
+
+            <div className="management-stat-description">
+              Membres indisponibles
+            </div>
+          </div>
         </div>
 
-        <div className="card assignment-stat">
-          <span>En attente</span>
-          <strong>{pending}</strong>
-        </div>
+        {/* ==================================================
+            FILTRES
+        ================================================== */}
 
-        <div className="card assignment-stat">
-          <span>Confirmées</span>
-          <strong>{confirmed}</strong>
-        </div>
-
-        <div className="card assignment-stat">
-          <span>Refusées</span>
-          <strong>{declined}</strong>
-        </div>
-      </div>
-
-      {showForm && (
-        <div className="card section-gap">
-          <div className="section-header">
+        <div className="management-card">
+          <div className="management-toolbar">
             <div>
-              <h2>Nouvelle programmation</h2>
+              <h2 className="management-card-title">
+                Filtres
+              </h2>
 
               <p className="page-subtitle">
-                Le membre reçoit automatiquement un email
-                s’il possède une adresse email.
+                Affinez la liste des
+                programmations.
+              </p>
+            </div>
+
+            <div className="management-filters">
+              <select
+                className="management-select"
+                name="event"
+                value={
+                  filters.event
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Tous les événements
+                </option>
+
+                {events.map(
+                  (event) => (
+                    <option
+                      key={
+                        event._id
+                      }
+                      value={
+                        event._id
+                      }
+                    >
+                      {event.title}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <select
+                className="management-select"
+                name="department"
+                value={
+                  filters.department
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Tous les départements
+                </option>
+
+                {departments.map(
+                  (
+                    department
+                  ) => (
+                    <option
+                      key={
+                        department._id
+                      }
+                      value={
+                        department._id
+                      }
+                    >
+                      {
+                        department.name
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+
+              <select
+                className="management-select"
+                name="status"
+                value={
+                  filters.status
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Tous les statuts
+                </option>
+
+                <option value="pending">
+                  En attente
+                </option>
+
+                <option value="confirmed">
+                  Confirmé
+                </option>
+
+                <option value="declined">
+                  Refusé
+                </option>
+
+                <option value="cancelled">
+                  Annulé
+                </option>
+              </select>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={
+                  resetFilters
+                }
+              >
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ==================================================
+            TABLEAU
+        ================================================== */}
+
+        <div
+          className="management-card"
+          style={{
+            marginTop: 24,
+          }}
+        >
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                Équipe programmée
+              </h2>
+
+              <p className="page-subtitle">
+                {
+                  assignments.length
+                }{" "}
+                programmation
+                {assignments.length >
+                1
+                  ? "s"
+                  : ""}
               </p>
             </div>
           </div>
 
-          <form
-            className="assignment-form"
-            onSubmit={handleSubmit}
-          >
-            <div className="form-group">
-              <label>Membre *</label>
+          {loading ? (
+            <div className="management-loading">
+              <div className="management-spinner" />
 
-              <select
-                name="member"
-                value={form.member}
-                onChange={handleMemberChange}
-                required
-              >
-                <option value="">
-                  Sélectionner un membre
-                </option>
-
-                {members.map((member) => (
-                  <option
-                    key={member._id}
-                    value={member._id}
-                  >
-                    {member.firstName} {member.lastName}
-                    {member.email
-                      ? ` — ${member.email}`
-                      : " — sans email"}
-                  </option>
-                ))}
-              </select>
+              <div>
+                Chargement des
+                programmations...
+              </div>
             </div>
+          ) : assignments.length ===
+            0 ? (
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                📅
+              </div>
 
-            <div className="form-group">
-              <label>Événement *</label>
+              <h3>
+                Aucune programmation
+              </h3>
 
-              <select
-                name="event"
-                value={form.event}
-                onChange={handleChange}
-                required
-              >
-                <option value="">
-                  Sélectionner un événement
-                </option>
-
-                {events.map((event) => (
-                  <option
-                    key={event._id}
-                    value={event._id}
-                  >
-                    {event.title} — {formatDate(event.date)}
-                  </option>
-                ))}
-              </select>
+              <p>
+                Commencez par
+                programmer une
+                personne pour un
+                événement.
+              </p>
             </div>
+          ) : (
+            <div className="management-table-wrapper">
+              <table className="management-table">
+                <thead>
+                  <tr>
+                    <th>
+                      Membre
+                    </th>
 
-            <div className="form-group">
-              <label>Département</label>
+                    <th>
+                      Événement
+                    </th>
 
-              <select
-                name="department"
-                value={form.department}
-                onChange={handleChange}
-              >
-                <option value="">
-                  Aucun département
-                </option>
+                    <th>
+                      Date
+                    </th>
 
-                {departments.map((department) => (
-                  <option
-                    key={department._id}
-                    value={department._id}
-                  >
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                    <th>
+                      Département
+                    </th>
 
-            <div className="form-group">
-              <label>Rôle / Poste *</label>
+                    <th>
+                      Poste
+                    </th>
 
-              <input
-                type="text"
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-                placeholder="Ex : Alto, Accueil, Piano..."
-                required
-              />
-            </div>
+                    <th>
+                      Notification
+                    </th>
 
-            <div className="form-group assignment-note">
-              <label>Consignes</label>
+                    <th>
+                      Réponse
+                    </th>
 
-              <textarea
-                name="note"
-                value={form.note}
-                onChange={handleChange}
-                rows="3"
-                placeholder="Ex : Arriver 30 minutes avant..."
-              />
-            </div>
+                    <th>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-            <div className="form-actions">
-              <button
-                type="submit"
-                disabled={saving}
-              >
-                {saving
-                  ? "Programmation..."
-                  : "Programmer"}
-              </button>
-
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={() => {
-                  setShowForm(false);
-                  setForm(initialForm);
-                }}
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="card section-gap">
-        <div className="filters-panel">
-          <select
-            name="event"
-            value={filters.event}
-            onChange={handleFilterChange}
-          >
-            <option value="">
-              Tous les événements
-            </option>
-
-            {events.map((event) => (
-              <option
-                key={event._id}
-                value={event._id}
-              >
-                {event.title}
-              </option>
-            ))}
-          </select>
-
-          <select
-            name="department"
-            value={filters.department}
-            onChange={handleFilterChange}
-          >
-            <option value="">
-              Tous les départements
-            </option>
-
-            {departments.map((department) => (
-              <option
-                key={department._id}
-                value={department._id}
-              >
-                {department.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleFilterChange}
-          >
-            <option value="">
-              Tous les statuts
-            </option>
-
-            <option value="pending">
-              En attente
-            </option>
-
-            <option value="confirmed">
-              Confirmé
-            </option>
-
-            <option value="declined">
-              Refusé
-            </option>
-
-            <option value="cancelled">
-              Annulé
-            </option>
-          </select>
-
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={resetFilters}
-          >
-            Réinitialiser
-          </button>
-        </div>
-      </div>
-
-      <div className="card section-gap">
-        <div className="section-header">
-          <div>
-            <h2>Équipe programmée</h2>
-
-            <span className="results-count">
-              {assignments.length} programmation(s)
-            </span>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="assignment-empty">
-            Chargement...
-          </div>
-        ) : assignments.length === 0 ? (
-          <div className="assignment-empty">
-            <h3>Aucune programmation</h3>
-
-            <p>
-              Commencez par programmer une personne.
-            </p>
-          </div>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Membre</th>
-                  <th>Événement</th>
-                  <th>Date</th>
-                  <th>Département</th>
-                  <th>Poste</th>
-                  <th>Notification</th>
-                  <th>Réponse</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {assignments.map((assignment) => (
-                  <tr key={assignment._id}>
-                    <td>
-                      <strong>
-                        {assignment.member?.firstName}{" "}
-                        {assignment.member?.lastName}
-                      </strong>
-
-                      {assignment.member?.email && (
-                        <div
-                          style={{
-                            marginTop: 4,
-                            fontSize: 12,
-                            color: "#6b7280",
-                          }}
-                        >
-                          {assignment.member.email}
-                        </div>
-                      )}
-                    </td>
-
-                    <td>
-                      {assignment.event?.title || "-"}
-                    </td>
-
-                    <td>
-                      {formatDate(
-                        assignment.event?.date
-                      )}
-                    </td>
-
-                    <td>
-                      {assignment.department?.name || "-"}
-                    </td>
-
-                    <td>
-                      {assignment.role}
-                    </td>
-
-                    <td>
-                      <span
-                        className={getEmailClass(
-                          assignment.emailStatus
-                        )}
+                <tbody>
+                  {assignments.map(
+                    (
+                      assignment
+                    ) => (
+                      <tr
+                        key={
+                          assignment._id
+                        }
                       >
-                        {getEmailLabel(
-                          assignment.emailStatus
-                        )}
-                      </span>
+                        {/* MEMBRE */}
 
-                      <div
-                        style={{
-                          marginTop: 7,
-                          fontSize: 12,
-                          color: "#6b7280",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        <div>
-                          Envois :{" "}
+                        <td>
+                          <div className="person-cell">
+                            <div className="person-avatar">
+                              {getInitials(
+                                assignment.member
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="person-name">
+                                {assignment
+                                  .member
+                                  ?.firstName ||
+                                  ""}{" "}
+                                {assignment
+                                  .member
+                                  ?.lastName ||
+                                  ""}
+                              </div>
+
+                              <div className="person-secondary">
+                                {assignment
+                                  .member
+                                  ?.email ||
+                                  "Sans email"}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* ÉVÉNEMENT */}
+
+                        <td>
+                          <div className="person-name">
+                            {assignment
+                              .event
+                              ?.title ||
+                              "—"}
+                          </div>
+                        </td>
+
+                        {/* DATE */}
+
+                        <td>
+                          {formatDate(
+                            assignment
+                              .event
+                              ?.date
+                          )}
+                        </td>
+
+                        {/* DÉPARTEMENT */}
+
+                        <td>
+                          {assignment
+                            .department
+                            ?.name ||
+                            "—"}
+                        </td>
+
+                        {/* POSTE */}
+
+                        <td>
                           <strong>
-                            {assignment.emailSendCount || 0}
+                            {assignment.role ||
+                              "—"}
                           </strong>
-                        </div>
 
-                        {assignment.firstEmailSentAt && (
-                          <div>
-                            Premier :{" "}
-                            {formatDate(
-                              assignment.firstEmailSentAt
+                          {assignment.note && (
+                            <div className="person-secondary">
+                              {
+                                assignment.note
+                              }
+                            </div>
+                          )}
+                        </td>
+
+                        {/* EMAIL */}
+
+                        <td>
+                          <span
+                            className={`status-badge ${getEmailClass(
+                              assignment.emailStatus
+                            )}`}
+                          >
+                            {getEmailLabel(
+                              assignment.emailStatus
                             )}
-                          </div>
-                        )}
+                          </span>
 
-                        {assignment.emailSentAt && (
-                          <div>
-                            Dernier :{" "}
-                            {formatDate(
-                              assignment.emailSentAt
-                            )}
-                          </div>
-                        )}
-
-                        {assignment.reminderCount > 0 && (
                           <div
+                            className="person-secondary"
                             style={{
                               marginTop: 8,
-                              paddingTop: 8,
-                              borderTop:
-                                "1px solid #e5e7eb",
+                              lineHeight:
+                                1.6,
                             }}
                           >
-                            🔔 Rappels :{" "}
-                            <strong>
-                              {assignment.reminderCount}
-                            </strong>
+                            <div>
+                              Envois :{" "}
+                              <strong>
+                                {assignment.emailSendCount ||
+                                  0}
+                              </strong>
+                            </div>
 
-                            {assignment.lastReminderAt && (
+                            {assignment.emailSentAt && (
                               <div>
-                                Dernier rappel :{" "}
+                                Dernier :{" "}
                                 {formatDate(
-                                  assignment.lastReminderAt
+                                  assignment.emailSentAt
                                 )}
                               </div>
                             )}
+
+                            {assignment.reminderCount >
+                              0 && (
+                              <div>
+                                🔔{" "}
+                                {
+                                  assignment.reminderCount
+                                }{" "}
+                                rappel
+                                {assignment.reminderCount >
+                                1
+                                  ? "s"
+                                  : ""}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </td>
+                        </td>
 
-                    <td>
-                      <span
-                        className={getStatusClass(
-                          assignment.status
-                        )}
-                      >
-                        {getStatusLabel(
-                          assignment.status
-                        )}
-                      </span>
+                        {/* RÉPONSE */}
 
-                      {assignment.status === "pending" && (
-                        <div className="waiting-response">
-                          En attente du membre
-                        </div>
-                      )}
+                        <td>
+                          <span
+                            className={`status-badge ${getStatusClass(
+                              assignment.status
+                            )}`}
+                          >
+                            {getStatusLabel(
+                              assignment.status
+                            )}
+                          </span>
 
-                      {assignment.status === "confirmed" && (
-                        <div className="confirmed-response">
-                          Confirmé par le membre
+                          <div
+                            className="person-secondary"
+                            style={{
+                              marginTop: 8,
+                              lineHeight:
+                                1.5,
+                            }}
+                          >
+                            {assignment.status ===
+                              "pending" &&
+                              "En attente du membre"}
 
-                          {assignment.confirmedAt && (
-                            <>
-                              <br />
-                              {formatDate(
-                                assignment.confirmedAt
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
+                            {assignment.status ===
+                              "confirmed" && (
+                              <>
+                                Confirmé par
+                                le membre
 
-                      {assignment.status === "declined" && (
-                        <div className="declined-response">
-                          Indisponible
+                                {assignment.confirmedAt && (
+                                  <>
+                                    <br />
 
-                          {assignment.declinedAt && (
-                            <>
-                              <br />
-                              {formatDate(
-                                assignment.declinedAt
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                                    {formatDate(
+                                      assignment.confirmedAt
+                                    )}
+                                  </>
+                                )}
+                              </>
+                            )}
 
-                    <td>
-                      <div className="assignment-actions">
-                        <button
-                          type="button"
-                          className="secondary-btn small-btn"
-                          disabled={
-                            resendingId === assignment._id
-                          }
-                          onClick={() =>
-                            resendEmail(assignment)
-                          }
-                        >
-                          {resendingId === assignment._id
-                            ? "Envoi..."
-                            : "Renvoyer l'email"}
-                        </button>
+                            {assignment.status ===
+                              "declined" && (
+                              <>
+                                Indisponible
 
-                        <button
-                          type="button"
-                          className="danger-btn small-btn"
-                          onClick={() =>
-                            deleteAssignment(assignment)
-                          }
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                                {assignment.declinedAt && (
+                                  <>
+                                    <br />
+
+                                    {formatDate(
+                                      assignment.declinedAt
+                                    )}
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* ACTIONS */}
+
+                        <td>
+                          <div className="table-actions">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-small"
+                              disabled={
+                                resendingId ===
+                                assignment._id
+                              }
+                              onClick={() =>
+                                resendEmail(
+                                  assignment
+                                )
+                              }
+                            >
+                              {resendingId ===
+                              assignment._id
+                                ? "Envoi..."
+                                : "✉️ Renvoyer"}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-small"
+                              onClick={() =>
+                                deleteAssignment(
+                                  assignment
+                                )
+                              }
+                            >
+                              🗑️ Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ==================================================
+          MODAL NOUVELLE PROGRAMMATION
+      ================================================== */}
+
+      {showForm && (
+        <div
+          className="management-modal-overlay"
+          onMouseDown={(
+            event
+          ) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              closeForm();
+            }
+          }}
+        >
+          <div className="management-modal">
+            {/* HEADER */}
+
+            <div className="management-modal-header">
+              <div>
+                <h2>
+                  Nouvelle programmation
+                </h2>
+
+                <p className="page-subtitle">
+                  Programmez un membre
+                  et envoyez-lui
+                  automatiquement son
+                  invitation.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="management-modal-close"
+                onClick={
+                  closeForm
+                }
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* FORMULAIRE */}
+
+            <form
+              onSubmit={
+                handleSubmit
+              }
+            >
+              <div className="management-modal-body">
+                <div className="management-form-grid">
+                  {/* MEMBRE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Membre *
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="member"
+                      value={
+                        form.member
+                      }
+                      onChange={
+                        handleMemberChange
+                      }
+                      required
+                    >
+                      <option value="">
+                        Sélectionner un
+                        membre
+                      </option>
+
+                      {members.map(
+                        (
+                          member
+                        ) => (
+                          <option
+                            key={
+                              member._id
+                            }
+                            value={
+                              member._id
+                            }
+                          >
+                            {
+                              member.firstName
+                            }{" "}
+                            {
+                              member.lastName
+                            }
+                            {member.email
+                              ? ` — ${member.email}`
+                              : " — sans email"}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  {/* ÉVÉNEMENT */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Événement *
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="event"
+                      value={
+                        form.event
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      required
+                    >
+                      <option value="">
+                        Sélectionner un
+                        événement
+                      </option>
+
+                      {events.map(
+                        (event) => (
+                          <option
+                            key={
+                              event._id
+                            }
+                            value={
+                              event._id
+                            }
+                          >
+                            {
+                              event.title
+                            }{" "}
+                            —{" "}
+                            {formatDate(
+                              event.date
+                            )}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  {/* DÉPARTEMENT */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Département
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="department"
+                      value={
+                        form.department
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      <option value="">
+                        Aucun département
+                      </option>
+
+                      {departments.map(
+                        (
+                          department
+                        ) => (
+                          <option
+                            key={
+                              department._id
+                            }
+                            value={
+                              department._id
+                            }
+                          >
+                            {
+                              department.name
+                            }
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  {/* POSTE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Rôle / Poste *
+                    </label>
+
+                    <input
+                      className="form-input"
+                      type="text"
+                      name="role"
+                      value={
+                        form.role
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Ex. Alto, Accueil, Piano..."
+                      required
+                    />
+                  </div>
+
+                  {/* CONSIGNES */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Consignes
+                    </label>
+
+                    <textarea
+                      className="form-textarea"
+                      name="note"
+                      value={
+                        form.note
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      rows="4"
+                      placeholder="Ex. Arriver 30 minutes avant le début..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* FOOTER */}
+
+              <div className="management-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={
+                    closeForm
+                  }
+                >
+                  Annuler
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    saving
+                  }
+                >
+                  {saving
+                    ? "Programmation..."
+                    : "Programmer le membre"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

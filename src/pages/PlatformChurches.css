@@ -1,0 +1,677 @@
+/* ======================================================
+   PAGE
+====================================================== */
+
+.management-page {
+  width: 100%;
+}
+
+.platform-filters-card {
+  margin-bottom: 24px;
+  padding: 22px 24px;
+}
+
+/* ======================================================
+   FILTRES
+====================================================== */
+
+.platform-filters-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(180px, 1fr)
+    minmax(180px, 1fr);
+  gap: 18px;
+  align-items: end;
+}
+
+.platform-filters-grid .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.platform-filters-grid .form-group label {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.platform-filters-grid .form-group input,
+.platform-filters-grid .form-group select {
+  width: 100%;
+  height: 44px;
+
+  padding: 0 14px;
+
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  color: #0f172a;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.platform-filters-grid .form-group input::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.platform-filters-grid .form-group input:focus,
+.platform-filters-grid .form-group select:focus {
+  border-color: #5b4df5;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(91, 77, 245, 0.08);
+}
+
+/* ======================================================
+   TABLE WRAPPER
+====================================================== */
+
+.management-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ======================================================
+   TABLE
+====================================================== */
+
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.management-table thead {
+  background: #f8fafc;
+}
+
+.management-table th {
+  padding: 16px 22px;
+
+  color: #64748b;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  text-align: left;
+
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+
+  border-bottom: 1px solid #e7edf5;
+
+  white-space: nowrap;
+}
+
+.management-table td {
+  padding: 19px 22px;
+
+  color: #334155;
+
+  font-size: 12px;
+
+  border-bottom: 1px solid #edf1f6;
+
+  vertical-align: middle;
+}
+
+.management-table tbody tr {
+  transition:
+    background 0.2s ease;
+}
+
+.management-table tbody tr:hover {
+  background: #fbfcff;
+}
+
+.management-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ======================================================
+   NOM EGLISE
+====================================================== */
+
+.platform-church-name {
+  color: #0f172a;
+
+  font-size: 13px;
+  font-weight: 900;
+
+  line-height: 1.4;
+}
+
+.person-secondary {
+  margin-top: 3px;
+
+  color: #94a3b8;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.platform-slug {
+  margin-top: 4px;
+
+  color: #7c86a2;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ======================================================
+   UTILISATION
+====================================================== */
+
+.platform-usage {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 7px 11px;
+}
+
+.platform-usage span {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 3px;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* ======================================================
+   PLAN
+====================================================== */
+
+.platform-plan-select {
+  min-width: 130px;
+  height: 38px;
+
+  padding: 0 12px;
+
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  color: #334155;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  outline: none;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.platform-plan-select:focus {
+  border-color: #5b4df5;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(91, 77, 245, 0.08);
+}
+
+.platform-plan-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ======================================================
+   STATUTS
+====================================================== */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 72px;
+
+  padding: 7px 12px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  white-space: nowrap;
+}
+
+.status-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* ======================================================
+   BOUTONS
+====================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  min-height: 38px;
+
+  padding: 0 14px;
+
+  border: none;
+  border-radius: 10px;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 0 13px;
+}
+
+.btn-primary {
+  background: #5546e8;
+  color: #ffffff;
+
+  box-shadow:
+    0 6px 18px
+    rgba(85, 70, 232, 0.15);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow:
+    0 8px 22px
+    rgba(85, 70, 232, 0.22);
+}
+
+.btn-secondary {
+  background: #ffffff;
+
+  color: #1e293b;
+
+  border: 1px solid #dfe5ee;
+}
+
+.btn-danger {
+  background: #fff1f1;
+
+  color: #dc2626;
+
+  border: 1px solid #fecaca;
+}
+
+/* ======================================================
+   CARD
+====================================================== */
+
+.management-card {
+  background: #ffffff;
+
+  border: 1px solid #e8edf4;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 10px 30px
+    rgba(15, 23, 42, 0.035);
+}
+
+.management-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 24px 26px;
+
+  border-bottom: 1px solid #edf1f6;
+}
+
+.management-card-title {
+  margin: 0;
+
+  color: #0f172a;
+
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.management-card-header .page-subtitle {
+  margin-top: 6px;
+}
+
+/* ======================================================
+   STAT CARDS
+====================================================== */
+
+.management-stats-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 28px;
+}
+
+.management-stat-card {
+  position: relative;
+
+  min-height: 124px;
+
+  padding: 23px 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #e6ebf2;
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 8px 25px
+    rgba(15, 23, 42, 0.035);
+}
+
+.management-stat-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+  bottom: 0;
+
+  width: 4px;
+
+  background: #5546e8;
+}
+
+.management-stat-label {
+  color: #64748b;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.management-stat-value {
+  margin-top: 10px;
+
+  color: #0f172a;
+
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.management-stat-description {
+  margin-top: 10px;
+
+  color: #94a3b8;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ======================================================
+   PAGE HEADER
+====================================================== */
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin-bottom: 28px;
+}
+
+.page-header-left {
+  min-width: 0;
+}
+
+.platform-eyebrow {
+  margin-bottom: 8px;
+
+  color: #5546e8;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.page-title {
+  margin: 0;
+
+  color: #0f172a;
+
+  font-size: 30px;
+  line-height: 1.15;
+
+  font-weight: 900;
+}
+
+.page-subtitle {
+  margin: 7px 0 0;
+
+  color: #64748b;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ======================================================
+   LOADING / EMPTY / ALERT
+====================================================== */
+
+.management-loading {
+  min-height: 250px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.management-spinner {
+  width: 20px;
+  height: 20px;
+
+  border: 3px solid #e2e8f0;
+  border-top-color: #5546e8;
+
+  border-radius: 50%;
+
+  animation:
+    platform-spin 0.8s linear infinite;
+}
+
+@keyframes platform-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.management-empty {
+  padding: 55px 25px;
+
+  text-align: center;
+}
+
+.management-empty h3 {
+  margin: 0;
+
+  color: #0f172a;
+
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.management-empty p {
+  margin: 7px 0 0;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+}
+
+.management-alert {
+  margin-bottom: 20px;
+
+  padding: 13px 15px;
+
+  border-radius: 11px;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.management-alert-error {
+  background: #fef2f2;
+
+  color: #b91c1c;
+
+  border: 1px solid #fecaca;
+}
+
+/* ======================================================
+   ACTUALISATION
+====================================================== */
+
+.platform-table-loading {
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ======================================================
+   PAGINATION
+====================================================== */
+
+.platform-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 14px;
+
+  padding: 18px 24px;
+
+  border-top: 1px solid #edf1f6;
+}
+
+.platform-pagination span {
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ======================================================
+   RESPONSIVE
+====================================================== */
+
+@media (max-width: 1100px) {
+  .management-stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .platform-filters-grid {
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .platform-filters-grid .form-group:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .page-header {
+    flex-direction: column;
+  }
+
+  .management-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-filters-grid .form-group:first-child {
+    grid-column: auto;
+  }
+
+  .management-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .management-table th,
+  .management-table td {
+    padding:
+      14px 16px;
+  }
+
+  .page-title {
+    font-size: 25px;
+  }
+}

@@ -1,61 +1,109 @@
-import { useEffect, useState } from "react";
-import Layout from "../components/Layout";
-import API from "../api/axios";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { toast } from "react-toastify";
 
+import Layout from "../components/Layout";
+
+import API from "../api/axios";
+
+import "../styles/ManagementPages.css";
+
 export default function ActivityLogs() {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [logs, setLogs] =
+    useState([]);
 
-  const [filters, setFilters] = useState({
-    search: "",
-    entity: "",
-    action: "",
-    page: 1,
-    limit: 20,
-  });
+  const [loading, setLoading] =
+    useState(false);
 
-  const [pagination, setPagination] = useState({
+  const [filters, setFilters] =
+    useState({
+      search: "",
+      entity: "",
+      action: "",
+      page: 1,
+      limit: 20,
+    });
+
+  const [
+    pagination,
+    setPagination,
+  ] = useState({
     page: 1,
     totalPages: 1,
     total: 0,
   });
 
-  // =========================
+  // ======================================================
   // CHARGEMENT DES LOGS
-  // =========================
+  // ======================================================
 
-  const fetchLogs = async (customFilters = filters) => {
+  const fetchLogs = async (
+    customFilters = filters
+  ) => {
     try {
       setLoading(true);
 
-      const query = new URLSearchParams();
+      const query =
+        new URLSearchParams();
 
-      if (customFilters.search) {
-        query.append("search", customFilters.search);
+      if (
+        customFilters.search
+      ) {
+        query.append(
+          "search",
+          customFilters.search
+        );
       }
 
-      if (customFilters.entity) {
-        query.append("entity", customFilters.entity);
+      if (
+        customFilters.entity
+      ) {
+        query.append(
+          "entity",
+          customFilters.entity
+        );
       }
 
-      if (customFilters.action) {
-        query.append("action", customFilters.action);
+      if (
+        customFilters.action
+      ) {
+        query.append(
+          "action",
+          customFilters.action
+        );
       }
 
-      query.append("page", customFilters.page);
-      query.append("limit", customFilters.limit);
-
-      const res = await API.get(
-        `/activity-logs?${query.toString()}`
+      query.append(
+        "page",
+        customFilters.page
       );
 
-      setLogs(res.data.data || []);
+      query.append(
+        "limit",
+        customFilters.limit
+      );
+
+      const res =
+        await API.get(
+          `/activity-logs?${query.toString()}`
+        );
+
+      setLogs(
+        res.data?.data || []
+      );
 
       setPagination({
-        page: res.data.page || 1,
-        totalPages: res.data.totalPages || 1,
-        total: res.data.total || 0,
+        page:
+          res.data?.page || 1,
+        totalPages:
+          res.data
+            ?.totalPages || 1,
+        total:
+          res.data?.total || 0,
       });
     } catch (error) {
       console.error(
@@ -64,7 +112,8 @@ export default function ActivityLogs() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Erreur lors du chargement du journal d’activité"
       );
     } finally {
@@ -72,9 +121,9 @@ export default function ActivityLogs() {
     }
   };
 
-  // =========================
+  // ======================================================
   // CHARGEMENT INITIAL
-  // =========================
+  // ======================================================
 
   useEffect(() => {
     fetchLogs();
@@ -82,22 +131,30 @@ export default function ActivityLogs() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // =========================
+  // ======================================================
   // PAGINATION / LIMIT
-  // =========================
+  // ======================================================
 
   useEffect(() => {
     fetchLogs(filters);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit]);
+  }, [
+    filters.page,
+    filters.limit,
+  ]);
 
-  // =========================
+  // ======================================================
   // FILTRES
-  // =========================
+  // ======================================================
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const handleFilterChange = (
+    e
+  ) => {
+    const {
+      name,
+      value,
+    } = e.target;
 
     setFilters((prev) => ({
       ...prev,
@@ -106,8 +163,11 @@ export default function ActivityLogs() {
     }));
   };
 
-  const applyFilters = (e) => {
+  const applyFilters = (
+    e
+  ) => {
     e.preventDefault();
+
     fetchLogs(filters);
   };
 
@@ -120,17 +180,32 @@ export default function ActivityLogs() {
       limit: 20,
     };
 
-    setFilters(newFilters);
-    fetchLogs(newFilters);
+    setFilters(
+      newFilters
+    );
+
+    fetchLogs(
+      newFilters
+    );
   };
 
-  // =========================
+  // ======================================================
   // PAGINATION
-  // =========================
+  // ======================================================
 
-  const goToPage = (page) => {
-    if (page < 1) return;
-    if (page > pagination.totalPages) return;
+  const goToPage = (
+    page
+  ) => {
+    if (page < 1) {
+      return;
+    }
+
+    if (
+      page >
+      pagination.totalPages
+    ) {
+      return;
+    }
 
     setFilters((prev) => ({
       ...prev,
@@ -138,27 +213,47 @@ export default function ActivityLogs() {
     }));
   };
 
-  // =========================
+  // ======================================================
   // FORMAT DATE
-  // =========================
+  // ======================================================
 
-  const formatDate = (value) => {
-    if (!value) return "-";
+  const formatDate = (
+    value
+  ) => {
+    if (!value) {
+      return "-";
+    }
 
-    return new Date(value).toLocaleString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "-";
+    }
+
+    return date.toLocaleString(
+      "fr-FR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
   };
 
-  // =========================
+  // ======================================================
   // TRADUCTION ACTION
-  // =========================
+  // ======================================================
 
-  const getActionLabel = (action) => {
+  const getActionLabel = (
+    action
+  ) => {
     switch (action) {
       case "CREATE":
         return "Création";
@@ -177,11 +272,13 @@ export default function ActivityLogs() {
     }
   };
 
-  // =========================
+  // ======================================================
   // TRADUCTION ENTITÉ
-  // =========================
+  // ======================================================
 
-  const getEntityLabel = (entity) => {
+  const getEntityLabel = (
+    entity
+  ) => {
     switch (entity) {
       case "Member":
         return "Membre";
@@ -206,283 +303,596 @@ export default function ActivityLogs() {
     }
   };
 
-  // =========================
+  // ======================================================
+  // BADGE ACTION
+  // ======================================================
+
+  const getActionClass = (
+    action
+  ) => {
+    switch (action) {
+      case "CREATE":
+        return "status-badge status-active";
+
+      case "UPDATE":
+        return "status-badge status-planned";
+
+      case "DELETE":
+        return "status-badge status-inactive";
+
+      case "LOGIN":
+        return "status-badge status-pending";
+
+      default:
+        return "status-badge status-pending";
+    }
+  };
+
+  // ======================================================
+  // INITIALS
+  // ======================================================
+
+  const getInitials = (
+    name
+  ) => {
+    if (!name) {
+      return "S";
+    }
+
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map(
+        (part) =>
+          part[0] || ""
+      )
+      .join("")
+      .toUpperCase();
+  };
+
+  // ======================================================
+  // STATISTIQUES DE LA PAGE CHARGÉE
+  // ======================================================
+
+  const stats = useMemo(() => {
+    const create =
+      logs.filter(
+        (log) =>
+          log.action ===
+          "CREATE"
+      ).length;
+
+    const update =
+      logs.filter(
+        (log) =>
+          log.action ===
+          "UPDATE"
+      ).length;
+
+    const deleteCount =
+      logs.filter(
+        (log) =>
+          log.action ===
+          "DELETE"
+      ).length;
+
+    const login =
+      logs.filter(
+        (log) =>
+          log.action ===
+          "LOGIN"
+      ).length;
+
+    return {
+      create,
+      update,
+      deleteCount,
+      login,
+    };
+  }, [logs]);
+
+  // ======================================================
   // RENDER
-  // =========================
+  // ======================================================
 
   return (
     <Layout>
-      <div className="section-header">
-        <div>
-          <h2>Journal d’activité</h2>
+      <div className="management-page">
+        {/* ================================================
+            HEADER
+        ================================================ */}
 
-          <p
-            style={{
-              color: "#6b7280",
-              marginTop: 6,
-            }}
-          >
-            Suivi des actions effectuées dans la plateforme
-          </p>
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              Journal d’activité
+            </h1>
+
+            <p className="page-subtitle">
+              Consultez les actions
+              effectuées dans la
+              plateforme et gardez une
+              trace des principales
+              opérations administratives.
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* =========================
-          FILTRES
-      ========================= */}
+        {/* ================================================
+            STATISTIQUES
+        ================================================ */}
 
-      <div className="card">
-        <form
-          className="filters-panel"
-          onSubmit={applyFilters}
+        <div className="management-stats-grid">
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Total activités
+            </div>
+
+            <div className="management-stat-value">
+              {pagination.total}
+            </div>
+
+            <div className="management-stat-description">
+              Actions enregistrées
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Créations
+            </div>
+
+            <div className="management-stat-value">
+              {stats.create}
+            </div>
+
+            <div className="management-stat-description">
+              Sur cette page
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Modifications
+            </div>
+
+            <div className="management-stat-value">
+              {stats.update}
+            </div>
+
+            <div className="management-stat-description">
+              Sur cette page
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Connexions
+            </div>
+
+            <div className="management-stat-value">
+              {stats.login}
+            </div>
+
+            <div className="management-stat-description">
+              {stats.deleteCount} suppression
+              {stats.deleteCount > 1
+                ? "s"
+                : ""}
+            </div>
+          </div>
+        </div>
+
+        {/* ================================================
+            FILTRES
+        ================================================ */}
+
+        <div
+          className="management-card"
+          style={{
+            marginTop: 24,
+          }}
         >
-          <input
-            type="text"
-            name="search"
-            placeholder="Rechercher une activité..."
-            value={filters.search}
-            onChange={handleFilterChange}
-          />
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                Rechercher une activité
+              </h2>
 
-          {/* ENTITÉ */}
-
-          <select
-            name="entity"
-            value={filters.entity}
-            onChange={handleFilterChange}
-          >
-            <option value="">
-              Toutes les entités
-            </option>
-
-            <option value="Member">
-              Membres
-            </option>
-
-            <option value="Department">
-              Départements
-            </option>
-
-            <option value="Event">
-              Événements
-            </option>
-
-            <option value="Assignment">
-              Programmations
-            </option>
-
-            <option value="Attendance">
-              Présences
-            </option>
-
-            <option value="User">
-              Administrateurs
-            </option>
-          </select>
-
-          {/* ACTION */}
-
-          <select
-            name="action"
-            value={filters.action}
-            onChange={handleFilterChange}
-          >
-            <option value="">
-              Toutes les actions
-            </option>
-
-            <option value="CREATE">
-              Création
-            </option>
-
-            <option value="UPDATE">
-              Modification
-            </option>
-
-            <option value="DELETE">
-              Suppression
-            </option>
-
-            <option value="LOGIN">
-              Connexion
-            </option>
-          </select>
-
-          {/* NOMBRE PAR PAGE */}
-
-          <select
-            name="limit"
-            value={filters.limit}
-            onChange={handleFilterChange}
-          >
-            <option value="10">
-              10 / page
-            </option>
-
-            <option value="20">
-              20 / page
-            </option>
-
-            <option value="50">
-              50 / page
-            </option>
-
-            <option value="100">
-              100 / page
-            </option>
-          </select>
-
-          <div className="filter-actions">
-            <button type="submit">
-              Appliquer
-            </button>
-
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={resetFilters}
-            >
-              Réinitialiser
-            </button>
+              <p className="page-subtitle">
+                Filtrez le journal par
+                utilisateur, type
+                d’entité ou action.
+              </p>
+            </div>
           </div>
-        </form>
-      </div>
 
-      {/* =========================
-          TABLEAU
-      ========================= */}
+          <form
+            className="management-toolbar"
+            onSubmit={applyFilters}
+          >
+            <div className="management-search">
+              <span className="management-search-icon">
+                ⌕
+              </span>
 
-      <div className="card section-gap">
-        <div className="section-header">
-          <div>
-            <h2>Activités</h2>
+              <input
+                type="text"
+                name="search"
+                placeholder="Rechercher une activité..."
+                value={
+                  filters.search
+                }
+                onChange={
+                  handleFilterChange
+                }
+              />
+            </div>
 
-            <span className="results-count">
-              {pagination.total} action(s) enregistrée(s)
-            </span>
-          </div>
+            <div className="management-filters">
+              <select
+                name="entity"
+                className="management-select"
+                value={
+                  filters.entity
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Toutes les entités
+                </option>
+
+                <option value="Member">
+                  Membres
+                </option>
+
+                <option value="Department">
+                  Départements
+                </option>
+
+                <option value="Event">
+                  Événements
+                </option>
+
+                <option value="Assignment">
+                  Programmations
+                </option>
+
+                <option value="Attendance">
+                  Présences
+                </option>
+
+                <option value="User">
+                  Administrateurs
+                </option>
+              </select>
+
+              <select
+                name="action"
+                className="management-select"
+                value={
+                  filters.action
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Toutes les actions
+                </option>
+
+                <option value="CREATE">
+                  Création
+                </option>
+
+                <option value="UPDATE">
+                  Modification
+                </option>
+
+                <option value="DELETE">
+                  Suppression
+                </option>
+
+                <option value="LOGIN">
+                  Connexion
+                </option>
+              </select>
+
+              <select
+                name="limit"
+                className="management-select"
+                value={
+                  filters.limit
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="10">
+                  10 / page
+                </option>
+
+                <option value="20">
+                  20 / page
+                </option>
+
+                <option value="50">
+                  50 / page
+                </option>
+
+                <option value="100">
+                  100 / page
+                </option>
+              </select>
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-small"
+              >
+                Appliquer
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={
+                  resetFilters
+                }
+              >
+                Réinitialiser
+              </button>
+            </div>
+          </form>
         </div>
 
-        {loading ? (
-          <div
-            style={{
-              padding: "30px",
-              textAlign: "center",
-            }}
-          >
-            Chargement du journal...
-          </div>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Utilisateur</th>
-                  <th>Action</th>
-                  <th>Entité</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
+        {/* ================================================
+            TABLEAU
+        ================================================ */}
 
-              <tbody>
-                {logs.length > 0 ? (
-                  logs.map((log) => (
-                    <tr key={log._id}>
-                      {/* DATE */}
+        <div
+          className="management-card"
+          style={{
+            marginTop: 24,
+          }}
+        >
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                Historique des activités
+              </h2>
 
-                      <td>
-                        {formatDate(log.createdAt)}
-                      </td>
+              <p className="page-subtitle">
+                {pagination.total} action
+                {pagination.total > 1
+                  ? "s"
+                  : ""}{" "}
+                enregistrée
+                {pagination.total > 1
+                  ? "s"
+                  : ""}
+              </p>
+            </div>
 
-                      {/* UTILISATEUR */}
-
-                      <td>
-                        {log.userName ||
-                          log.userId?.name ||
-                          "Système"}
-                      </td>
-
-                      {/* ACTION */}
-
-                      <td>
-                        <span
-                          className={`activity-badge activity-${(
-                            log.action || ""
-                          ).toLowerCase()}`}
-                        >
-                          {getActionLabel(log.action)}
-                        </span>
-                      </td>
-
-                      {/* ENTITÉ */}
-
-                      <td>
-                        {getEntityLabel(log.entity)}
-                      </td>
-
-                      {/* DESCRIPTION */}
-
-                      <td>
-                        {log.description || "-"}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="5"
-                      style={{
-                        textAlign: "center",
-                        padding: "30px",
-                      }}
-                    >
-                      Aucune activité trouvée
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* =========================
-            PAGINATION
-        ========================= */}
-
-        {pagination.totalPages > 1 && (
-          <div className="pagination-bar">
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={() =>
-                goToPage(pagination.page - 1)
-              }
-              disabled={pagination.page <= 1}
-            >
-              Précédent
-            </button>
-
-            <span>
-              Page {pagination.page} /{" "}
-              {pagination.totalPages}
+            <span className="status-badge status-planned">
+              Page {pagination.page}
             </span>
-
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={() =>
-                goToPage(pagination.page + 1)
-              }
-              disabled={
-                pagination.page >=
-                pagination.totalPages
-              }
-            >
-              Suivant
-            </button>
           </div>
-        )}
+
+          {loading ? (
+            <div className="management-loading">
+              <div className="management-spinner" />
+
+              <span>
+                Chargement du journal...
+              </span>
+            </div>
+          ) : logs.length > 0 ? (
+            <div className="management-table-wrapper">
+              <table className="management-table">
+                <thead>
+                  <tr>
+                    <th>
+                      Date
+                    </th>
+
+                    <th>
+                      Utilisateur
+                    </th>
+
+                    <th>
+                      Action
+                    </th>
+
+                    <th>
+                      Entité
+                    </th>
+
+                    <th>
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {logs.map(
+                    (log) => {
+                      const userName =
+                        log.userName ||
+                        log.userId
+                          ?.name ||
+                        "Système";
+
+                      return (
+                        <tr
+                          key={
+                            log._id
+                          }
+                        >
+                          <td>
+                            <div
+                              style={{
+                                whiteSpace:
+                                  "nowrap",
+                              }}
+                            >
+                              {formatDate(
+                                log.createdAt
+                              )}
+                            </div>
+                          </td>
+
+                          <td>
+                            <div className="person-cell">
+                              <div className="person-avatar">
+                                {getInitials(
+                                  userName
+                                )}
+                              </div>
+
+                              <div>
+                                <div className="person-name">
+                                  {userName}
+                                </div>
+
+                                <div className="person-secondary">
+                                  {userName ===
+                                  "Système"
+                                    ? "Action automatique"
+                                    : "Utilisateur"}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <span
+                              className={getActionClass(
+                                log.action
+                              )}
+                            >
+                              {getActionLabel(
+                                log.action
+                              )}
+                            </span>
+                          </td>
+
+                          <td>
+                            <span className="status-badge status-pending">
+                              {getEntityLabel(
+                                log.entity
+                              )}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div
+                              style={{
+                                maxWidth:
+                                  420,
+                                lineHeight:
+                                  1.55,
+                                color:
+                                  "#475569",
+                              }}
+                            >
+                              {log.description ||
+                                "-"}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                📋
+              </div>
+
+              <h3>
+                Aucune activité
+              </h3>
+
+              <p>
+                Aucun élément ne
+                correspond aux filtres
+                sélectionnés.
+              </p>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={
+                  resetFilters
+                }
+              >
+                Réinitialiser les filtres
+              </button>
+            </div>
+          )}
+
+          {/* ================================================
+              PAGINATION
+          ================================================ */}
+
+          {pagination.totalPages >
+            1 && (
+            <div className="management-pagination">
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() =>
+                  goToPage(
+                    pagination.page -
+                      1
+                  )
+                }
+                disabled={
+                  pagination.page <=
+                  1
+                }
+              >
+                ← Précédent
+              </button>
+
+              <div className="management-pagination-info">
+                Page{" "}
+                <strong>
+                  {pagination.page}
+                </strong>{" "}
+                sur{" "}
+                <strong>
+                  {
+                    pagination.totalPages
+                  }
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() =>
+                  goToPage(
+                    pagination.page +
+                      1
+                  )
+                }
+                disabled={
+                  pagination.page >=
+                  pagination.totalPages
+                }
+              >
+                Suivant →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );

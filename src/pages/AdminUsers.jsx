@@ -1,16 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+
 import Layout from "../components/Layout";
-import API from "../api/axios";
 import ConfirmModal from "../components/ConfirmModal";
+
+import API from "../api/axios";
+
+import "../styles/ManagementPages.css";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editingUserId, setEditingUserId] = useState(null);
 
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editingUserId, setEditingUserId] =
+    useState(null);
+
+  const [deleteTargetId, setDeleteTargetId] =
+    useState(null);
+
+  const [deleteLoading, setDeleteLoading] =
+    useState(false);
+
+  // ======================================================
+  // FILTRES
+  // ======================================================
 
   const [filters, setFilters] = useState({
     search: "",
@@ -20,12 +33,20 @@ export default function AdminUsers() {
     limit: 10,
   });
 
+  // ======================================================
+  // PAGINATION
+  // ======================================================
+
   const [pagination, setPagination] = useState({
     page: 1,
     totalPages: 1,
     total: 0,
     limit: 10,
   });
+
+  // ======================================================
+  // FORMULAIRE
+  // ======================================================
 
   const [formData, setFormData] = useState({
     name: "",
@@ -35,33 +56,75 @@ export default function AdminUsers() {
     isActive: true,
   });
 
-  const fetchUsers = async (customFilters = filters) => {
+  // ======================================================
+  // CHARGER LES UTILISATEURS
+  // ======================================================
+
+  const fetchUsers = async (
+    customFilters = filters
+  ) => {
     try {
       setLoading(true);
 
       const query = new URLSearchParams();
 
-      if (customFilters.search) query.append("search", customFilters.search);
-      if (customFilters.role) query.append("role", customFilters.role);
-      if (customFilters.isActive !== "") {
-        query.append("isActive", customFilters.isActive);
+      if (customFilters.search) {
+        query.append(
+          "search",
+          customFilters.search
+        );
       }
 
-      query.append("page", customFilters.page);
-      query.append("limit", customFilters.limit);
+      if (customFilters.role) {
+        query.append(
+          "role",
+          customFilters.role
+        );
+      }
 
-      const res = await API.get(`/users?${query.toString()}`);
+      if (customFilters.isActive !== "") {
+        query.append(
+          "isActive",
+          customFilters.isActive
+        );
+      }
 
-      setUsers(res.data.data || []);
+      query.append(
+        "page",
+        customFilters.page
+      );
+
+      query.append(
+        "limit",
+        customFilters.limit
+      );
+
+      const res = await API.get(
+        `/users?${query.toString()}`
+      );
+
+      setUsers(
+        res.data?.data || []
+      );
+
       setPagination({
-        page: res.data.page || 1,
-        totalPages: res.data.totalPages || 1,
-        total: res.data.total || 0,
-        limit: res.data.limit || 10,
+        page: res.data?.page || 1,
+        totalPages:
+          res.data?.totalPages || 1,
+        total:
+          res.data?.total || 0,
+        limit:
+          res.data?.limit || 10,
       });
     } catch (error) {
-      console.error("Erreur chargement users :", error);
-      toast.error("Erreur lors du chargement des utilisateurs");
+      console.error(
+        "Erreur chargement users :",
+        error
+      );
+
+      toast.error(
+        "Erreur lors du chargement des utilisateurs"
+      );
     } finally {
       setLoading(false);
     }
@@ -69,16 +132,59 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     fetchUsers(filters);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.limit]);
+  }, [
+    filters.page,
+    filters.limit,
+  ]);
+
+  // ======================================================
+  // STATISTIQUES
+  // ======================================================
+
+  const stats = useMemo(() => {
+    const admins = users.filter(
+      (user) =>
+        user.role === "admin"
+    ).length;
+
+    const managers = users.filter(
+      (user) =>
+        user.role === "manager"
+    ).length;
+
+    const active = users.filter(
+      (user) => user.isActive
+    ).length;
+
+    const inactive = users.filter(
+      (user) => !user.isActive
+    ).length;
+
+    return {
+      admins,
+      managers,
+      active,
+      inactive,
+    };
+  }, [users]);
+
+  // ======================================================
+  // FILTRES
+  // ======================================================
 
   const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value,
+    } = e.target;
 
     setFilters((prev) => ({
       ...prev,
@@ -89,6 +195,7 @@ export default function AdminUsers() {
 
   const applyFilters = (e) => {
     e.preventDefault();
+
     fetchUsers(filters);
   };
 
@@ -102,15 +209,28 @@ export default function AdminUsers() {
     };
 
     setFilters(newFilters);
+
     fetchUsers(newFilters);
   };
 
+  // ======================================================
+  // FORMULAIRE
+  // ======================================================
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
     }));
   };
 
@@ -122,33 +242,64 @@ export default function AdminUsers() {
       role: "admin",
       isActive: true,
     });
+
     setEditingUserId(null);
   };
 
+  // ======================================================
+  // CRÉER / MODIFIER
+  // ======================================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
 
     try {
-      const payload = { ...formData };
+      const payload = {
+        ...formData,
+        email:
+          formData.email
+            .trim()
+            .toLowerCase(),
+        name:
+          formData.name.trim(),
+      };
 
-      if (editingUserId && !payload.password) {
+      if (
+        editingUserId &&
+        !payload.password
+      ) {
         delete payload.password;
       }
 
       if (editingUserId) {
-        await API.put(`/users/${editingUserId}`, payload);
-        toast.success("Utilisateur mis à jour avec succès");
+        await API.put(
+          `/users/${editingUserId}`,
+          payload
+        );
+
+        toast.success(
+          "Utilisateur mis à jour avec succès"
+        );
       } else {
-        await API.post("/users", payload);
-        toast.success("Utilisateur créé avec succès");
+        await API.post(
+          "/users",
+          payload
+        );
+
+        toast.success(
+          "Utilisateur créé avec succès"
+        );
       }
 
       resetForm();
-      fetchUsers(filters);
+
+      await fetchUsers(filters);
     } catch (error) {
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Erreur lors de l'enregistrement de l'utilisateur"
       );
     } finally {
@@ -156,61 +307,128 @@ export default function AdminUsers() {
     }
   };
 
-  const handleEdit = async (userId) => {
+  // ======================================================
+  // MODIFIER
+  // ======================================================
+
+  const handleEdit = async (
+    userId
+  ) => {
     try {
-      const res = await API.get(`/users/${userId}`);
-      const user = res.data.data;
+      setLoading(true);
 
-      setEditingUserId(user._id);
-      setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        password: "",
-        role: user.role || "admin",
-        isActive: !!user.isActive,
-      });
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (error) {
-      console.error(error);
-    
-      toast.error(
-        error.response?.data?.message ||
-          "Impossible de charger cet utilisateur"
+      const res = await API.get(
+        `/users/${userId}`
       );
-    }
-  };
 
-  const handleDelete = (userId) => {
-    setDeleteTargetId(userId);
-  };
+      const user =
+        res.data?.data;
 
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
+      if (!user) {
+        toast.error(
+          "Utilisateur introuvable"
+        );
 
-    try {
-      setDeleteLoading(true);
-      await API.delete(`/users/${deleteTargetId}`);
-      toast.success("Utilisateur supprimé avec succès");
-      setDeleteTargetId(null);
-
-      if (editingUserId === deleteTargetId) {
-        resetForm();
+        return;
       }
 
-      fetchUsers(filters);
+      setEditingUserId(
+        user._id
+      );
+
+      setFormData({
+        name:
+          user.name || "",
+        email:
+          user.email || "",
+        password: "",
+        role:
+          user.role || "admin",
+        isActive:
+          !!user.isActive,
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (error) {
+      console.error(error);
+
       toast.error(
-        error.response?.data?.message ||
-          "Erreur lors de la suppression de l'utilisateur"
+        error.response?.data
+          ?.message ||
+          "Impossible de charger cet utilisateur"
       );
     } finally {
-      setDeleteLoading(false);
+      setLoading(false);
     }
   };
 
-  const goToPage = (page) => {
-    if (page < 1 || page > pagination.totalPages) return;
+  // ======================================================
+  // SUPPRESSION
+  // ======================================================
+
+  const handleDelete = (
+    userId
+  ) => {
+    setDeleteTargetId(
+      userId
+    );
+  };
+
+  const confirmDelete =
+    async () => {
+      if (!deleteTargetId) {
+        return;
+      }
+
+      try {
+        setDeleteLoading(true);
+
+        await API.delete(
+          `/users/${deleteTargetId}`
+        );
+
+        toast.success(
+          "Utilisateur supprimé avec succès"
+        );
+
+        if (
+          editingUserId ===
+          deleteTargetId
+        ) {
+          resetForm();
+        }
+
+        setDeleteTargetId(null);
+
+        await fetchUsers(filters);
+      } catch (error) {
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Erreur lors de la suppression de l'utilisateur"
+        );
+      } finally {
+        setDeleteLoading(false);
+      }
+    };
+
+  // ======================================================
+  // PAGINATION
+  // ======================================================
+
+  const goToPage = (
+    page
+  ) => {
+    if (
+      page < 1 ||
+      page >
+        pagination.totalPages
+    ) {
+      return;
+    }
 
     setFilters((prev) => ({
       ...prev,
@@ -218,226 +436,754 @@ export default function AdminUsers() {
     }));
   };
 
+  // ======================================================
+  // INITIALS
+  // ======================================================
+
+  const getInitials = (
+    name
+  ) => {
+    if (!name) {
+      return "U";
+    }
+
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map(
+        (part) =>
+          part[0] || ""
+      )
+      .join("")
+      .toUpperCase();
+  };
+
+  // ======================================================
+  // RENDER
+  // ======================================================
+
   return (
     <Layout>
-      <div className="card">
-        <div className="section-header">
-          <h2>
-            {editingUserId ? "Modifier un admin" : "Ajouter un admin"}
-          </h2>
+      <div className="management-page">
+        {/* ================================================
+            HEADER
+        ================================================ */}
+
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              Utilisateurs
+            </h1>
+
+            <p className="page-subtitle">
+              Gérez les administrateurs
+              et managers autorisés à
+              accéder à votre espace.
+            </p>
+          </div>
         </div>
 
-        <form className="member-form" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="name"
-            placeholder="Nom"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+        {/* ================================================
+            STATISTIQUES
+        ================================================ */}
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Adresse email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+        <div className="management-stats-grid">
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Total utilisateurs
+            </div>
 
-          <input
-            type="password"
-            name="password"
-            placeholder={
-              editingUserId
-                ? "Nouveau mot de passe (optionnel)"
-                : "Mot de passe"
-            }
-            value={formData.password}
-            onChange={handleChange}
-            required={!editingUserId}
-          />
+            <div className="management-stat-value">
+              {pagination.total}
+            </div>
 
-          <select name="role" value={formData.role} onChange={handleChange}>
-            <option value="admin">admin</option>
-            <option value="manager">manager</option>
-          </select>
+            <div className="management-stat-description">
+              Comptes enregistrés
+            </div>
+          </div>
 
-          <label className="checkbox-line">
-            <input
-              type="checkbox"
-              name="isActive"
-              checked={formData.isActive}
-              onChange={handleChange}
-            />
-            Compte actif
-          </label>
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Administrateurs
+            </div>
 
-          <div className="form-actions">
-            <button type="submit" disabled={loading}>
-              {loading
-                ? editingUserId
-                  ? "Modification..."
-                  : "Création..."
-                : editingUserId
-                ? "Mettre à jour"
-                : "Créer l'admin"}
-            </button>
+            <div className="management-stat-value">
+              {stats.admins}
+            </div>
+
+            <div className="management-stat-description">
+              Sur cette page
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Managers
+            </div>
+
+            <div className="management-stat-value">
+              {stats.managers}
+            </div>
+
+            <div className="management-stat-description">
+              Sur cette page
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Comptes actifs
+            </div>
+
+            <div className="management-stat-value">
+              {stats.active}
+            </div>
+
+            <div className="management-stat-description">
+              {stats.inactive} inactif
+              {stats.inactive > 1
+                ? "s"
+                : ""}
+            </div>
+          </div>
+        </div>
+
+        {/* ================================================
+            FORMULAIRE
+        ================================================ */}
+
+        <div
+          className="management-card"
+          style={{
+            marginTop: 24,
+          }}
+        >
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                {editingUserId
+                  ? "Modifier l'utilisateur"
+                  : "Nouvel utilisateur"}
+              </h2>
+
+              <p className="page-subtitle">
+                {editingUserId
+                  ? "Modifiez les informations et les droits de ce compte."
+                  : "Créez un compte administrateur ou manager."}
+              </p>
+            </div>
 
             {editingUserId && (
-              <button
-                type="button"
-                className="secondary-btn"
-                onClick={resetForm}
-              >
-                Annuler
-              </button>
+              <span className="status-badge status-warning">
+                Mode modification
+              </span>
             )}
           </div>
-        </form>
-      </div>
 
-      <div className="card section-gap">
-        <div className="section-header">
-          <div>
-            <h2>Utilisateurs admin</h2>
-            <span className="results-count">
-              {pagination.total} utilisateur(s) au total
-            </span>
-          </div>
-        </div>
-
-        <form className="filters-panel" onSubmit={applyFilters}>
-          <input
-            type="text"
-            name="search"
-            placeholder="Rechercher un utilisateur..."
-            value={filters.search}
-            onChange={handleFilterChange}
-          />
-
-          <select name="role" value={filters.role} onChange={handleFilterChange}>
-            <option value="">Tous les rôles</option>
-            <option value="admin">admin</option>
-            <option value="manager">manager</option>
-          </select>
-
-          <select
-            name="isActive"
-            value={filters.isActive}
-            onChange={handleFilterChange}
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              padding: 24,
+            }}
           >
-            <option value="">Tous les statuts</option>
-            <option value="true">Actif</option>
-            <option value="false">Inactif</option>
-          </select>
+            <div className="management-form-grid">
+              {/* NOM */}
 
-          <select
-            name="limit"
-            value={filters.limit}
-            onChange={handleFilterChange}
-          >
-            <option value="5">5 / page</option>
-            <option value="10">10 / page</option>
-            <option value="20">20 / page</option>
-            <option value="50">50 / page</option>
-          </select>
+              <div className="form-group">
+                <label className="form-label">
+                  Nom complet
+                </label>
 
-          <div className="filter-actions">
-            <button type="submit">Appliquer</button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={resetFilters}
+                <input
+                  type="text"
+                  name="name"
+                  className="form-input"
+                  placeholder="Ex : Jean Dupont"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              {/* EMAIL */}
+
+              <div className="form-group">
+                <label className="form-label">
+                  Adresse email
+                </label>
+
+                <input
+                  type="email"
+                  name="email"
+                  className="form-input"
+                  placeholder="Ex : jean@email.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              {/* PASSWORD */}
+
+              <div className="form-group">
+                <label className="form-label">
+                  {editingUserId
+                    ? "Nouveau mot de passe"
+                    : "Mot de passe"}
+                </label>
+
+                <input
+                  type="password"
+                  name="password"
+                  className="form-input"
+                  placeholder={
+                    editingUserId
+                      ? "Laisser vide pour conserver l'actuel"
+                      : "Minimum 6 caractères"
+                  }
+                  value={
+                    formData.password
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required={
+                    !editingUserId
+                  }
+                  minLength={
+                    formData.password
+                      ? 6
+                      : undefined
+                  }
+                />
+              </div>
+
+              {/* ROLE */}
+
+              <div className="form-group">
+                <label className="form-label">
+                  Rôle
+                </label>
+
+                <select
+                  name="role"
+                  className="form-select"
+                  value={
+                    formData.role
+                  }
+                  onChange={
+                    handleChange
+                  }
+                >
+                  <option value="admin">
+                    Administrateur
+                  </option>
+
+                  <option value="manager">
+                    Manager
+                  </option>
+                </select>
+              </div>
+
+              {/* ACTIVE */}
+
+              <div className="form-group form-group-full">
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    gap: 12,
+                    padding: 16,
+                    border:
+                      "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    background:
+                      "#f8fafc",
+                    cursor:
+                      "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    checked={
+                      formData.isActive
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    style={{
+                      width: 18,
+                      height: 18,
+                    }}
+                  />
+
+                  <div>
+                    <strong
+                      style={{
+                        display:
+                          "block",
+                        fontSize: 14,
+                      }}
+                    >
+                      Compte actif
+                    </strong>
+
+                    <span
+                      style={{
+                        color:
+                          "#64748b",
+                        fontSize: 12,
+                      }}
+                    >
+                      L'utilisateur
+                      pourra se
+                      connecter à
+                      l'application.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "flex-end",
+                gap: 10,
+                marginTop: 22,
+                flexWrap: "wrap",
+              }}
             >
-              Réinitialiser
-            </button>
-          </div>
-        </form>
-
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Rôle</th>
-                <th>Actif</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length > 0 ? (
-                users.map((user) => (
-                  <tr key={user._id}>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>{user.isActive ? "Oui" : "Non"}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          className="edit-btn"
-                          onClick={() => handleEdit(user._id)}
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          onClick={() => handleDelete(user._id)}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5">Aucun utilisateur trouvé</td>
-                </tr>
+              {editingUserId && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={
+                    resetForm
+                  }
+                  disabled={
+                    loading
+                  }
+                >
+                  Annuler
+                </button>
               )}
-            </tbody>
-          </table>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading
+                  ? editingUserId
+                    ? "Modification..."
+                    : "Création..."
+                  : editingUserId
+                  ? "✓ Enregistrer les modifications"
+                  : "+ Créer l'utilisateur"}
+              </button>
+            </div>
+          </form>
         </div>
 
-        <div className="pagination-bar">
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page - 1)}
-            disabled={pagination.page <= 1}
-          >
-            Précédent
-          </button>
+        {/* ================================================
+            LISTE
+        ================================================ */}
 
-          <span>
-            Page {pagination.page} / {pagination.totalPages}
-          </span>
+        <div
+          className="management-card"
+          style={{
+            marginTop: 24,
+          }}
+        >
+          <div className="management-card-header">
+            <div>
+              <h2 className="management-card-title">
+                Comptes utilisateurs
+              </h2>
 
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => goToPage(pagination.page + 1)}
-            disabled={pagination.page >= pagination.totalPages}
+              <p className="page-subtitle">
+                {pagination.total}{" "}
+                utilisateur
+                {pagination.total > 1
+                  ? "s"
+                  : ""}{" "}
+                au total
+              </p>
+            </div>
+          </div>
+
+          {/* ================================================
+              FILTRES
+          ================================================ */}
+
+          <form
+            className="management-toolbar"
+            onSubmit={applyFilters}
           >
-            Suivant
-          </button>
+            <div className="management-search">
+              <span className="management-search-icon">
+                ⌕
+              </span>
+
+              <input
+                type="text"
+                name="search"
+                placeholder="Rechercher par nom ou email..."
+                value={
+                  filters.search
+                }
+                onChange={
+                  handleFilterChange
+                }
+              />
+            </div>
+
+            <div className="management-filters">
+              <select
+                name="role"
+                className="management-select"
+                value={filters.role}
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Tous les rôles
+                </option>
+
+                <option value="admin">
+                  Administrateurs
+                </option>
+
+                <option value="manager">
+                  Managers
+                </option>
+              </select>
+
+              <select
+                name="isActive"
+                className="management-select"
+                value={
+                  filters.isActive
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="">
+                  Tous les statuts
+                </option>
+
+                <option value="true">
+                  Actifs
+                </option>
+
+                <option value="false">
+                  Inactifs
+                </option>
+              </select>
+
+              <select
+                name="limit"
+                className="management-select"
+                value={
+                  filters.limit
+                }
+                onChange={
+                  handleFilterChange
+                }
+              >
+                <option value="5">
+                  5 / page
+                </option>
+
+                <option value="10">
+                  10 / page
+                </option>
+
+                <option value="20">
+                  20 / page
+                </option>
+
+                <option value="50">
+                  50 / page
+                </option>
+              </select>
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-small"
+              >
+                Appliquer
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={
+                  resetFilters
+                }
+              >
+                Réinitialiser
+              </button>
+            </div>
+          </form>
+
+          {/* ================================================
+              TABLEAU
+          ================================================ */}
+
+          {loading &&
+          users.length === 0 ? (
+            <div className="management-loading">
+              <div className="management-spinner" />
+
+              <span>
+                Chargement des
+                utilisateurs...
+              </span>
+            </div>
+          ) : users.length > 0 ? (
+            <div className="management-table-wrapper">
+              <table className="management-table">
+                <thead>
+                  <tr>
+                    <th>
+                      Utilisateur
+                    </th>
+
+                    <th>
+                      Email
+                    </th>
+
+                    <th>
+                      Rôle
+                    </th>
+
+                    <th>
+                      Statut
+                    </th>
+
+                    <th>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {users.map(
+                    (user) => (
+                      <tr
+                        key={
+                          user._id
+                        }
+                      >
+                        <td>
+                          <div className="person-cell">
+                            <div className="person-avatar">
+                              {getInitials(
+                                user.name
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="person-name">
+                                {user.name}
+                              </div>
+
+                              <div className="person-secondary">
+                                Compte{" "}
+                                {user.role ===
+                                "admin"
+                                  ? "administrateur"
+                                  : "manager"}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td>
+                          {user.email}
+                        </td>
+
+                        <td>
+                          <span
+                            className={
+                              user.role ===
+                              "admin"
+                                ? "status-badge status-planned"
+                                : "status-badge status-pending"
+                            }
+                          >
+                            {user.role ===
+                            "admin"
+                              ? "Administrateur"
+                              : "Manager"}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span
+                            className={
+                              user.isActive
+                                ? "status-badge status-active"
+                                : "status-badge status-inactive"
+                            }
+                          >
+                            {user.isActive
+                              ? "Actif"
+                              : "Inactif"}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className="table-actions">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-small"
+                              onClick={() =>
+                                handleEdit(
+                                  user._id
+                                )
+                              }
+                            >
+                              Modifier
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-small"
+                              onClick={() =>
+                                handleDelete(
+                                  user._id
+                                )
+                              }
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                👤
+              </div>
+
+              <h3>
+                Aucun utilisateur
+              </h3>
+
+              <p>
+                Aucun compte ne
+                correspond aux
+                critères sélectionnés.
+              </p>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={
+                  resetFilters
+                }
+              >
+                Réinitialiser les
+                filtres
+              </button>
+            </div>
+          )}
+
+          {/* ================================================
+              PAGINATION
+          ================================================ */}
+
+          {pagination.totalPages >
+            1 && (
+            <div className="management-pagination">
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() =>
+                  goToPage(
+                    pagination.page -
+                      1
+                  )
+                }
+                disabled={
+                  pagination.page <=
+                  1
+                }
+              >
+                ← Précédent
+              </button>
+
+              <div className="management-pagination-info">
+                Page{" "}
+                <strong>
+                  {pagination.page}
+                </strong>{" "}
+                sur{" "}
+                <strong>
+                  {
+                    pagination.totalPages
+                  }
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() =>
+                  goToPage(
+                    pagination.page +
+                      1
+                  )
+                }
+                disabled={
+                  pagination.page >=
+                  pagination.totalPages
+                }
+              >
+                Suivant →
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* ================================================
+            CONFIRMATION SUPPRESSION
+        ================================================ */}
+
+        <ConfirmModal
+          isOpen={
+            !!deleteTargetId
+          }
+          title="Supprimer cet utilisateur"
+          message="Cette action supprimera définitivement l'utilisateur sélectionné. Voulez-vous continuer ?"
+          confirmText="Supprimer"
+          onConfirm={
+            confirmDelete
+          }
+          onClose={() =>
+            setDeleteTargetId(
+              null
+            )
+          }
+          loading={
+            deleteLoading
+          }
+        />
       </div>
-
-      <ConfirmModal
-        isOpen={!!deleteTargetId}
-        title="Supprimer cet utilisateur"
-        message="Cette action supprimera définitivement l'utilisateur sélectionné. Voulez-vous continuer ?"
-        confirmText="Supprimer"
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTargetId(null)}
-        loading={deleteLoading}
-      />
     </Layout>
   );
 }

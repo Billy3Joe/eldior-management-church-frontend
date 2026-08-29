@@ -1,9 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  toast,
+} from "react-toastify";
 
 import Layout from "../components/Layout";
+import "../styles/ManagementPages.css";
+
 import API from "../api/axios";
-import { getCurrentAdmin } from "../utils/auth";
+
+import {
+  getCurrentAdmin,
+} from "../utils/auth";
 
 const initialForm = {
   name: "",
@@ -12,117 +24,206 @@ const initialForm = {
 };
 
 export default function Departments() {
-  const currentUser = getCurrentAdmin();
-  const isAdmin = currentUser?.role === "admin";
+  const currentUser =
+    getCurrentAdmin();
 
-  const [departments, setDepartments] =
-    useState([]);
+  const isAdmin =
+    currentUser?.role === "admin";
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    departments,
+    setDepartments,
+  ] = useState([]);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [search, setSearch] =
-    useState("");
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
 
-  const [form, setForm] =
-    useState(initialForm);
+  const [
+    search,
+    setSearch,
+  ] = useState("");
 
-  const [editingId, setEditingId] =
-    useState(null);
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState("all");
 
-  const [showForm, setShowForm] =
-    useState(false);
+  const [
+    form,
+    setForm,
+  ] = useState(initialForm);
+
+  const [
+    editingId,
+    setEditingId,
+  ] = useState(null);
+
+  const [
+    showForm,
+    setShowForm,
+  ] = useState(false);
 
   // ======================================================
   // CHARGEMENT
   // ======================================================
 
-  const fetchDepartments = async () => {
-    try {
-      setLoading(true);
+  const fetchDepartments =
+    async () => {
+      try {
+        setLoading(true);
 
-      const response =
-        await API.get(
-          "/departments",
-          {
-            params: {
-              limit: 1000,
-            },
-          }
+        const response =
+          await API.get(
+            "/departments",
+            {
+              params: {
+                limit: 1000,
+              },
+            }
+          );
+
+        const data =
+          response.data?.data ||
+          response.data
+            ?.departments ||
+          [];
+
+        setDepartments(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Erreur départements :",
+          error
         );
 
-      const data =
-        response.data?.data ||
-        response.data?.departments ||
-        [];
-
-      setDepartments(
-        Array.isArray(data)
-          ? data
-          : []
-      );
-    } catch (error) {
-      console.error(
-        "Erreur départements :",
-        error
-      );
-
-      toast.error(
-        error.response?.data?.message ||
-          "Impossible de charger les départements"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Impossible de charger les départements"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     fetchDepartments();
   }, []);
 
   // ======================================================
-  // RECHERCHE
+  // STATISTIQUES
+  // ======================================================
+
+  const stats =
+    useMemo(() => {
+      const total =
+        departments.length;
+
+      const active =
+        departments.filter(
+          (department) =>
+            department.status ===
+            "active"
+        ).length;
+
+      const inactive =
+        departments.filter(
+          (department) =>
+            department.status ===
+            "inactive"
+        ).length;
+
+      const withLeader =
+        departments.filter(
+          (department) =>
+            Boolean(
+              department.leader
+            )
+        ).length;
+
+      return {
+        total,
+        active,
+        inactive,
+        withLeader,
+      };
+    }, [departments]);
+
+  // ======================================================
+  // RECHERCHE + FILTRE
   // ======================================================
 
   const filteredDepartments =
     useMemo(() => {
-      const value = search
-        .trim()
-        .toLowerCase();
-
-      if (!value) {
-        return departments;
-      }
+      const value =
+        search
+          .trim()
+          .toLowerCase();
 
       return departments.filter(
-        (department) =>
-          [
+        (department) => {
+          const matchesStatus =
+            statusFilter ===
+              "all" ||
+            department.status ===
+              statusFilter;
+
+          if (!matchesStatus) {
+            return false;
+          }
+
+          if (!value) {
+            return true;
+          }
+
+          const text = [
             department.name,
             department.leader,
             department.status,
           ]
             .filter(Boolean)
             .join(" ")
-            .toLowerCase()
-            .includes(value)
+            .toLowerCase();
+
+          return text.includes(
+            value
+          );
+        }
       );
-    }, [departments, search]);
+    }, [
+      departments,
+      search,
+      statusFilter,
+    ]);
 
   // ======================================================
-  // FORM
+  // FORMULAIRE
   // ======================================================
 
-  const handleChange = (event) => {
-    const { name, value } =
-      event.target;
+  const handleChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
   };
 
   const resetForm = () => {
@@ -146,10 +247,12 @@ export default function Departments() {
 
     setForm({
       name:
-        department.name || "",
+        department.name ||
+        "",
 
       leader:
-        department.leader || "",
+        department.leader ||
+        "",
 
       status:
         department.status ||
@@ -157,15 +260,10 @@ export default function Departments() {
     });
 
     setShowForm(true);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
   };
 
   // ======================================================
-  // CREATE / UPDATE
+  // CRÉATION / MODIFICATION
   // ======================================================
 
   const handleSubmit = async (
@@ -202,7 +300,7 @@ export default function Departments() {
         );
 
         toast.success(
-          "Département modifié"
+          "Département modifié avec succès"
         );
       } else {
         await API.post(
@@ -211,7 +309,7 @@ export default function Departments() {
         );
 
         toast.success(
-          "Département créé"
+          "Département créé avec succès"
         );
       }
 
@@ -225,7 +323,8 @@ export default function Departments() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible d'enregistrer le département"
       );
     } finally {
@@ -234,7 +333,7 @@ export default function Departments() {
   };
 
   // ======================================================
-  // DELETE ADMIN
+  // SUPPRESSION
   // ======================================================
 
   const handleDelete = async (
@@ -248,11 +347,12 @@ export default function Departments() {
       return;
     }
 
-    if (
-      !window.confirm(
-        "Supprimer ce département ?"
-      )
-    ) {
+    const confirmed =
+      window.confirm(
+        "Voulez-vous vraiment supprimer ce département ?"
+      );
+
+    if (!confirmed) {
       return;
     }
 
@@ -262,223 +362,527 @@ export default function Departments() {
       );
 
       toast.success(
-        "Département supprimé"
+        "Département supprimé avec succès"
       );
 
       await fetchDepartments();
     } catch (error) {
+      console.error(
+        "Erreur suppression département :",
+        error
+      );
+
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de supprimer le département"
       );
     }
   };
 
+  // ======================================================
+  // INITIAL DU DÉPARTEMENT
+  // ======================================================
+
+  const getDepartmentInitial = (
+    department
+  ) => {
+    return (
+      department.name
+        ?.charAt(0)
+        ?.toUpperCase() ||
+      "D"
+    );
+  };
+
+  // ======================================================
+  // AFFICHAGE
+  // ======================================================
+
   return (
     <Layout>
-      <div className="section-header">
-        <div>
-          <h2>Départements</h2>
+      <div className="management-page">
+        {/* ==================================================
+            HEADER
+        ================================================== */}
 
-          <p className="page-subtitle">
-            Organisez les différents
-            départements de l'église.
-          </p>
+        <div className="page-header">
+          <div className="page-header-left">
+            <h1 className="page-title">
+              Départements
+            </h1>
+
+            <p className="page-subtitle">
+              Organisez les différents
+              départements de votre
+              église et leurs
+              responsables.
+            </p>
+          </div>
+
+          <div className="page-header-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={
+                openCreateForm
+              }
+            >
+              + Nouveau département
+            </button>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateForm}
-        >
-          + Nouveau département
-        </button>
-      </div>
+        {/* ==================================================
+            STATISTIQUES
+        ================================================== */}
 
-      {showForm && (
-        <div className="card section-gap">
-          <h3>
-            {editingId
-              ? "Modifier le département"
-              : "Créer un département"}
-          </h3>
+        <div className="management-stats-grid">
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Total départements
+            </div>
 
-          <form
-            onSubmit={handleSubmit}
-          >
-            <div className="form-group">
-              <label>Nom</label>
+            <div className="management-stat-value">
+              {stats.total}
+            </div>
+
+            <div className="management-stat-description">
+              Tous les départements
+              enregistrés
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Départements actifs
+            </div>
+
+            <div className="management-stat-value">
+              {stats.active}
+            </div>
+
+            <div className="management-stat-description">
+              Départements actuellement
+              actifs
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Départements inactifs
+            </div>
+
+            <div className="management-stat-value">
+              {stats.inactive}
+            </div>
+
+            <div className="management-stat-description">
+              Départements actuellement
+              inactifs
+            </div>
+          </div>
+
+          <div className="management-stat-card">
+            <div className="management-stat-label">
+              Avec responsable
+            </div>
+
+            <div className="management-stat-value">
+              {stats.withLeader}
+            </div>
+
+            <div className="management-stat-description">
+              Départements ayant un
+              responsable
+            </div>
+          </div>
+        </div>
+
+        {/* ==================================================
+            LISTE DES DÉPARTEMENTS
+        ================================================== */}
+
+        <div className="management-card">
+          {/* RECHERCHE / FILTRE */}
+
+          <div className="management-toolbar">
+            <div className="management-search">
+              <span className="management-search-icon">
+                🔎
+              </span>
 
               <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
+                type="search"
+                placeholder="Rechercher un département..."
+                value={search}
+                onChange={(
+                  event
+                ) =>
+                  setSearch(
+                    event.target
+                      .value
+                  )
+                }
               />
             </div>
 
-            <div className="form-group">
-              <label>
-                Responsable
-              </label>
-
-              <input
-                name="leader"
-                value={form.leader}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Statut</label>
-
+            <div className="management-filters">
               <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
+                className="management-select"
+                value={
+                  statusFilter
+                }
+                onChange={(
+                  event
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value
+                  )
+                }
               >
+                <option value="all">
+                  Tous les statuts
+                </option>
+
                 <option value="active">
-                  Actif
+                  Actifs
                 </option>
 
                 <option value="inactive">
-                  Inactif
+                  Inactifs
                 </option>
               </select>
             </div>
+          </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                marginTop: 20,
-              }}
-            >
-              <button
-                type="submit"
-                disabled={saving}
-              >
-                {saving
-                  ? "Enregistrement..."
-                  : editingId
-                  ? "Enregistrer"
-                  : "Créer"}
-              </button>
+          {/* CHARGEMENT */}
 
-              <button
-                type="button"
-                onClick={resetForm}
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="card section-gap">
-        <input
-          type="search"
-          placeholder="Rechercher un département..."
-          value={search}
-          onChange={(event) =>
-            setSearch(
-              event.target.value
-            )
-          }
-        />
-
-        <div
-          style={{
-            marginTop: 20,
-            overflowX: "auto",
-          }}
-        >
           {loading ? (
-            <p>
-              Chargement...
-            </p>
+            <div className="management-loading">
+              <div className="management-spinner" />
+
+              <div>
+                Chargement des
+                départements...
+              </div>
+            </div>
           ) : filteredDepartments.length ===
             0 ? (
-            <p>
-              Aucun département.
-            </p>
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                🏢
+              </div>
+
+              <h3>
+                Aucun département
+                trouvé
+              </h3>
+
+              <p>
+                Créez votre premier
+                département ou
+                modifiez les critères
+                de recherche.
+              </p>
+            </div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>
-                    Responsable
-                  </th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+            <div className="management-table-wrapper">
+              <table className="management-table">
+                <thead>
+                  <tr>
+                    <th>
+                      Département
+                    </th>
 
-              <tbody>
-                {filteredDepartments.map(
-                  (department) => (
-                    <tr
-                      key={
-                        department._id
-                      }
-                    >
-                      <td>
-                        {
-                          department.name
+                    <th>
+                      Responsable
+                    </th>
+
+                    <th>
+                      Statut
+                    </th>
+
+                    <th>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredDepartments.map(
+                    (
+                      department
+                    ) => (
+                      <tr
+                        key={
+                          department._id
                         }
-                      </td>
+                      >
+                        {/* DÉPARTEMENT */}
 
-                      <td>
-                        {department.leader ||
-                          "—"}
-                      </td>
-
-                      <td>
-                        {department.status ||
-                          "—"}
-                      </td>
-
-                      <td>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditForm(
+                        <td>
+                          <div className="person-cell">
+                            <div className="person-avatar">
+                              {getDepartmentInitial(
                                 department
-                              )
-                            }
-                          >
-                            Modifier
-                          </button>
+                              )}
+                            </div>
 
-                          {isAdmin && (
+                            <div>
+                              <div className="person-name">
+                                {
+                                  department.name
+                                }
+                              </div>
+
+                              <div className="person-secondary">
+                                Département
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* RESPONSABLE */}
+
+                        <td>
+                          {department.leader ? (
+                            <div>
+                              <div className="person-name">
+                                {
+                                  department.leader
+                                }
+                              </div>
+
+                              <div className="person-secondary">
+                                Responsable
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="person-secondary">
+                              Non renseigné
+                            </span>
+                          )}
+                        </td>
+
+                        {/* STATUT */}
+
+                        <td>
+                          <span
+                            className={`status-badge ${
+                              department.status ===
+                              "active"
+                                ? "status-active"
+                                : "status-inactive"
+                            }`}
+                          >
+                            {department.status ===
+                            "active"
+                              ? "Actif"
+                              : "Inactif"}
+                          </span>
+                        </td>
+
+                        {/* ACTIONS */}
+
+                        <td>
+                          <div className="table-actions">
                             <button
                               type="button"
+                              className="btn btn-secondary btn-small"
                               onClick={() =>
-                                handleDelete(
-                                  department._id
+                                openEditForm(
+                                  department
                                 )
                               }
                             >
-                              Supprimer
+                              ✏️ Modifier
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
+
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-small"
+                                onClick={() =>
+                                  handleDelete(
+                                    department._id
+                                  )
+                                }
+                              >
+                                🗑️ Supprimer
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
+
+      {/* ==================================================
+          MODAL CRÉATION / MODIFICATION
+      ================================================== */}
+
+      {showForm && (
+        <div
+          className="management-modal-overlay"
+          onMouseDown={(
+            event
+          ) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              resetForm();
+            }
+          }}
+        >
+          <div className="management-modal">
+            {/* HEADER MODAL */}
+
+            <div className="management-modal-header">
+              <div>
+                <h2>
+                  {editingId
+                    ? "Modifier le département"
+                    : "Créer un département"}
+                </h2>
+
+                <p className="page-subtitle">
+                  {editingId
+                    ? "Modifiez les informations de ce département."
+                    : "Renseignez les informations du nouveau département."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="management-modal-close"
+                onClick={
+                  resetForm
+                }
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* FORMULAIRE */}
+
+            <form
+              onSubmit={
+                handleSubmit
+              }
+            >
+              <div className="management-modal-body">
+                <div className="management-form-grid">
+                  {/* NOM */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Nom du département *
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="name"
+                      value={
+                        form.name
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Ex. Accueil, Louange, Communication..."
+                      required
+                    />
+                  </div>
+
+                  {/* RESPONSABLE */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Responsable
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="leader"
+                      value={
+                        form.leader
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Nom du responsable"
+                    />
+                  </div>
+
+                  {/* STATUT */}
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Statut
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="status"
+                      value={
+                        form.status
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      <option value="active">
+                        Actif
+                      </option>
+
+                      <option value="inactive">
+                        Inactif
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* FOOTER MODAL */}
+
+              <div className="management-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={
+                    resetForm
+                  }
+                >
+                  Annuler
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    saving
+                  }
+                >
+                  {saving
+                    ? "Enregistrement..."
+                    : editingId
+                    ? "Enregistrer les modifications"
+                    : "Créer le département"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
