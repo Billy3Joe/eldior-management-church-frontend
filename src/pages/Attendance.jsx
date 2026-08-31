@@ -4,421 +4,721 @@ import {
   useState,
 } from "react";
 
-import * as XLSX from "xlsx";
-
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+  toast,
+} from "react-toastify";
 
 import Layout from "../components/Layout";
 import "../styles/ManagementPages.css";
 
 import API from "../api/axios";
 
-export default function AttendanceStats() {
-  const [analytics, setAnalytics] =
-    useState(null);
+// ======================================================
+// HELPERS
+// ======================================================
 
-  const [loading, setLoading] =
-    useState(true);
+const formatDate = (
+  value
+) => {
+  if (!value) {
+    return "—";
+  }
 
-  const [period, setPeriod] =
-    useState("all");
+  const date =
+    new Date(value);
 
-  const [customStart, setCustomStart] =
-    useState("");
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "—";
+  }
 
-  const [customEnd, setCustomEnd] =
-    useState("");
-
-  // ======================================================
-  // CHARGEMENT DES STATISTIQUES
-  // ======================================================
-
-  const fetchAnalytics = async (
-    selectedPeriod = period
-  ) => {
-    try {
-      setLoading(true);
-
-      const query =
-        new URLSearchParams();
-
-      if (selectedPeriod) {
-        query.append(
-          "period",
-          selectedPeriod
-        );
-      }
-
-      if (
-        selectedPeriod === "custom" &&
-        customStart &&
-        customEnd
-      ) {
-        query.append(
-          "startDate",
-          customStart
-        );
-
-        query.append(
-          "endDate",
-          customEnd
-        );
-      }
-
-      const res = await API.get(
-        `/attendances/analytics/global?${query.toString()}`
-      );
-
-      setAnalytics(
-        res.data?.data || null
-      );
-    } catch (err) {
-      console.error(
-        "Erreur analytics attendance :",
-        err
-      );
-
-      setAnalytics(null);
-    } finally {
-      setLoading(false);
+  return date.toLocaleDateString(
+    "fr-FR",
+    {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }
-  };
+  );
+};
 
-  useEffect(() => {
-    fetchAnalytics(period);
+const getInitials = (
+  member
+) => {
+  const first =
+    member?.firstName
+      ?.charAt(0)
+      ?.toUpperCase() ||
+    "";
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const last =
+    member?.lastName
+      ?.charAt(0)
+      ?.toUpperCase() ||
+    "";
 
-  useEffect(() => {
-    if (period !== "custom") {
-      fetchAnalytics(period);
-    } else if (
-      customStart &&
-      customEnd
-    ) {
-      fetchAnalytics(period);
-    }
+  return (
+    `${first}${last}` ||
+    "P"
+  );
+};
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    period,
-    customStart,
-    customEnd,
-  ]);
+const ATTENDANCE_STATUSES = [
+  "Présent",
+  "Absent",
+  "Excusé",
+  "En retard",
+];
 
-  // ======================================================
-  // DONNÉES
-  // ======================================================
+// ======================================================
+// PAGE
+// ======================================================
 
-  const overview =
-    analytics?.overview || {};
+export default function Attendance() {
+  const [
+    events,
+    setEvents,
+  ] = useState([]);
 
-  const bestAttendanceEvent =
-    analytics?.bestAttendanceEvent ||
-    null;
+  const [
+    members,
+    setMembers,
+  ] = useState([]);
 
-  const eventsAnalytics =
-    analytics?.eventsAnalytics || [];
+  const [
+    attendances,
+    setAttendances,
+  ] = useState([]);
 
-  // ======================================================
-  // DONNÉES GRAPHIQUES
-  // ======================================================
+  const [
+    selectedEventId,
+    setSelectedEventId,
+  ] = useState("");
 
-  const globalStatusData =
-    useMemo(
-      () => [
-        {
-          name: "Présents",
-          value:
-            overview.presentCount ||
-            0,
-        },
-        {
-          name: "Absents",
-          value:
-            overview.absentCount ||
-            0,
-        },
-        {
-          name: "Excusés",
-          value:
-            overview.excusedCount ||
-            0,
-        },
-      ],
-      [
-        overview.presentCount,
-        overview.absentCount,
-        overview.excusedCount,
-      ]
-    );
+  const [
+    loadingEvents,
+    setLoadingEvents,
+  ] = useState(true);
 
-  const eventChartData =
-    useMemo(
-      () =>
-        eventsAnalytics.map(
-          (event) => ({
-            name:
-              event.title ||
-              "Événement",
+  const [
+    loadingMembers,
+    setLoadingMembers,
+  ] = useState(true);
 
-            presents:
-              event.present || 0,
+  const [
+    loadingAttendance,
+    setLoadingAttendance,
+  ] = useState(false);
 
-            absents:
-              event.absent || 0,
+  const [
+    savingMemberId,
+    setSavingMemberId,
+  ] = useState(null);
 
-            excuses:
-              event.excused || 0,
+  const [
+    bulkSaving,
+    setBulkSaving,
+  ] = useState(false);
 
-            taux:
-              event.attendanceRate ||
-              0,
-          })
-        ),
-      [eventsAnalytics]
-    );
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    typeFilter,
+    setTypeFilter,
+  ] = useState("all");
 
   // ======================================================
-  // EXPORT EXCEL
+  // CHARGEMENT ÉVÉNEMENTS
   // ======================================================
 
-  const handleExportExcel = () => {
-    const summarySheetData = [
-      [
-        "STATISTIQUES AVANCÉES DE PRÉSENCE",
-      ],
-      [],
-      [
-        "Période sélectionnée",
-        analytics?.period ||
-          period,
-      ],
-      [
-        "Date début",
-        analytics?.startDate ||
-          customStart ||
-          "",
-      ],
-      [
-        "Date fin",
-        analytics?.endDate ||
-          customEnd ||
-          "",
-      ],
-      [],
-      ["Résumé global"],
-      [
-        "Total membres",
-        overview.totalMembers ||
-          0,
-      ],
-      [
-        "Présents",
-        overview.presentCount ||
-          0,
-      ],
-      [
-        "Absents",
-        overview.absentCount ||
-          0,
-      ],
-      [
-        "Excusés",
-        overview.excusedCount ||
-          0,
-      ],
-      [
-        "Total présences",
-        overview.totalAttendances ||
-          0,
-      ],
-      [],
-      ["Meilleur événement"],
-      [
-        "Titre",
-        bestAttendanceEvent?.title ||
-          "",
-      ],
-      [
-        "Taux de présence",
-        `${
-          bestAttendanceEvent
-            ?.attendanceRate || 0
-        }%`,
-      ],
-      [
-        "Présents",
-        bestAttendanceEvent
-          ?.present || 0,
-      ],
-      [
-        "Absents",
-        bestAttendanceEvent
-          ?.absent || 0,
-      ],
-      [
-        "Excusés",
-        bestAttendanceEvent
-          ?.excused || 0,
-      ],
-    ];
+  const fetchEvents =
+    async () => {
+      try {
+        setLoadingEvents(true);
 
-    const eventsSheetData = [
-      [
-        "Événement",
-        "Date",
-        "Présents",
-        "Absents",
-        "Excusés",
-        "Non marqués",
-        "Taux de présence",
-        "Type",
-        "Statut",
-      ],
+        const response =
+          await API.get(
+            "/events",
+            {
+              params: {
+                limit: 1000,
+              },
+            }
+          );
 
-      ...eventsAnalytics.map(
-        (event) => [
-          event.title || "",
+        const data =
+          response.data?.data ||
+          response.data?.events ||
+          [];
 
-          event.date
-            ? new Date(
-                event.date
-              ).toLocaleString(
-                "fr-FR"
+        const rows =
+          Array.isArray(data)
+            ? data
+            : [];
+
+        const sorted =
+          [...rows].sort(
+            (a, b) =>
+              new Date(
+                a.date
+              ) -
+              new Date(
+                b.date
               )
-            : "",
+          );
 
-          event.present || 0,
+        setEvents(
+          sorted
+        );
 
-          event.absent || 0,
+        if (
+          sorted.length >
+          0
+        ) {
+          const now =
+            new Date();
 
-          event.excused || 0,
+          const nextEvent =
+            sorted.find(
+              (event) =>
+                new Date(
+                  event.date
+                ) >= now
+            );
 
-          event.notMarked || 0,
+          setSelectedEventId(
+            nextEvent?._id ||
+              sorted[
+                sorted.length - 1
+              ]?._id ||
+              ""
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Erreur chargement événements :",
+          error
+        );
 
-          `${
-            event.attendanceRate ||
-            0
-          }%`,
-
-          event.type || "",
-
-          event.status || "",
-        ]
-      ),
-    ];
-
-    const workbook =
-      XLSX.utils.book_new();
-
-    const summarySheet =
-      XLSX.utils.aoa_to_sheet(
-        summarySheetData
-      );
-
-    const eventsSheet =
-      XLSX.utils.aoa_to_sheet(
-        eventsSheetData
-      );
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      summarySheet,
-      "Résumé"
-    );
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      eventsSheet,
-      "Par événement"
-    );
-
-    XLSX.writeFile(
-      workbook,
-      "attendance-stats-eldior-management-church.xlsx"
-    );
-  };
-
-  // ======================================================
-  // FORMAT DATE
-  // ======================================================
-
-  const formatDate = (value) => {
-    if (!value) {
-      return "—";
-    }
-
-    const date =
-      new Date(value);
-
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat(
-      "fr-FR",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "Impossible de charger les événements"
+        );
+      } finally {
+        setLoadingEvents(
+          false
+        );
       }
-    ).format(date);
-  };
+    };
+
+  // ======================================================
+  // CHARGEMENT PERSONNES
+  // ======================================================
+
+  const fetchMembers =
+    async () => {
+      try {
+        setLoadingMembers(
+          true
+        );
+
+        const response =
+          await API.get(
+            "/members",
+            {
+              params: {
+                limit: 1000,
+              },
+            }
+          );
+
+        const data =
+          response.data?.data ||
+          response.data?.members ||
+          [];
+
+        setMembers(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Erreur chargement personnes :",
+          error
+        );
+
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "Impossible de charger les personnes"
+        );
+      } finally {
+        setLoadingMembers(
+          false
+        );
+      }
+    };
+
+  // ======================================================
+  // CHARGEMENT PRÉSENCES DE L'ÉVÉNEMENT
+  // ======================================================
+
+  const fetchAttendances =
+    async (
+      eventId
+    ) => {
+      if (!eventId) {
+        setAttendances([]);
+        return;
+      }
+
+      try {
+        setLoadingAttendance(
+          true
+        );
+
+        const response =
+          await API.get(
+            `/attendances/event/${eventId}`
+          );
+
+        const data =
+          response.data?.data ||
+          [];
+
+        setAttendances(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Erreur chargement présences :",
+          error
+        );
+
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "Impossible de charger les présences"
+        );
+      } finally {
+        setLoadingAttendance(
+          false
+        );
+      }
+    };
 
   // ======================================================
   // CHARGEMENT INITIAL
   // ======================================================
 
-  if (
-    loading &&
-    !analytics
-  ) {
-    return (
-      <Layout>
-        <div className="management-page">
-          <div className="management-card">
-            <div className="management-loading">
-              <div className="management-spinner" />
+  useEffect(() => {
+    fetchEvents();
+    fetchMembers();
+  }, []);
 
-              <div>
-                Chargement des
-                statistiques de
-                présence...
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  useEffect(() => {
+    if (
+      selectedEventId
+    ) {
+      fetchAttendances(
+        selectedEventId
+      );
+    } else {
+      setAttendances([]);
+    }
+  }, [
+    selectedEventId,
+  ]);
 
   // ======================================================
-  // AFFICHAGE
+  // ÉVÉNEMENT SÉLECTIONNÉ
+  // ======================================================
+
+  const selectedEvent =
+    useMemo(
+      () =>
+        events.find(
+          (event) =>
+            String(event._id) ===
+            String(
+              selectedEventId
+            )
+        ) || null,
+      [
+        events,
+        selectedEventId,
+      ]
+    );
+
+  // ======================================================
+  // MAP DES PRÉSENCES
+  // ======================================================
+
+  const attendanceMap =
+    useMemo(() => {
+      const map =
+        new Map();
+
+      attendances.forEach(
+        (attendance) => {
+          const memberId =
+            attendance?.member
+              ?._id ||
+            attendance?.member;
+
+          if (memberId) {
+            map.set(
+              String(
+                memberId
+              ),
+              attendance
+            );
+          }
+        }
+      );
+
+      return map;
+    }, [
+      attendances,
+    ]);
+
+  // ======================================================
+  // FILTRES
+  // ======================================================
+
+  const filteredMembers =
+    useMemo(() => {
+      const value =
+        search
+          .trim()
+          .toLowerCase();
+
+      return members.filter(
+        (member) => {
+          const memberType =
+            member.membershipType ||
+            "Membre";
+
+          if (
+            typeFilter !==
+              "all" &&
+            memberType !==
+              typeFilter
+          ) {
+            return false;
+          }
+
+          if (!value) {
+            return true;
+          }
+
+          const text = [
+            member.firstName,
+            member.lastName,
+            member.email,
+            member.phone,
+            memberType,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return text.includes(
+            value
+          );
+        }
+      );
+    }, [
+      members,
+      search,
+      typeFilter,
+    ]);
+
+  // ======================================================
+  // COMPTEURS
+  // ======================================================
+
+  const counters =
+    useMemo(() => {
+      let present = 0;
+      let absent = 0;
+      let excused = 0;
+      let late = 0;
+
+      attendances.forEach(
+        (attendance) => {
+          switch (
+            attendance.status
+          ) {
+            case "Présent":
+              present += 1;
+              break;
+
+            case "Absent":
+              absent += 1;
+              break;
+
+            case "Excusé":
+              excused += 1;
+              break;
+
+            case "En retard":
+              late += 1;
+              break;
+
+            default:
+              break;
+          }
+        }
+      );
+
+      return {
+        present,
+        absent,
+        excused,
+        late,
+
+        total:
+          attendances.length,
+      };
+    }, [
+      attendances,
+    ]);
+
+  // ======================================================
+  // MARQUER / MODIFIER UNE PRÉSENCE
+  // ======================================================
+
+  const setAttendanceStatus =
+    async (
+      member,
+      status
+    ) => {
+      if (
+        !selectedEventId
+      ) {
+        toast.warning(
+          "Sélectionnez d'abord un événement"
+        );
+
+        return;
+      }
+
+      if (
+        !member?._id
+      ) {
+        toast.error(
+          "Impossible d'identifier cette personne"
+        );
+
+        return;
+      }
+
+      try {
+        setSavingMemberId(
+          String(
+            member._id
+          )
+        );
+
+        // ==================================================
+        // IMPORTANT :
+        // Toujours POST.
+        //
+        // Le backend est désormais idempotent :
+        // - si la présence n'existe pas => création
+        // - si elle existe => mise à jour
+        //
+        // Cela évite les problèmes liés à un ancien
+        // attendanceId présent dans l'état React.
+        // ==================================================
+
+        await API.post(
+          "/attendances",
+          {
+            member:
+              String(
+                member._id
+              ),
+
+            event:
+              String(
+                selectedEventId
+              ),
+
+            status,
+          }
+        );
+
+        // Recharge immédiatement les données réelles
+        // depuis MongoDB.
+        await fetchAttendances(
+          selectedEventId
+        );
+      } catch (error) {
+        console.error(
+          "Erreur enregistrement présence :",
+          error
+        );
+
+        console.error(
+          "Réponse backend :",
+          error.response?.data
+        );
+
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "Impossible d'enregistrer la présence"
+        );
+      } finally {
+        setSavingMemberId(
+          null
+        );
+      }
+    };
+
+  // ======================================================
+  // MARQUER TOUS LES NON-POINTÉS ABSENTS
+  // ======================================================
+
+  const markAllAbsent =
+    async () => {
+      if (
+        !selectedEventId
+      ) {
+        toast.warning(
+          "Sélectionnez d'abord un événement"
+        );
+
+        return;
+      }
+
+      const unmarkedMembers =
+        members.filter(
+          (member) =>
+            !attendanceMap.has(
+              String(
+                member._id
+              )
+            )
+        );
+
+      if (
+        unmarkedMembers.length ===
+        0
+      ) {
+        toast.info(
+          "Toutes les personnes sont déjà pointées"
+        );
+
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          `Marquer ${unmarkedMembers.length} personne${
+            unmarkedMembers.length >
+            1
+              ? "s"
+              : ""
+          } non pointée${
+            unmarkedMembers.length >
+            1
+              ? "s"
+              : ""
+          } comme absente${
+            unmarkedMembers.length >
+            1
+              ? "s"
+              : ""
+          } ?`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        setBulkSaving(true);
+
+        for (
+          const member of
+          unmarkedMembers
+        ) {
+          await API.post(
+            "/attendances",
+            {
+              member:
+                String(
+                  member._id
+                ),
+
+              event:
+                String(
+                  selectedEventId
+                ),
+
+              status:
+                "Absent",
+            }
+          );
+        }
+
+        await fetchAttendances(
+          selectedEventId
+        );
+
+        toast.success(
+          "Personnes non pointées marquées absentes"
+        );
+      } catch (error) {
+        console.error(
+          "Erreur marquage global :",
+          error
+        );
+
+        console.error(
+          "Réponse backend :",
+          error.response?.data
+        );
+
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "Impossible de terminer le pointage"
+        );
+      } finally {
+        setBulkSaving(false);
+      }
+    };
+
+  // ======================================================
+  // RENDU
   // ======================================================
 
   return (
     <Layout>
       <div className="management-page">
+
         {/* ==================================================
             HEADER
         ================================================== */}
@@ -426,132 +726,112 @@ export default function AttendanceStats() {
         <div className="page-header">
           <div className="page-header-left">
             <h1 className="page-title">
-              Statistiques de présence
+              Présences
             </h1>
 
             <p className="page-subtitle">
-              Analysez les présences,
-              les absences et les
-              performances de vos
-              événements.
+              Sélectionnez un événement
+              puis enregistrez les
+              présences des membres
+              et visiteurs.
             </p>
-          </div>
-
-          <div className="page-header-actions">
-            <button
-              type="button"
-              className="btn btn-success"
-              onClick={
-                handleExportExcel
-              }
-            >
-              📊 Export Excel
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() =>
-                window.print()
-              }
-            >
-              🖨️ Export PDF
-            </button>
           </div>
         </div>
 
         {/* ==================================================
-            FILTRES
+            ÉVÉNEMENT
         ================================================== */}
 
         <div className="management-card">
           <div className="management-toolbar">
             <div>
               <div className="management-card-title">
-                Période d'analyse
+                Événement
               </div>
 
               <div className="page-subtitle">
-                Sélectionnez la période
-                à analyser.
+                Choisissez le culte ou
+                l'événement pour lequel
+                vous souhaitez faire
+                l'appel.
               </div>
             </div>
 
             <div className="management-filters">
               <select
                 className="management-select"
-                value={period}
-                onChange={(event) =>
-                  setPeriod(
-                    event.target.value
+                value={
+                  selectedEventId
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSelectedEventId(
+                    event.target
+                      .value
                   )
                 }
+                disabled={
+                  loadingEvents ||
+                  bulkSaving
+                }
               >
-                <option value="all">
-                  Toute la période
+                <option value="">
+                  Sélectionner un événement
                 </option>
 
-                <option value="week">
-                  Cette semaine
-                </option>
-
-                <option value="month">
-                  Ce mois
-                </option>
-
-                <option value="year">
-                  Cette année
-                </option>
-
-                <option value="custom">
-                  Période personnalisée
-                </option>
+                {events.map(
+                  (event) => (
+                    <option
+                      key={
+                        event._id
+                      }
+                      value={
+                        event._id
+                      }
+                    >
+                      {event.title} —{" "}
+                      {formatDate(
+                        event.date
+                      )}
+                    </option>
+                  )
+                )}
               </select>
-
-              {period ===
-                "custom" && (
-                <>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={
-                      customStart
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      setCustomStart(
-                        event.target
-                          .value
-                      )
-                    }
-                    style={{
-                      width: "auto",
-                    }}
-                  />
-
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={
-                      customEnd
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      setCustomEnd(
-                        event.target
-                          .value
-                      )
-                    }
-                    style={{
-                      width: "auto",
-                    }}
-                  />
-                </>
-              )}
             </div>
           </div>
+
+          {selectedEvent && (
+            <div
+              style={{
+                marginTop: 16,
+                padding:
+                  "14px 16px",
+                borderRadius:
+                  "12px",
+                background:
+                  "rgba(99,102,241,.06)",
+                border:
+                  "1px solid rgba(99,102,241,.15)",
+              }}
+            >
+              <strong>
+                {
+                  selectedEvent.title
+                }
+              </strong>
+
+              <div className="page-subtitle">
+                {formatDate(
+                  selectedEvent.date
+                )}
+
+                {selectedEvent.location
+                  ? ` • ${selectedEvent.location}`
+                  : ""}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ==================================================
@@ -566,32 +846,25 @@ export default function AttendanceStats() {
         >
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Total membres
+              Présents
             </div>
 
             <div className="management-stat-value">
-              {overview.totalMembers ||
-                0}
-            </div>
-
-            <div className="management-stat-description">
-              Membres pris en compte
-              dans l'analyse
+              {
+                counters.present
+              }
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Présents
+              En retard
             </div>
 
             <div className="management-stat-value">
-              {overview.presentCount ||
-                0}
-            </div>
-
-            <div className="management-stat-description">
-              Présences enregistrées
+              {
+                counters.late
+              }
             </div>
           </div>
 
@@ -601,12 +874,9 @@ export default function AttendanceStats() {
             </div>
 
             <div className="management-stat-value">
-              {overview.absentCount ||
-                0}
-            </div>
-
-            <div className="management-stat-description">
-              Absences enregistrées
+              {
+                counters.absent
+              }
             </div>
           </div>
 
@@ -616,202 +886,15 @@ export default function AttendanceStats() {
             </div>
 
             <div className="management-stat-value">
-              {overview.excusedCount ||
-                0}
-            </div>
-
-            <div className="management-stat-description">
-              Absences justifiées
+              {
+                counters.excused
+              }
             </div>
           </div>
         </div>
 
         {/* ==================================================
-            RÉPARTITION + MEILLEUR ÉVÉNEMENT
-        ================================================== */}
-
-        <div
-          className="content-grid"
-          style={{
-            marginTop: 24,
-          }}
-        >
-          {/* PIE */}
-
-          <div className="management-card">
-            <div className="management-card-header">
-              <div>
-                <h2 className="management-card-title">
-                  Répartition globale
-                </h2>
-
-                <p className="page-subtitle">
-                  Présents, absents et
-                  excusés
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: 20,
-              }}
-            >
-              <ResponsiveContainer
-                width="100%"
-                height={300}
-              >
-                <PieChart>
-                  <Pie
-                    data={
-                      globalStatusData
-                    }
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={95}
-                    label
-                  >
-                    <Cell fill="#16a34a" />
-
-                    <Cell fill="#dc2626" />
-
-                    <Cell fill="#d97706" />
-                  </Pie>
-
-                  <Tooltip />
-
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* MEILLEUR ÉVÉNEMENT */}
-
-          <div className="management-card">
-            <div className="management-card-header">
-              <div>
-                <h2 className="management-card-title">
-                  Meilleure présence
-                </h2>
-
-                <p className="page-subtitle">
-                  Événement avec le
-                  meilleur taux de
-                  participation
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: 24,
-              }}
-            >
-              {bestAttendanceEvent ? (
-                <>
-                  <div
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 800,
-                      color:
-                        "#111827",
-                      marginBottom: 8,
-                    }}
-                  >
-                    {
-                      bestAttendanceEvent.title
-                    }
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 38,
-                      fontWeight: 800,
-                      color:
-                        "#4f46e5",
-                      marginBottom: 20,
-                    }}
-                  >
-                    {bestAttendanceEvent.attendanceRate ||
-                      0}
-                    %
-                  </div>
-
-                  <div className="management-stats-grid">
-                    <div>
-                      <div className="management-stat-label">
-                        Présents
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {bestAttendanceEvent.present ||
-                          0}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="management-stat-label">
-                        Absents
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {bestAttendanceEvent.absent ||
-                          0}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="management-stat-label">
-                        Excusés
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {bestAttendanceEvent.excused ||
-                          0}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="management-empty">
-                  <div className="management-empty-icon">
-                    📊
-                  </div>
-
-                  <h3>
-                    Aucune donnée
-                  </h3>
-
-                  <p>
-                    Les statistiques
-                    apparaîtront après
-                    l'enregistrement
-                    des présences.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ==================================================
-            GRAPHIQUE PAR ÉVÉNEMENT
+            LISTE DES PERSONNES
         ================================================== */}
 
         <div
@@ -820,336 +903,271 @@ export default function AttendanceStats() {
             marginTop: 24,
           }}
         >
-          <div className="management-card-header">
-            <div>
-              <h2 className="management-card-title">
-                Présence par événement
-              </h2>
-
-              <p className="page-subtitle">
-                Comparaison des
-                présents, absents et
-                excusés
-              </p>
-            </div>
-          </div>
-
-          <div
-            style={{
-              padding: 20,
-            }}
-          >
-            <ResponsiveContainer
-              width="100%"
-              height={360}
-            >
-              <BarChart
-                data={
-                  eventChartData
-                }
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
-                <XAxis
-                  dataKey="name"
-                />
-
-                <YAxis
-                  allowDecimals={
-                    false
-                  }
-                />
-
-                <Tooltip />
-
-                <Legend />
-
-                <Bar
-                  dataKey="presents"
-                  name="Présents"
-                  fill="#16a34a"
-                  radius={[
-                    6,
-                    6,
-                    0,
-                    0,
-                  ]}
-                />
-
-                <Bar
-                  dataKey="absents"
-                  name="Absents"
-                  fill="#dc2626"
-                  radius={[
-                    6,
-                    6,
-                    0,
-                    0,
-                  ]}
-                />
-
-                <Bar
-                  dataKey="excuses"
-                  name="Excusés"
-                  fill="#d97706"
-                  radius={[
-                    6,
-                    6,
-                    0,
-                    0,
-                  ]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* ==================================================
-            TAUX PAR ÉVÉNEMENT
-        ================================================== */}
-
-        <div
-          className="management-card"
-          style={{
-            marginTop: 24,
-          }}
-        >
-          <div className="management-card-header">
-            <div>
-              <h2 className="management-card-title">
-                Taux de présence par
-                événement
-              </h2>
-
-              <p className="page-subtitle">
-                Pourcentage de
-                participation pour
-                chaque événement
-              </p>
-            </div>
-          </div>
-
-          <div
-            style={{
-              padding: 20,
-            }}
-          >
-            <ResponsiveContainer
-              width="100%"
-              height={360}
-            >
-              <BarChart
-                data={
-                  eventChartData
-                }
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
-                <XAxis
-                  dataKey="name"
-                />
-
-                <YAxis
-                  allowDecimals={
-                    false
-                  }
-                  domain={[
-                    0,
-                    100,
-                  ]}
-                />
-
-                <Tooltip />
-
-                <Legend />
-
-                <Bar
-                  dataKey="taux"
-                  name="Taux de présence (%)"
-                  fill="#4f46e5"
-                  radius={[
-                    6,
-                    6,
-                    0,
-                    0,
-                  ]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* ==================================================
-            TABLEAU DÉTAILLÉ
-        ================================================== */}
-
-        <div
-          className="management-card"
-          style={{
-            marginTop: 24,
-          }}
-        >
-          <div className="management-card-header">
-            <div>
-              <h2 className="management-card-title">
-                Détail par événement
-              </h2>
-
-              <p className="page-subtitle">
-                Analyse détaillée de
-                toutes les présences
-              </p>
-            </div>
-
-            <div>
-              <span className="status-badge status-planned">
-                {
-                  eventsAnalytics.length
-                }{" "}
-                événement
-                {eventsAnalytics.length >
-                1
-                  ? "s"
-                  : ""}
+          <div className="management-toolbar">
+            <div className="management-search">
+              <span className="management-search-icon">
+                🔎
               </span>
+
+              <input
+                type="search"
+                placeholder="Rechercher une personne..."
+                value={
+                  search
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSearch(
+                    event.target
+                      .value
+                  )
+                }
+              />
+            </div>
+
+            <div className="management-filters">
+              <select
+                className="management-select"
+                value={
+                  typeFilter
+                }
+                onChange={(
+                  event
+                ) =>
+                  setTypeFilter(
+                    event.target
+                      .value
+                  )
+                }
+                disabled={
+                  bulkSaving
+                }
+              >
+                <option value="all">
+                  Tous les profils
+                </option>
+
+                <option value="Membre">
+                  Membres
+                </option>
+
+                <option value="Visiteur">
+                  Visiteurs
+                </option>
+              </select>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={
+                  markAllAbsent
+                }
+                disabled={
+                  !selectedEventId ||
+                  bulkSaving
+                }
+              >
+                {bulkSaving
+                  ? "Enregistrement..."
+                  : "Tout non-pointé = absent"}
+              </button>
             </div>
           </div>
 
-          {eventsAnalytics.length >
-          0 ? (
+          {!selectedEventId ? (
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                🗓️
+              </div>
+
+              <h3>
+                Sélectionnez un événement
+              </h3>
+
+              <p>
+                Choisissez l'événement
+                ci-dessus pour commencer
+                le pointage.
+              </p>
+            </div>
+          ) : loadingMembers ||
+            loadingAttendance ? (
+            <div className="management-loading">
+              <div className="management-spinner" />
+
+              <div>
+                Chargement de l'appel...
+              </div>
+            </div>
+          ) : filteredMembers.length ===
+            0 ? (
+            <div className="management-empty">
+              <div className="management-empty-icon">
+                👥
+              </div>
+
+              <h3>
+                Aucune personne
+              </h3>
+            </div>
+          ) : (
             <div className="management-table-wrapper">
               <table className="management-table">
                 <thead>
                   <tr>
                     <th>
-                      Événement
+                      Personne
                     </th>
 
                     <th>
-                      Date
+                      Profil
                     </th>
 
                     <th>
-                      Présents
+                      Statut actuel
                     </th>
 
                     <th>
-                      Absents
-                    </th>
-
-                    <th>
-                      Excusés
-                    </th>
-
-                    <th>
-                      Non marqués
-                    </th>
-
-                    <th>
-                      Taux
+                      Pointage
                     </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {eventsAnalytics.map(
-                    (event) => (
-                      <tr
-                        key={
-                          event.eventId
-                        }
-                      >
-                        <td>
-                          <div className="person-cell">
-                            <div className="person-avatar">
-                              📅
-                            </div>
+                  {filteredMembers.map(
+                    (member) => {
+                      const memberId =
+                        String(
+                          member._id
+                        );
 
-                            <div>
-                              <div className="person-name">
-                                {event.title ||
-                                  "Événement"}
+                      const attendance =
+                        attendanceMap.get(
+                          memberId
+                        );
+
+                      const currentStatus =
+                        attendance?.status ||
+                        "Non pointé";
+
+                      const isSaving =
+                        savingMemberId ===
+                        memberId;
+
+                      return (
+                        <tr
+                          key={
+                            memberId
+                          }
+                        >
+                          {/* PERSONNE */}
+
+                          <td>
+                            <div className="person-cell">
+                              <div className="person-avatar">
+                                {getInitials(
+                                  member
+                                )}
                               </div>
 
-                              <div className="person-secondary">
-                                {event.type ||
-                                  "Événement"}
+                              <div>
+                                <div className="person-name">
+                                  {
+                                    member.firstName
+                                  }{" "}
+                                  {
+                                    member.lastName
+                                  }
+                                </div>
+
+                                <div className="person-secondary">
+                                  {member.phone ||
+                                    member.email ||
+                                    "Aucun contact"}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td>
-                          {formatDate(
-                            event.date
-                          )}
-                        </td>
+                          {/* PROFIL */}
 
-                        <td>
-                          <span className="status-badge status-active">
-                            {event.present ||
-                              0}
-                          </span>
-                        </td>
+                          <td>
+                            {member.membershipType ||
+                              "Membre"}
+                          </td>
 
-                        <td>
-                          <span className="status-badge status-inactive">
-                            {event.absent ||
-                              0}
-                          </span>
-                        </td>
+                          {/* STATUT */}
 
-                        <td>
-                          <span className="status-badge status-pending">
-                            {event.excused ||
-                              0}
-                          </span>
-                        </td>
+                          <td>
+                            <strong>
+                              {isSaving
+                                ? "Enregistrement..."
+                                : currentStatus}
+                            </strong>
+                          </td>
 
-                        <td>
-                          {event.notMarked ||
-                            0}
-                        </td>
+                          {/* POINTAGE */}
 
-                        <td>
-                          <strong
-                            style={{
-                              color:
-                                "#4f46e5",
-                            }}
-                          >
-                            {event.attendanceRate ||
-                              0}
-                            %
-                          </strong>
-                        </td>
-                      </tr>
-                    )
+                          <td>
+                            <div
+                              className="table-actions"
+                              style={{
+                                flexWrap:
+                                  "wrap",
+                              }}
+                            >
+                              {ATTENDANCE_STATUSES.map(
+                                (
+                                  status
+                                ) => (
+                                  <button
+                                    key={
+                                      status
+                                    }
+                                    type="button"
+                                    className={
+                                      currentStatus ===
+                                      status
+                                        ? "btn btn-primary btn-small"
+                                        : "btn btn-secondary btn-small"
+                                    }
+                                    disabled={
+                                      isSaving ||
+                                      bulkSaving
+                                    }
+                                    onClick={() =>
+                                      setAttendanceStatus(
+                                        member,
+                                        status
+                                      )
+                                    }
+                                  >
+                                    {status ===
+                                    "Présent"
+                                      ? "✅ "
+                                      : status ===
+                                        "Absent"
+                                      ? "❌ "
+                                      : status ===
+                                        "Excusé"
+                                      ? "🟠 "
+                                      : "🕒 "}
+
+                                    {
+                                      status
+                                    }
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
                   )}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div className="management-empty">
-              <div className="management-empty-icon">
-                📈
-              </div>
-
-              <h3>
-                Aucune statistique
-                disponible
-              </h3>
-
-              <p>
-                Les données
-                apparaîtront lorsque
-                des présences auront
-                été enregistrées.
-              </p>
             </div>
           )}
         </div>

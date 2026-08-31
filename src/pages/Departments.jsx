@@ -17,6 +17,16 @@ import {
   getCurrentAdmin,
 } from "../utils/auth";
 
+import {
+  getPlanLimit,
+  getPlanName,
+  normalizePlan,
+} from "../utils/subscription";
+
+import {
+  useSubscription,
+} from "../context/SubscriptionContext";
+
 const initialForm = {
   name: "",
   leader: "",
@@ -28,7 +38,39 @@ export default function Departments() {
     getCurrentAdmin();
 
   const isAdmin =
-    currentUser?.role === "admin";
+    currentUser?.role === "admin" ||
+    currentUser?.platformRole ===
+      "superadmin";
+
+  // ======================================================
+  // ABONNEMENT SYNCHRONISÉ
+  // ======================================================
+
+  const {
+    plan,
+    initialized,
+  } = useSubscription();
+
+  const currentPlan =
+    normalizePlan(
+      initialized
+        ? plan
+        : currentUser?.church?.plan ||
+            "free"
+    );
+
+  const departmentLimit =
+    getPlanLimit(
+      currentPlan,
+      "departments"
+    );
+
+  const isUnlimited =
+    departmentLimit === null;
+
+  // ======================================================
+  // STATES
+  // ======================================================
 
   const [
     departments,
@@ -119,6 +161,27 @@ export default function Departments() {
   useEffect(() => {
     fetchDepartments();
   }, []);
+
+  // ======================================================
+  // LIMITE DU PLAN
+  // ======================================================
+
+  const departmentCount =
+    departments.length;
+
+  const limitReached =
+    !isUnlimited &&
+    departmentCount >=
+      departmentLimit;
+
+  const remainingDepartments =
+    isUnlimited
+      ? null
+      : Math.max(
+          departmentLimit -
+            departmentCount,
+          0
+        );
 
   // ======================================================
   // STATISTIQUES
@@ -233,6 +296,16 @@ export default function Departments() {
   };
 
   const openCreateForm = () => {
+    if (limitReached) {
+      toast.warning(
+        `Limite atteinte : votre abonnement ${getPlanName(
+          currentPlan
+        )} autorise au maximum ${departmentLimit} départements.`
+      );
+
+      return;
+    }
+
     setForm(initialForm);
     setEditingId(null);
     setShowForm(true);
@@ -274,6 +347,19 @@ export default function Departments() {
     if (!form.name.trim()) {
       toast.warning(
         "Le nom du département est obligatoire"
+      );
+
+      return;
+    }
+
+    if (
+      !editingId &&
+      limitReached
+    ) {
+      toast.warning(
+        `Vous avez atteint la limite de ${departmentLimit} départements de votre abonnement ${getPlanName(
+          currentPlan
+        )}.`
       );
 
       return;
@@ -321,6 +407,22 @@ export default function Departments() {
         "Erreur département :",
         error
       );
+
+      if (
+        error.response
+          ?.data
+          ?.code ===
+        "PLAN_LIMIT_REACHED"
+      ) {
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "La limite de départements de votre abonnement est atteinte."
+        );
+
+        return;
+      }
 
       toast.error(
         error.response?.data
@@ -402,9 +504,8 @@ export default function Departments() {
   return (
     <Layout>
       <div className="management-page">
-        {/* ==================================================
-            HEADER
-        ================================================== */}
+
+        {/* HEADER */}
 
         <div className="page-header">
           <div className="page-header-left">
@@ -427,15 +528,133 @@ export default function Departments() {
               onClick={
                 openCreateForm
               }
+              disabled={
+                limitReached
+              }
+              title={
+                limitReached
+                  ? `Limite de ${departmentLimit} départements atteinte`
+                  : "Créer un département"
+              }
+              style={
+                limitReached
+                  ? {
+                      opacity:
+                        0.55,
+                      cursor:
+                        "not-allowed",
+                    }
+                  : undefined
+              }
             >
-              + Nouveau département
+              {limitReached
+                ? "🔒 Limite atteinte"
+                : "+ Nouveau département"}
             </button>
           </div>
         </div>
 
-        {/* ==================================================
-            STATISTIQUES
-        ================================================== */}
+        {/* ABONNEMENT */}
+
+        <div
+          style={{
+            marginBottom:
+              "20px",
+
+            padding:
+              "14px 18px",
+
+            borderRadius:
+              "12px",
+
+            border:
+              limitReached
+                ? "1px solid rgba(239, 68, 68, 0.25)"
+                : "1px solid rgba(99, 102, 241, 0.18)",
+
+            background:
+              limitReached
+                ? "rgba(239, 68, 68, 0.06)"
+                : "rgba(99, 102, 241, 0.05)",
+
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            justifyContent:
+              "space-between",
+
+            gap:
+              "16px",
+
+            flexWrap:
+              "wrap",
+          }}
+        >
+          <div>
+            <strong>
+              Départements utilisés :{" "}
+              {departmentCount}
+              {" / "}
+              {isUnlimited
+                ? "Illimité"
+                : departmentLimit}
+            </strong>
+
+            <div
+              style={{
+                marginTop:
+                  "4px",
+                fontSize:
+                  "12px",
+                opacity:
+                  0.75,
+              }}
+            >
+              Plan{" "}
+              {getPlanName(
+                currentPlan
+              )}
+            </div>
+          </div>
+
+          {!isUnlimited && (
+            <div>
+              {limitReached ? (
+                <strong>
+                  🔒 Limite atteinte
+                </strong>
+              ) : (
+                <span>
+                  {
+                    remainingDepartments
+                  }{" "}
+                  département
+                  {remainingDepartments >
+                  1
+                    ? "s"
+                    : ""}{" "}
+                  restant
+                  {remainingDepartments >
+                  1
+                    ? "s"
+                    : ""}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isUnlimited && (
+            <div>
+              ✓ Départements
+              illimités
+            </div>
+          )}
+        </div>
+
+        {/* STATISTIQUES */}
 
         <div className="management-stats-grid">
           <div className="management-stat-card">
@@ -499,12 +718,9 @@ export default function Departments() {
           </div>
         </div>
 
-        {/* ==================================================
-            LISTE DES DÉPARTEMENTS
-        ================================================== */}
+        {/* LISTE DES DÉPARTEMENTS */}
 
         <div className="management-card">
-          {/* RECHERCHE / FILTRE */}
 
           <div className="management-toolbar">
             <div className="management-search">
@@ -556,8 +772,6 @@ export default function Departments() {
               </select>
             </div>
           </div>
-
-          {/* CHARGEMENT */}
 
           {loading ? (
             <div className="management-loading">
@@ -620,8 +834,6 @@ export default function Departments() {
                           department._id
                         }
                       >
-                        {/* DÉPARTEMENT */}
-
                         <td>
                           <div className="person-cell">
                             <div className="person-avatar">
@@ -644,8 +856,6 @@ export default function Departments() {
                           </div>
                         </td>
 
-                        {/* RESPONSABLE */}
-
                         <td>
                           {department.leader ? (
                             <div>
@@ -666,8 +876,6 @@ export default function Departments() {
                           )}
                         </td>
 
-                        {/* STATUT */}
-
                         <td>
                           <span
                             className={`status-badge ${
@@ -683,8 +891,6 @@ export default function Departments() {
                               : "Inactif"}
                           </span>
                         </td>
-
-                        {/* ACTIONS */}
 
                         <td>
                           <div className="table-actions">
@@ -725,9 +931,7 @@ export default function Departments() {
         </div>
       </div>
 
-      {/* ==================================================
-          MODAL CRÉATION / MODIFICATION
-      ================================================== */}
+      {/* MODAL CRÉATION / MODIFICATION */}
 
       {showForm && (
         <div
@@ -744,7 +948,6 @@ export default function Departments() {
           }}
         >
           <div className="management-modal">
-            {/* HEADER MODAL */}
 
             <div className="management-modal-header">
               <div>
@@ -773,8 +976,6 @@ export default function Departments() {
               </button>
             </div>
 
-            {/* FORMULAIRE */}
-
             <form
               onSubmit={
                 handleSubmit
@@ -782,7 +983,6 @@ export default function Departments() {
             >
               <div className="management-modal-body">
                 <div className="management-form-grid">
-                  {/* NOM */}
 
                   <div className="form-group form-group-full">
                     <label className="form-label">
@@ -803,8 +1003,6 @@ export default function Departments() {
                     />
                   </div>
 
-                  {/* RESPONSABLE */}
-
                   <div className="form-group form-group-full">
                     <label className="form-label">
                       Responsable
@@ -822,8 +1020,6 @@ export default function Departments() {
                       placeholder="Nom du responsable"
                     />
                   </div>
-
-                  {/* STATUT */}
 
                   <div className="form-group form-group-full">
                     <label className="form-label">
@@ -851,8 +1047,6 @@ export default function Departments() {
                   </div>
                 </div>
               </div>
-
-              {/* FOOTER MODAL */}
 
               <div className="management-modal-footer">
                 <button

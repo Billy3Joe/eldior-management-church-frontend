@@ -17,13 +17,223 @@ import {
   getCurrentAdmin,
 } from "../utils/auth";
 
+import {
+  getPlanLimit,
+  getPlanName,
+  normalizePlan,
+} from "../utils/subscription";
+
+import {
+  useSubscription,
+} from "../context/SubscriptionContext";
+
+// ======================================================
+// CONSTANTES
+// ======================================================
+
+const AGE_GROUPS = [
+  "0-3",
+  "4-6",
+  "7-10",
+  "11-14",
+  "15-17",
+  "18+",
+  "Non renseigné",
+];
+
 const initialForm = {
   firstName: "",
   lastName: "",
+  gender: "",
+  birthDate: "",
+  ageGroup: "Non renseigné",
   email: "",
   phone: "",
-  status: "active",
+  address: "",
+  membershipType: "Membre",
+  membershipDate: "",
+  status: "Actif",
 };
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+const normalizeStatus = (
+  status
+) => {
+  if (
+    status === "active" ||
+    status === "Actif"
+  ) {
+    return "Actif";
+  }
+
+  if (
+    status === "inactive" ||
+    status === "Inactif"
+  ) {
+    return "Inactif";
+  }
+
+  return "Actif";
+};
+
+const calculateAge = (
+  birthDate
+) => {
+  if (!birthDate) {
+    return null;
+  }
+
+  const birth =
+    new Date(birthDate);
+
+  if (
+    Number.isNaN(
+      birth.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const today =
+    new Date();
+
+  let age =
+    today.getFullYear() -
+    birth.getFullYear();
+
+  const monthDifference =
+    today.getMonth() -
+    birth.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (
+      monthDifference === 0 &&
+      today.getDate() <
+        birth.getDate()
+    )
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0
+    ? age
+    : null;
+};
+
+const getAgeGroupFromAge = (
+  age
+) => {
+  if (
+    age === null ||
+    typeof age === "undefined"
+  ) {
+    return "Non renseigné";
+  }
+
+  if (age <= 3) {
+    return "0-3";
+  }
+
+  if (age <= 6) {
+    return "4-6";
+  }
+
+  if (age <= 10) {
+    return "7-10";
+  }
+
+  if (age <= 14) {
+    return "11-14";
+  }
+
+  if (age <= 17) {
+    return "15-17";
+  }
+
+  return "18+";
+};
+
+// ======================================================
+// CATÉGORIE DÉMOGRAPHIQUE
+// ======================================================
+
+const getPersonCategory = (
+  ageGroup
+) => {
+  if (
+    [
+      "0-3",
+      "4-6",
+      "7-10",
+      "11-14",
+    ].includes(ageGroup)
+  ) {
+    return "Enfant";
+  }
+
+  if (
+    ageGroup === "15-17"
+  ) {
+    return "Adolescent";
+  }
+
+  if (
+    ageGroup === "18+"
+  ) {
+    return "Adulte";
+  }
+
+  return "Non renseigné";
+};
+
+const getPersonCategoryIcon = (
+  category
+) => {
+  switch (category) {
+    case "Enfant":
+      return "🧒";
+
+    case "Adolescent":
+      return "🧑";
+
+    case "Adulte":
+      return "👤";
+
+    default:
+      return "❔";
+  }
+};
+
+const formatDateForInput = (
+  value
+) => {
+  if (!value) {
+    return "";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "";
+  }
+
+  return date
+    .toISOString()
+    .split("T")[0];
+};
+
+// ======================================================
+// PAGE
+// ======================================================
 
 export default function Members() {
   const currentUser =
@@ -31,7 +241,39 @@ export default function Members() {
 
   const isAdmin =
     currentUser?.role ===
-    "admin";
+      "admin" ||
+    currentUser?.platformRole ===
+      "superadmin";
+
+  // ======================================================
+  // ABONNEMENT
+  // ======================================================
+
+  const {
+    plan,
+    initialized,
+  } = useSubscription();
+
+  const currentPlan =
+    normalizePlan(
+      initialized
+        ? plan
+        : currentUser?.church?.plan ||
+            "free"
+    );
+
+  const memberLimit =
+    getPlanLimit(
+      currentPlan,
+      "members"
+    );
+
+  const isUnlimited =
+    memberLimit === null;
+
+  // ======================================================
+  // STATES
+  // ======================================================
 
   const [
     members,
@@ -59,6 +301,11 @@ export default function Members() {
   ] = useState("all");
 
   const [
+    typeFilter,
+    setTypeFilter,
+  ] = useState("all");
+
+  const [
     form,
     setForm,
   ] = useState(initialForm);
@@ -74,7 +321,7 @@ export default function Members() {
   ] = useState(false);
 
   // ======================================================
-  // CHARGER LES MEMBRES
+  // MEMBRES
   // ======================================================
 
   const fetchMembers =
@@ -93,10 +340,8 @@ export default function Members() {
           );
 
         const data =
-          response.data
-            ?.data ||
-          response.data
-            ?.members ||
+          response.data?.data ||
+          response.data?.members ||
           [];
 
         setMembers(
@@ -126,6 +371,27 @@ export default function Members() {
   }, []);
 
   // ======================================================
+  // LIMITE
+  // ======================================================
+
+  const memberCount =
+    members.length;
+
+  const limitReached =
+    !isUnlimited &&
+    memberCount >=
+      memberLimit;
+
+  const remainingMembers =
+    isUnlimited
+      ? null
+      : Math.max(
+          memberLimit -
+            memberCount,
+          0
+        );
+
+  // ======================================================
   // STATISTIQUES
   // ======================================================
 
@@ -137,35 +403,112 @@ export default function Members() {
       const active =
         members.filter(
           (member) =>
-            member.status ===
-            "active"
+            normalizeStatus(
+              member.status
+            ) === "Actif"
         ).length;
 
       const inactive =
         members.filter(
           (member) =>
-            member.status ===
-            "inactive"
+            normalizeStatus(
+              member.status
+            ) === "Inactif"
         ).length;
 
-      const withEmail =
+      const visitors =
         members.filter(
           (member) =>
-            Boolean(
-              member.email
-            )
+            member.membershipType ===
+            "Visiteur"
+        ).length;
+
+      const children =
+        members.filter(
+          (member) => {
+            const age =
+              calculateAge(
+                member.birthDate
+              );
+
+            const ageGroup =
+              age !== null
+                ? getAgeGroupFromAge(
+                    age
+                  )
+                : member.ageGroup ||
+                  "Non renseigné";
+
+            return (
+              getPersonCategory(
+                ageGroup
+              ) === "Enfant"
+            );
+          }
+        ).length;
+
+      const teenagers =
+        members.filter(
+          (member) => {
+            const age =
+              calculateAge(
+                member.birthDate
+              );
+
+            const ageGroup =
+              age !== null
+                ? getAgeGroupFromAge(
+                    age
+                  )
+                : member.ageGroup ||
+                  "Non renseigné";
+
+            return (
+              getPersonCategory(
+                ageGroup
+              ) ===
+              "Adolescent"
+            );
+          }
+        ).length;
+
+      const adults =
+        members.filter(
+          (member) => {
+            const age =
+              calculateAge(
+                member.birthDate
+              );
+
+            const ageGroup =
+              age !== null
+                ? getAgeGroupFromAge(
+                    age
+                  )
+                : member.ageGroup ||
+                  "Non renseigné";
+
+            return (
+              getPersonCategory(
+                ageGroup
+              ) === "Adulte"
+            );
+          }
         ).length;
 
       return {
         total,
         active,
         inactive,
-        withEmail,
+        visitors,
+        children,
+        teenagers,
+        adults,
       };
     }, [members]);
 
   // ======================================================
-  // RECHERCHE + FILTRE
+  // FILTRES
   // ======================================================
 
   const filteredMembers =
@@ -177,13 +520,31 @@ export default function Members() {
 
       return members.filter(
         (member) => {
+          const memberStatus =
+            normalizeStatus(
+              member.status
+            );
+
+          const memberType =
+            member.membershipType ||
+            "Membre";
+
           const matchesStatus =
             statusFilter ===
               "all" ||
-            member.status ===
+            memberStatus ===
               statusFilter;
 
-          if (!matchesStatus) {
+          const matchesType =
+            typeFilter ===
+              "all" ||
+            memberType ===
+              typeFilter;
+
+          if (
+            !matchesStatus ||
+            !matchesType
+          ) {
             return false;
           }
 
@@ -196,7 +557,10 @@ export default function Members() {
             member.lastName,
             member.email,
             member.phone,
-            member.status,
+            member.gender,
+            member.ageGroup,
+            memberType,
+            memberStatus,
           ]
             .filter(Boolean)
             .join(" ")
@@ -211,7 +575,17 @@ export default function Members() {
       members,
       search,
       statusFilter,
+      typeFilter,
     ]);
+
+  // ======================================================
+  // CATÉGORIE ACTUELLE DU FORMULAIRE
+  // ======================================================
+
+  const currentFormCategory =
+    getPersonCategory(
+      form.ageGroup
+    );
 
   // ======================================================
   // FORMULAIRE
@@ -224,6 +598,54 @@ export default function Members() {
       name,
       value,
     } = event.target;
+
+    if (
+      name === "birthDate"
+    ) {
+      const age =
+        calculateAge(value);
+
+      setForm(
+        (previous) => ({
+          ...previous,
+
+          birthDate:
+            value,
+
+          ageGroup:
+            value
+              ? getAgeGroupFromAge(
+                  age
+                )
+              : "Non renseigné",
+        })
+      );
+
+      return;
+    }
+
+    if (
+      name ===
+      "membershipType"
+    ) {
+      setForm(
+        (previous) => ({
+          ...previous,
+
+          membershipType:
+            value,
+
+          membershipDate:
+            value ===
+            "Visiteur"
+              ? ""
+              : previous
+                  .membershipDate,
+        })
+      );
+
+      return;
+    }
 
     setForm(
       (previous) => ({
@@ -240,6 +662,16 @@ export default function Members() {
   };
 
   const openCreateForm = () => {
+    if (limitReached) {
+      toast.warning(
+        `Limite atteinte : votre abonnement ${getPlanName(
+          currentPlan
+        )} autorise au maximum ${memberLimit} membres.`
+      );
+
+      return;
+    }
+
     setForm(initialForm);
     setEditingId(null);
     setShowForm(true);
@@ -248,6 +680,24 @@ export default function Members() {
   const openEditForm = (
     member
   ) => {
+    const birthDate =
+      formatDateForInput(
+        member.birthDate
+      );
+
+    const calculatedAge =
+      calculateAge(
+        birthDate
+      );
+
+    const calculatedAgeGroup =
+      calculatedAge !== null
+        ? getAgeGroupFromAge(
+            calculatedAge
+          )
+        : member.ageGroup ||
+          "Non renseigné";
+
     setEditingId(
       member._id
     );
@@ -261,6 +711,15 @@ export default function Members() {
         member.lastName ||
         "",
 
+      gender:
+        member.gender ||
+        "",
+
+      birthDate,
+
+      ageGroup:
+        calculatedAgeGroup,
+
       email:
         member.email ||
         "",
@@ -269,9 +728,23 @@ export default function Members() {
         member.phone ||
         "",
 
+      address:
+        member.address ||
+        "",
+
+      membershipType:
+        member.membershipType ||
+        "Membre",
+
+      membershipDate:
+        formatDateForInput(
+          member.membershipDate
+        ),
+
       status:
-        member.status ||
-        "active",
+        normalizeStatus(
+          member.status
+        ),
     });
 
     setShowForm(true);
@@ -297,8 +770,33 @@ export default function Members() {
       return;
     }
 
+    if (
+      !editingId &&
+      limitReached
+    ) {
+      toast.warning(
+        `Vous avez atteint la limite de ${memberLimit} membres de votre abonnement ${getPlanName(
+          currentPlan
+        )}.`
+      );
+
+      return;
+    }
+
     try {
       setSaving(true);
+
+      const finalAge =
+        calculateAge(
+          form.birthDate
+        );
+
+      const finalAgeGroup =
+        form.birthDate
+          ? getAgeGroupFromAge(
+              finalAge
+            )
+          : form.ageGroup;
 
       const payload = {
         firstName:
@@ -307,11 +805,34 @@ export default function Members() {
         lastName:
           form.lastName.trim(),
 
+        gender:
+          form.gender,
+
+        birthDate:
+          form.birthDate ||
+          null,
+
+        ageGroup:
+          finalAgeGroup,
+
         email:
           form.email.trim(),
 
         phone:
           form.phone.trim(),
+
+        address:
+          form.address.trim(),
+
+        membershipType:
+          form.membershipType,
+
+        membershipDate:
+          form.membershipType ===
+            "Membre"
+            ? form.membershipDate ||
+              null
+            : null,
 
         status:
           form.status,
@@ -324,7 +845,7 @@ export default function Members() {
         );
 
         toast.success(
-          "Membre modifié avec succès"
+          "Personne modifiée avec succès"
         );
       } else {
         await API.post(
@@ -333,7 +854,10 @@ export default function Members() {
         );
 
         toast.success(
-          "Membre ajouté avec succès"
+          form.membershipType ===
+            "Visiteur"
+            ? "Visiteur ajouté avec succès"
+            : "Membre ajouté avec succès"
         );
       }
 
@@ -346,11 +870,27 @@ export default function Members() {
         error
       );
 
+      if (
+        error.response
+          ?.data
+          ?.code ===
+        "PLAN_LIMIT_REACHED"
+      ) {
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "La limite de membres de votre abonnement est atteinte."
+        );
+
+        return;
+      }
+
       toast.error(
         error.response
           ?.data
           ?.message ||
-          "Impossible d'enregistrer le membre"
+          "Impossible d'enregistrer la personne"
       );
     } finally {
       setSaving(false);
@@ -366,7 +906,7 @@ export default function Members() {
   ) => {
     if (!isAdmin) {
       toast.error(
-        "Seul un administrateur peut supprimer un membre"
+        "Seul un administrateur peut supprimer une personne"
       );
 
       return;
@@ -374,7 +914,7 @@ export default function Members() {
 
     const confirmed =
       window.confirm(
-        "Voulez-vous vraiment supprimer ce membre ?"
+        "Voulez-vous vraiment supprimer cette personne ?"
       );
 
     if (!confirmed) {
@@ -387,7 +927,7 @@ export default function Members() {
       );
 
       toast.success(
-        "Membre supprimé avec succès"
+        "Personne supprimée avec succès"
       );
 
       await fetchMembers();
@@ -401,13 +941,13 @@ export default function Members() {
         error.response
           ?.data
           ?.message ||
-          "Impossible de supprimer ce membre"
+          "Impossible de supprimer cette personne"
       );
     }
   };
 
   // ======================================================
-  // INITIALS AVATAR
+  // INITIALS
   // ======================================================
 
   const getInitials = (
@@ -431,12 +971,15 @@ export default function Members() {
     );
   };
 
+  // ======================================================
+  // AFFICHAGE
+  // ======================================================
+
   return (
     <Layout>
       <div className="management-page">
-        {/* ==================================================
-            HEADER
-        ================================================== */}
+
+        {/* HEADER */}
 
         <div className="page-header">
           <div className="page-header-left">
@@ -445,10 +988,7 @@ export default function Members() {
             </h1>
 
             <p className="page-subtitle">
-              Gérez les membres
-              de votre église,
-              leurs coordonnées
-              et leur statut.
+              Gérez les membres et visiteurs de votre église ainsi que leurs informations démographiques.
             </p>
           </div>
 
@@ -459,20 +999,121 @@ export default function Members() {
               onClick={
                 openCreateForm
               }
+              disabled={
+                limitReached
+              }
             >
-              + Ajouter un membre
+              {limitReached
+                ? "🔒 Limite atteinte"
+                : "+ Ajouter une personne"}
             </button>
           </div>
         </div>
 
-        {/* ==================================================
-            STATISTIQUES
-        ================================================== */}
+        {/* ABONNEMENT */}
+
+        <div
+          style={{
+            marginBottom:
+              "20px",
+
+            padding:
+              "14px 18px",
+
+            borderRadius:
+              "12px",
+
+            border:
+              limitReached
+                ? "1px solid rgba(239, 68, 68, 0.25)"
+                : "1px solid rgba(99, 102, 241, 0.18)",
+
+            background:
+              limitReached
+                ? "rgba(239, 68, 68, 0.06)"
+                : "rgba(99, 102, 241, 0.05)",
+
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            justifyContent:
+              "space-between",
+
+            gap:
+              "16px",
+
+            flexWrap:
+              "wrap",
+          }}
+        >
+          <div>
+            <strong>
+              Personnes utilisées :{" "}
+              {memberCount}
+              {" / "}
+              {isUnlimited
+                ? "Illimité"
+                : memberLimit}
+            </strong>
+
+            <div
+              style={{
+                marginTop:
+                  "4px",
+
+                fontSize:
+                  "12px",
+
+                opacity:
+                  0.75,
+              }}
+            >
+              Plan{" "}
+              {getPlanName(
+                currentPlan
+              )}
+            </div>
+          </div>
+
+          {!isUnlimited && (
+            <div>
+              {limitReached ? (
+                <strong>
+                  🔒 Limite atteinte
+                </strong>
+              ) : (
+                <span>
+                  {remainingMembers} personne
+                  {remainingMembers >
+                  1
+                    ? "s"
+                    : ""}{" "}
+                  restante
+                  {remainingMembers >
+                  1
+                    ? "s"
+                    : ""}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isUnlimited && (
+            <div>
+              ✓ Personnes illimitées
+            </div>
+          )}
+        </div>
+
+        {/* STATISTIQUES */}
 
         <div className="management-stats-grid">
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Total membres
+              Total
             </div>
 
             <div className="management-stat-value">
@@ -480,65 +1121,58 @@ export default function Members() {
             </div>
 
             <div className="management-stat-description">
-              Tous les membres
-              enregistrés
+              Personnes enregistrées
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Membres actifs
+              Adultes
             </div>
 
             <div className="management-stat-value">
-              {stats.active}
+              {stats.adults}
             </div>
 
             <div className="management-stat-description">
-              Membres actuellement
-              actifs
+              18 ans et plus
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Membres inactifs
+              Enfants
             </div>
 
             <div className="management-stat-value">
-              {stats.inactive}
+              {stats.children}
             </div>
 
             <div className="management-stat-description">
-              Membres actuellement
-              inactifs
+              0 à 14 ans
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Avec email
+              Adolescents
             </div>
 
             <div className="management-stat-value">
-              {stats.withEmail}
+              {stats.teenagers}
             </div>
 
             <div className="management-stat-description">
-              Membres avec une
-              adresse email
+              15 à 17 ans
             </div>
           </div>
         </div>
 
-        {/* ==================================================
-            CARD TABLE
-        ================================================== */}
+        {/* TABLE */}
 
         <div className="management-card">
-          {/* TOOLBAR */}
-
           <div className="management-toolbar">
+
             <div className="management-search">
               <span className="management-search-icon">
                 🔎
@@ -546,7 +1180,7 @@ export default function Members() {
 
               <input
                 type="search"
-                placeholder="Rechercher un membre..."
+                placeholder="Rechercher une personne..."
                 value={
                   search
                 }
@@ -562,6 +1196,34 @@ export default function Members() {
             </div>
 
             <div className="management-filters">
+
+              <select
+                className="management-select"
+                value={
+                  typeFilter
+                }
+                onChange={(
+                  event
+                ) =>
+                  setTypeFilter(
+                    event.target
+                      .value
+                  )
+                }
+              >
+                <option value="all">
+                  Tous les profils
+                </option>
+
+                <option value="Membre">
+                  Membres
+                </option>
+
+                <option value="Visiteur">
+                  Visiteurs
+                </option>
+              </select>
+
               <select
                 className="management-select"
                 value={
@@ -580,26 +1242,23 @@ export default function Members() {
                   Tous les statuts
                 </option>
 
-                <option value="active">
+                <option value="Actif">
                   Actifs
                 </option>
 
-                <option value="inactive">
+                <option value="Inactif">
                   Inactifs
                 </option>
               </select>
             </div>
           </div>
 
-          {/* LOADING */}
-
           {loading ? (
             <div className="management-loading">
               <div className="management-spinner" />
 
               <div>
-                Chargement des
-                membres...
+                Chargement des personnes...
               </div>
             </div>
           ) : filteredMembers.length ===
@@ -610,16 +1269,11 @@ export default function Members() {
               </div>
 
               <h3>
-                Aucun membre
-                trouvé
+                Aucune personne trouvée
               </h3>
 
               <p>
-                Ajoutez un
-                nouveau membre
-                ou modifiez vos
-                critères de
-                recherche.
+                Ajoutez un membre ou un visiteur.
               </p>
             </div>
           ) : (
@@ -627,116 +1281,178 @@ export default function Members() {
               <table className="management-table">
                 <thead>
                   <tr>
-                    <th>
-                      Membre
-                    </th>
-
-                    <th>
-                      Email
-                    </th>
-
-                    <th>
-                      Téléphone
-                    </th>
-
-                    <th>
-                      Statut
-                    </th>
-
-                    <th>
-                      Actions
-                    </th>
+                    <th>Personne</th>
+                    <th>Profil</th>
+                    <th>Sexe</th>
+                    <th>Catégorie</th>
+                    <th>Âge</th>
+                    <th>Contact</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {filteredMembers.map(
-                    (
-                      member
-                    ) => (
-                      <tr
-                        key={
-                          member._id
-                        }
-                      >
-                        <td>
-                          <div className="person-cell">
-                            <div className="person-avatar">
-                              {getInitials(
-                                member
-                              )}
-                            </div>
+                    (member) => {
+                      const memberStatus =
+                        normalizeStatus(
+                          member.status
+                        );
 
-                            <div>
-                              <div className="person-name">
-                                {member.firstName}{" "}
-                                {member.lastName}
+                      const memberType =
+                        member.membershipType ||
+                        "Membre";
+
+                      const age =
+                        calculateAge(
+                          member.birthDate
+                        );
+
+                      const ageGroup =
+                        age !== null
+                          ? getAgeGroupFromAge(
+                              age
+                            )
+                          : member.ageGroup ||
+                            "Non renseigné";
+
+                      const category =
+                        getPersonCategory(
+                          ageGroup
+                        );
+
+                      return (
+                        <tr
+                          key={
+                            member._id
+                          }
+                        >
+                          <td>
+                            <div className="person-cell">
+                              <div className="person-avatar">
+                                {getInitials(
+                                  member
+                                )}
                               </div>
+
+                              <div>
+                                <div className="person-name">
+                                  {member.firstName}{" "}
+                                  {member.lastName}
+                                </div>
+
+                                <div className="person-secondary">
+                                  {member.address ||
+                                    "Adresse non renseignée"}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <span
+                              className={`status-badge ${
+                                memberType ===
+                                "Membre"
+                                  ? "status-active"
+                                  : "status-inactive"
+                              }`}
+                            >
+                              {
+                                memberType
+                              }
+                            </span>
+                          </td>
+
+                          <td>
+                            {member.gender ||
+                              "—"}
+                          </td>
+
+                          <td>
+                            <strong>
+                              {getPersonCategoryIcon(
+                                category
+                              )}{" "}
+                              {category}
+                            </strong>
+                          </td>
+
+                          <td>
+                            <div>
+                              {age !== null
+                                ? `${age} ans`
+                                : "—"}
 
                               <div className="person-secondary">
-                                Membre
+                                {ageGroup}
                               </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td>
-                          {member.email ||
-                            "—"}
-                        </td>
+                          <td>
+                            <div>
+                              {member.phone ||
+                                "—"}
 
-                        <td>
-                          {member.phone ||
-                            "—"}
-                        </td>
+                              {member.email && (
+                                <div className="person-secondary">
+                                  {
+                                    member.email
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </td>
 
-                        <td>
-                          <span
-                            className={`status-badge ${
-                              member.status ===
-                              "active"
-                                ? "status-active"
-                                : "status-inactive"
-                            }`}
-                          >
-                            {member.status ===
-                            "active"
-                              ? "Actif"
-                              : "Inactif"}
-                          </span>
-                        </td>
-
-                        <td>
-                          <div className="table-actions">
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-small"
-                              onClick={() =>
-                                openEditForm(
-                                  member
-                                )
-                              }
+                          <td>
+                            <span
+                              className={`status-badge ${
+                                memberStatus ===
+                                "Actif"
+                                  ? "status-active"
+                                  : "status-inactive"
+                              }`}
                             >
-                              ✏️ Modifier
-                            </button>
+                              {
+                                memberStatus
+                              }
+                            </span>
+                          </td>
 
-                            {isAdmin && (
+                          <td>
+                            <div className="table-actions">
                               <button
                                 type="button"
-                                className="btn btn-danger btn-small"
+                                className="btn btn-secondary btn-small"
                                 onClick={() =>
-                                  handleDelete(
-                                    member._id
+                                  openEditForm(
+                                    member
                                   )
                                 }
                               >
-                                🗑️ Supprimer
+                                ✏️ Modifier
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
+
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  className="btn btn-danger btn-small"
+                                  onClick={() =>
+                                    handleDelete(
+                                      member._id
+                                    )
+                                  }
+                                >
+                                  🗑️ Supprimer
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
                   )}
                 </tbody>
               </table>
@@ -746,7 +1462,7 @@ export default function Members() {
       </div>
 
       {/* ==================================================
-          MODAL AJOUT / MODIFICATION
+          MODAL
       ================================================== */}
 
       {showForm && (
@@ -764,18 +1480,17 @@ export default function Members() {
           }}
         >
           <div className="management-modal">
+
             <div className="management-modal-header">
               <div>
                 <h2>
                   {editingId
-                    ? "Modifier le membre"
-                    : "Ajouter un membre"}
+                    ? "Modifier la personne"
+                    : "Ajouter une personne"}
                 </h2>
 
                 <p className="page-subtitle">
-                  {editingId
-                    ? "Modifiez les informations de ce membre."
-                    : "Renseignez les informations du nouveau membre."}
+                  Renseignez les informations nécessaires aux statistiques et au suivi pastoral.
                 </p>
               </div>
 
@@ -785,7 +1500,6 @@ export default function Members() {
                 onClick={
                   resetForm
                 }
-                aria-label="Fermer"
               >
                 ✕
               </button>
@@ -798,6 +1512,7 @@ export default function Members() {
             >
               <div className="management-modal-body">
                 <div className="management-form-grid">
+
                   <div className="form-group">
                     <label className="form-label">
                       Prénom *
@@ -812,7 +1527,6 @@ export default function Members() {
                       onChange={
                         handleChange
                       }
-                      placeholder="Prénom"
                       required
                     />
                   </div>
@@ -831,9 +1545,189 @@ export default function Members() {
                       onChange={
                         handleChange
                       }
-                      placeholder="Nom"
                       required
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Profil *
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="membershipType"
+                      value={
+                        form.membershipType
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      <option value="Membre">
+                        Membre
+                      </option>
+
+                      <option value="Visiteur">
+                        Visiteur
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* SEXE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Sexe
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="gender"
+                      value={
+                        form.gender
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      <option value="">
+                        Non renseigné
+                      </option>
+
+                      <option value="Homme">
+                        Homme / Garçon
+                      </option>
+
+                      <option value="Femme">
+                        Femme / Fille
+                      </option>
+                    </select>
+
+                    <div className="person-secondary">
+                      Pour un enfant : choisissez Garçon ou Fille. La catégorie Enfant est calculée avec son âge.
+                    </div>
+                  </div>
+
+                  {/* DATE DE NAISSANCE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Date de naissance
+                    </label>
+
+                    <input
+                      className="form-input"
+                      type="date"
+                      name="birthDate"
+                      value={
+                        form.birthDate
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+
+                    {form.birthDate && (
+                      <div className="person-secondary">
+                        Âge actuel :{" "}
+                        {calculateAge(
+                          form.birthDate
+                        ) ?? "—"}{" "}
+                        ans
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TRANCHE */}
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Tranche d'âge
+                    </label>
+
+                    <select
+                      className="form-select"
+                      name="ageGroup"
+                      value={
+                        form.ageGroup
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      disabled={
+                        Boolean(
+                          form.birthDate
+                        )
+                      }
+                    >
+                      {AGE_GROUPS.map(
+                        (group) => (
+                          <option
+                            key={
+                              group
+                            }
+                            value={
+                              group
+                            }
+                          >
+                            {group ===
+                            "18+"
+                              ? "18 ans et +"
+                              : group ===
+                                "Non renseigné"
+                              ? "Non renseigné"
+                              : `${group} ans`}
+                          </option>
+                        )
+                      )}
+                    </select>
+
+                    {form.birthDate && (
+                      <div className="person-secondary">
+                        Calculée automatiquement depuis la date de naissance.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CATÉGORIE AUTOMATIQUE */}
+
+                  <div className="form-group form-group-full">
+                    <div
+                      style={{
+                        padding:
+                          "14px 16px",
+
+                        borderRadius:
+                          "12px",
+
+                        border:
+                          "1px solid rgba(99, 102, 241, 0.18)",
+
+                        background:
+                          "rgba(99, 102, 241, 0.05)",
+                      }}
+                    >
+                      <strong>
+                        {getPersonCategoryIcon(
+                          currentFormCategory
+                        )}{" "}
+                        Catégorie :{" "}
+                        {
+                          currentFormCategory
+                        }
+                      </strong>
+
+                      <div
+                        className="person-secondary"
+                        style={{
+                          marginTop:
+                            "5px",
+                        }}
+                      >
+                        Enfant : 0–14 ans • Adolescent : 15–17 ans • Adulte : 18 ans et plus.
+                      </div>
+                    </div>
                   </div>
 
                   <div className="form-group">
@@ -851,7 +1745,6 @@ export default function Members() {
                       onChange={
                         handleChange
                       }
-                      placeholder="membre@email.com"
                     />
                   </div>
 
@@ -869,11 +1762,55 @@ export default function Members() {
                       onChange={
                         handleChange
                       }
-                      placeholder="06 00 00 00 00"
                     />
                   </div>
 
                   <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Adresse
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="address"
+                      value={
+                        form.address
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+                  </div>
+
+                  {form.membershipType ===
+                    "Membre" && (
+                    <div className="form-group">
+                      <label className="form-label">
+                        Date d'intégration
+                      </label>
+
+                      <input
+                        className="form-input"
+                        type="date"
+                        name="membershipDate"
+                        value={
+                          form.membershipDate
+                        }
+                        onChange={
+                          handleChange
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div
+                    className={`form-group ${
+                      form.membershipType ===
+                      "Visiteur"
+                        ? "form-group-full"
+                        : ""
+                    }`}
+                  >
                     <label className="form-label">
                       Statut
                     </label>
@@ -888,15 +1825,44 @@ export default function Members() {
                         handleChange
                       }
                     >
-                      <option value="active">
+                      <option value="Actif">
                         Actif
                       </option>
 
-                      <option value="inactive">
+                      <option value="Inactif">
                         Inactif
                       </option>
                     </select>
                   </div>
+
+                  {form.membershipType ===
+                    "Visiteur" && (
+                    <div className="form-group form-group-full">
+                      <div
+                        style={{
+                          padding:
+                            "12px 14px",
+
+                          borderRadius:
+                            "10px",
+
+                          border:
+                            "1px solid rgba(99, 102, 241, 0.2)",
+
+                          background:
+                            "rgba(99, 102, 241, 0.06)",
+
+                          fontSize:
+                            "13px",
+
+                          lineHeight:
+                            "1.6",
+                        }}
+                      >
+                        👋 Les présences de ce visiteur permettront à ElDior de déterminer automatiquement sa première visite, sa dernière visite et son nombre de visites.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -922,6 +1888,9 @@ export default function Members() {
                     ? "Enregistrement..."
                     : editingId
                     ? "Enregistrer les modifications"
+                    : form.membershipType ===
+                      "Visiteur"
+                    ? "Ajouter le visiteur"
                     : "Ajouter le membre"}
                 </button>
               </div>

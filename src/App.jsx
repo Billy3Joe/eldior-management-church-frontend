@@ -5,24 +5,17 @@ import {
   Navigate,
 } from "react-router-dom";
 
-// ======================================================
-// AUTHENTIFICATION
-// ======================================================
+import {
+  SubscriptionProvider,
+} from "./context/SubscriptionContext";
 
 import Login from "./pages/Login";
 import RegisterChurch from "./pages/RegisterChurch";
 
-// ======================================================
-// PROTECTION DES ROUTES
-// ======================================================
-
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
 import PlatformRoute from "./components/PlatformRoute";
-
-// ======================================================
-// PAGES ÉGLISE
-// ======================================================
+import SubscriptionRoute from "./components/SubscriptionRoute";
 
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
@@ -30,6 +23,9 @@ import Departments from "./pages/Departments";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
 import Attendance from "./pages/Attendance";
+import AttendanceStats from "./pages/AttendanceStats";
+import PastoralStatistics from "./pages/PastoralStatistics";
+import VisitorFollowUp from "./pages/VisitorFollowUp";
 import Assignments from "./pages/Assignments";
 import AssignmentResponse from "./pages/AssignmentResponse";
 import Reports from "./pages/Reports";
@@ -38,269 +34,297 @@ import AdminUsers from "./pages/AdminUsers";
 import ActivityLogs from "./pages/ActivityLogs";
 import Subscription from "./pages/Subscription";
 
-// ======================================================
-// PAGES PLATEFORME
-// ======================================================
-
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformChurches from "./pages/PlatformChurches";
-
-// ======================================================
-// APPLICATION
-// ======================================================
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <SubscriptionProvider>
+        <Routes>
+          {/* ==================================================
+              RACINE
+          ================================================== */}
 
-        {/* ==================================================
-            ACCUEIL
-        ================================================== */}
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            }
+          />
 
-        <Route
-          path="/"
-          element={
-            <Navigate
-              to="/dashboard"
-              replace
-            />
-          }
-        />
+          {/* ==================================================
+              AUTHENTIFICATION
+          ================================================== */}
 
-        {/* ==================================================
-            LOGIN
-        ================================================== */}
+          <Route
+            path="/login"
+            element={
+              <Login />
+            }
+          />
 
-        <Route
-          path="/login"
-          element={
-            <Login />
-          }
-        />
+          <Route
+            path="/register-church"
+            element={
+              <RegisterChurch />
+            }
+          />
 
-        {/* ==================================================
-            CRÉATION ÉGLISE
-        ================================================== */}
+          {/* ==================================================
+              DASHBOARD
+          ================================================== */}
 
-        <Route
-          path="/register-church"
-          element={
-            <RegisterChurch />
-          }
-        />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            DASHBOARD ÉGLISE
-        ================================================== */}
+          {/* ==================================================
+              MEMBRES
+          ================================================== */}
 
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/members"
+            element={
+              <PrivateRoute>
+                <Members />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            MEMBRES
-        ================================================== */}
+          {/* ==================================================
+              DÉPARTEMENTS
+          ================================================== */}
 
-        <Route
-          path="/members"
-          element={
-            <PrivateRoute>
-              <Members />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/departments"
+            element={
+              <PrivateRoute>
+                <Departments />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            DÉPARTEMENTS
-        ================================================== */}
+          {/* ==================================================
+              ÉVÉNEMENTS
+          ================================================== */}
 
-        <Route
-          path="/departments"
-          element={
-            <PrivateRoute>
-              <Departments />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/events"
+            element={
+              <PrivateRoute>
+                <Events />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            ÉVÉNEMENTS
-        ================================================== */}
+          <Route
+            path="/events/:id"
+            element={
+              <PrivateRoute>
+                <EventDetails />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/events"
-          element={
-            <PrivateRoute>
-              <Events />
-            </PrivateRoute>
-          }
-        />
+          {/* ==================================================
+              PRÉSENCES
+          ================================================== */}
 
-        <Route
-          path="/events/:id"
-          element={
-            <PrivateRoute>
-              <EventDetails />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/attendance"
+            element={
+              <PrivateRoute>
+                <Attendance />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            PRÉSENCES
-        ================================================== */}
+          <Route
+            path="/attendance-stats"
+            element={
+              <PrivateRoute>
+                <AttendanceStats />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/attendance"
-          element={
-            <PrivateRoute>
-              <Attendance />
-            </PrivateRoute>
-          }
-        />
+          {/* ==================================================
+              STATISTIQUES PASTORALES
+          ================================================== */}
 
-        {/* ==================================================
-            PROGRAMMATIONS
-        ================================================== */}
+          <Route
+            path="/pastoral-statistics"
+            element={
+              <PrivateRoute>
+                <PastoralStatistics />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/assignments"
-          element={
-            <PrivateRoute>
-              <Assignments />
-            </PrivateRoute>
-          }
-        />
+          {/* ==================================================
+              SUIVI DES VISITEURS
+          ================================================== */}
 
-        {/* ==================================================
-            RÉPONSE PUBLIQUE
-        ================================================== */}
+          <Route
+            path="/visitor-follow-up"
+            element={
+              <PrivateRoute>
+                <VisitorFollowUp />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/assignment-response/:token"
-          element={
-            <AssignmentResponse />
-          }
-        />
+          {/* ==================================================
+              PROGRAMMATIONS
+          ================================================== */}
 
-        {/* ==================================================
-            RAPPORTS
-        ================================================== */}
+          <Route
+            path="/assignments"
+            element={
+              <PrivateRoute>
+                <SubscriptionRoute
+                  feature="assignments"
+                >
+                  <Assignments />
+                </SubscriptionRoute>
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/reports"
-          element={
-            <PrivateRoute>
-              <Reports />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/assignment-response/:token"
+            element={
+              <AssignmentResponse />
+            }
+          />
 
-        {/* ==================================================
-            ABONNEMENT
-        ================================================== */}
+          {/* ==================================================
+              RAPPORTS
+          ================================================== */}
 
-        <Route
-          path="/subscription"
-          element={
-            <PrivateRoute>
-              <Subscription />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/reports"
+            element={
+              <PrivateRoute>
+                <SubscriptionRoute
+                  feature="reports"
+                >
+                  <Reports />
+                </SubscriptionRoute>
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            PARAMÈTRES
-        ================================================== */}
+          {/* ==================================================
+              ABONNEMENT
+          ================================================== */}
 
-        <Route
-          path="/settings"
-          element={
-            <PrivateRoute>
-              <Settings />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/subscription"
+            element={
+              <PrivateRoute>
+                <Subscription />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            UTILISATEURS ÉGLISE
-        ================================================== */}
+          {/* ==================================================
+              PARAMÈTRES
+          ================================================== */}
 
-        <Route
-          path="/users"
-          element={
-            <PrivateRoute>
-              <AdminRoute>
-                <AdminUsers />
-              </AdminRoute>
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            JOURNAL D'ACTIVITÉ
-        ================================================== */}
+          {/* ==================================================
+              UTILISATEURS
+          ================================================== */}
 
-        <Route
-          path="/activity-logs"
-          element={
-            <PrivateRoute>
-              <AdminRoute>
-                <ActivityLogs />
-              </AdminRoute>
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/users"
+            element={
+              <PrivateRoute>
+                <AdminRoute>
+                  <AdminUsers />
+                </AdminRoute>
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            PLATEFORME - DASHBOARD
-        ================================================== */}
+          {/* ==================================================
+              JOURNAL
+          ================================================== */}
 
-        <Route
-          path="/platform"
-          element={
-            <PrivateRoute>
-              <PlatformRoute>
-                <PlatformDashboard />
-              </PlatformRoute>
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/activity-logs"
+            element={
+              <PrivateRoute>
+                <AdminRoute>
+                  <SubscriptionRoute
+                    feature="activityLogs"
+                  >
+                    <ActivityLogs />
+                  </SubscriptionRoute>
+                </AdminRoute>
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            PLATEFORME - ÉGLISES CLIENTES
-        ================================================== */}
+          {/* ==================================================
+              PLATEFORME ELDIOR
+          ================================================== */}
 
-        <Route
-          path="/platform/churches"
-          element={
-            <PrivateRoute>
-              <PlatformRoute>
-                <PlatformChurches />
-              </PlatformRoute>
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/platform"
+            element={
+              <PrivateRoute>
+                <PlatformRoute>
+                  <PlatformDashboard />
+                </PlatformRoute>
+              </PrivateRoute>
+            }
+          />
 
-        {/* ==================================================
-            ROUTE INCONNUE
-        ================================================== */}
+          <Route
+            path="/platform/churches"
+            element={
+              <PrivateRoute>
+                <PlatformRoute>
+                  <PlatformChurches />
+                </PlatformRoute>
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/dashboard"
-              replace
-            />
-          }
-        />
-      </Routes>
+          {/* ==================================================
+              404 FRONTEND
+          ================================================== */}
+
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            }
+          />
+        </Routes>
+      </SubscriptionProvider>
     </BrowserRouter>
   );
 }

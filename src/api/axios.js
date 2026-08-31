@@ -8,8 +8,7 @@ const API = axios.create({
   baseURL: "http://localhost:8000/api",
 
   headers: {
-    "Content-Type":
-      "application/json",
+    "Content-Type": "application/json",
   },
 });
 
@@ -54,23 +53,37 @@ API.interceptors.response.use(
   },
 
   (error) => {
+    const status =
+      error.response?.status;
+
+    const requestUrl =
+      error.config?.url || "";
+
     // ==================================================
-    // TOKEN EXPIRE / NON AUTORISÉ
+    // REQUÊTES D'AUTHENTIFICATION
     //
-    // On ne déconnecte pas automatiquement sur /auth/login,
-    // sinon une erreur de mot de passe viderait inutilement
-    // la session.
+    // Une erreur 401 pendant la connexion ne doit pas
+    // supprimer une éventuelle session existante.
     // ==================================================
 
-    const isLoginRequest =
-      error.config?.url?.includes(
+    const isAuthRequest =
+      requestUrl.includes(
         "/auth/login"
+      ) ||
+      requestUrl.includes(
+        "/auth/register"
+      ) ||
+      requestUrl.includes(
+        "/auth/register-church"
       );
 
+    // ==================================================
+    // TOKEN EXPIRÉ / INVALIDE
+    // ==================================================
+
     if (
-      error.response?.status ===
-        401 &&
-      !isLoginRequest
+      status === 401 &&
+      !isAuthRequest
     ) {
       localStorage.removeItem(
         "token"
@@ -79,6 +92,20 @@ API.interceptors.response.use(
       localStorage.removeItem(
         "admin"
       );
+
+      sessionStorage.removeItem(
+        "subscriptionBlockedFeature"
+      );
+
+      sessionStorage.removeItem(
+        "subscriptionRequiredPlan"
+      );
+
+      // On évite d'utiliser React Router ici,
+      // car Axios est en dehors des composants React.
+      //
+      // PrivateRoute prendra ensuite en charge
+      // la redirection vers la connexion.
     }
 
     return Promise.reject(

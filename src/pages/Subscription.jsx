@@ -5,7 +5,15 @@ import {
 } from "react";
 
 import Layout from "../components/Layout";
-import API from "../api/axios";
+
+import {
+  getRequiredPlanLabel,
+  normalizePlan,
+} from "../utils/subscription";
+
+import {
+  useSubscription,
+} from "../context/SubscriptionContext";
 
 import "../styles/ManagementPages.css";
 import "./Subscription.css";
@@ -15,62 +23,85 @@ import "./Subscription.css";
 // ======================================================
 
 export default function Subscription() {
-  const [
-    subscriptionData,
-    setSubscriptionData,
-  ] = useState(null);
+  // ====================================================
+  // CONTEXTE ABONNEMENT
+  // ====================================================
 
-  const [
+  const {
+    plan,
+    subscription: contextSubscription,
     loading,
-    setLoading,
-  ] = useState(true);
+    initialized,
+    error: contextError,
+    refreshSubscription,
+  } = useSubscription();
+
+  // ====================================================
+  // STATES LOCAUX
+  // ====================================================
 
   const [
-    error,
-    setError,
+    blockedFeature,
+    setBlockedFeature,
+  ] = useState("");
+
+  const [
+    requiredPlan,
+    setRequiredPlan,
   ] = useState("");
 
   // ====================================================
-  // CHARGEMENT
+  // FONCTIONNALITÉ BLOQUÉE
   // ====================================================
 
   useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    const feature =
+      sessionStorage.getItem(
+        "subscriptionBlockedFeature"
+      );
 
-        const response = await API.get(
-          "/subscription/me"
-        );
+    const storedPlan =
+      sessionStorage.getItem(
+        "subscriptionRequiredPlan"
+      );
 
-        console.log(
-          "📦 Subscription API :",
-          response.data
-        );
+    if (feature) {
+      setBlockedFeature(feature);
 
-        setSubscriptionData(
-          response.data?.data ||
-            response.data ||
-            null
-        );
-      } catch (err) {
-        console.error(
-          "❌ Erreur abonnement :",
-          err
-        );
+      setRequiredPlan(
+        storedPlan ||
+          getRequiredPlanLabel(
+            feature
+          )
+      );
 
-        setError(
-          err.response?.data?.message ||
-            "Impossible de charger les informations de l'abonnement."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      sessionStorage.removeItem(
+        "subscriptionBlockedFeature"
+      );
 
-    fetchSubscription();
+      sessionStorage.removeItem(
+        "subscriptionRequiredPlan"
+      );
+    }
   }, []);
+
+  // ====================================================
+  // NORMALISATION DE LA RÉPONSE DU CONTEXTE
+  // ====================================================
+
+  const subscriptionData =
+    useMemo(() => {
+      if (!contextSubscription) {
+        return null;
+      }
+
+      return (
+        contextSubscription?.data ||
+        contextSubscription
+      );
+    }, [
+      contextSubscription,
+    ]);
 
   // ====================================================
   // DONNÉES
@@ -80,7 +111,8 @@ export default function Subscription() {
     subscriptionData?.church || {};
 
   const subscription =
-    subscriptionData?.subscription || {};
+    subscriptionData?.subscription ||
+    {};
 
   const limits =
     subscriptionData?.limits || {};
@@ -96,18 +128,25 @@ export default function Subscription() {
   // ====================================================
 
   const currentPlan =
-    subscription?.plan ||
-    church?.plan ||
-    subscriptionData?.plan ||
-    "free";
+    normalizePlan(
+      plan ||
+        subscription?.plan ||
+        church?.plan ||
+        subscriptionData?.plan ||
+        "free"
+    );
 
   // ====================================================
   // LABEL DU PLAN
   // ====================================================
 
-  const getPlanLabel = (plan) => {
+  const getPlanLabel = (
+    selectedPlan
+  ) => {
     switch (
-      String(plan || "").toLowerCase()
+      String(
+        selectedPlan || ""
+      ).toLowerCase()
     ) {
       case "premium":
         return "Premium";
@@ -124,9 +163,13 @@ export default function Subscription() {
   // DESCRIPTION DU PLAN
   // ====================================================
 
-  const getPlanDescription = (plan) => {
+  const getPlanDescription = (
+    selectedPlan
+  ) => {
     switch (
-      String(plan || "").toLowerCase()
+      String(
+        selectedPlan || ""
+      ).toLowerCase()
     ) {
       case "premium":
         return "Accès complet à toutes les fonctionnalités de gestion ElDior Management Church.";
@@ -137,6 +180,54 @@ export default function Subscription() {
       default:
         return "Les fonctionnalités essentielles pour commencer la gestion numérique de votre église.";
     }
+  };
+
+  // ====================================================
+  // LABEL DES FONCTIONNALITÉS
+  // ====================================================
+
+  const getFeatureLabel = (
+    feature
+  ) => {
+    const labels = {
+      dashboard:
+        "Tableau de bord",
+
+      members:
+        "Gestion des membres",
+
+      departments:
+        "Gestion des départements",
+
+      events:
+        "Gestion des événements",
+
+      attendance:
+        "Gestion des présences",
+
+      assignments:
+        "Programmations",
+
+      reports:
+        "Rapports avancés",
+
+      emailNotifications:
+        "Notifications email",
+
+      reminders:
+        "Rappels automatiques",
+
+      activityLogs:
+        "Journal d'activité",
+
+      advancedSettings:
+        "Paramètres avancés",
+    };
+
+    return (
+      labels[feature] ||
+      "Cette fonctionnalité"
+    );
   };
 
   // ====================================================
@@ -180,18 +271,27 @@ export default function Subscription() {
   ) => {
     if (
       usageValue &&
-      typeof usageValue === "object" &&
-      !Array.isArray(usageValue)
+      typeof usageValue ===
+        "object" &&
+      !Array.isArray(
+        usageValue
+      )
     ) {
-      const current = Number(
-        usageValue.current ?? 0
-      );
+      const current =
+        Number(
+          usageValue.current ??
+            0
+        );
 
       const unlimited =
-        usageValue.unlimited === true ||
-        usageValue.limit === null ||
-        usageValue.limit === -1 ||
-        usageValue.limit === "unlimited";
+        usageValue.unlimited ===
+          true ||
+        usageValue.limit ===
+          null ||
+        usageValue.limit ===
+          -1 ||
+        usageValue.limit ===
+          "unlimited";
 
       const limit =
         unlimited
@@ -217,8 +317,9 @@ export default function Subscription() {
           : Number(
               usageValue.remaining ??
                 Math.max(
-                  Number(limit || 0) -
-                    current,
+                  Number(
+                    limit || 0
+                  ) - current,
                   0
                 )
             );
@@ -226,8 +327,11 @@ export default function Subscription() {
       const reached =
         usageValue.reached ??
         (!unlimited &&
-          Number(limit || 0) > 0 &&
-          current >= Number(limit));
+          Number(
+            limit || 0
+          ) > 0 &&
+          current >=
+            Number(limit));
 
       return {
         current,
@@ -240,19 +344,24 @@ export default function Subscription() {
     }
 
     const current =
-      Number(usageValue || 0);
+      Number(
+        usageValue || 0
+      );
 
     const unlimited =
       limitValue === null ||
       limitValue === undefined ||
       limitValue === -1 ||
       limitValue === Infinity ||
-      limitValue === "unlimited";
+      limitValue ===
+        "unlimited";
 
     const limit =
       unlimited
         ? null
-        : Number(limitValue || 0);
+        : Number(
+            limitValue || 0
+          );
 
     const percentage =
       unlimited
@@ -266,15 +375,19 @@ export default function Subscription() {
       unlimited
         ? null
         : Math.max(
-            Number(limit || 0) -
-              current,
+            Number(
+              limit || 0
+            ) - current,
             0
           );
 
     const reached =
       !unlimited &&
-      Number(limit || 0) > 0 &&
-      current >= Number(limit);
+      Number(
+        limit || 0
+      ) > 0 &&
+      current >=
+        Number(limit);
 
     return {
       current,
@@ -290,97 +403,103 @@ export default function Subscription() {
   // RESSOURCES
   // ====================================================
 
-  const resources = useMemo(() => {
-    return [
-      {
-        key: "members",
+  const resources =
+    useMemo(() => {
+      return [
+        {
+          key: "members",
+          label: "Membres",
 
-        label: "Membres",
+          description:
+            "Membres enregistrés dans votre église",
 
-        description:
-          "Membres enregistrés dans votre église",
+          ...normalizeResource(
+            usage.members ??
+              usage.totalMembers ??
+              0,
 
-        ...normalizeResource(
-          usage.members ??
-            usage.totalMembers ??
-            0,
+            limits.members ??
+              limits.maxMembers
+          ),
+        },
 
-          limits.members ??
-            limits.maxMembers
-        ),
-      },
+        {
+          key: "users",
+          label:
+            "Utilisateurs",
 
-      {
-        key: "users",
+          description:
+            "Administrateurs et managers",
 
-        label: "Utilisateurs",
+          ...normalizeResource(
+            usage.users ??
+              usage.totalUsers ??
+              0,
 
-        description:
-          "Administrateurs et managers",
+            limits.users ??
+              limits.maxUsers
+          ),
+        },
 
-        ...normalizeResource(
-          usage.users ??
-            usage.totalUsers ??
-            0,
+        {
+          key:
+            "departments",
 
-          limits.users ??
-            limits.maxUsers
-        ),
-      },
+          label:
+            "Départements",
 
-      {
-        key: "departments",
+          description:
+            "Départements et équipes",
 
-        label: "Départements",
+          ...normalizeResource(
+            usage.departments ??
+              usage.totalDepartments ??
+              0,
 
-        description:
-          "Départements et équipes",
+            limits.departments ??
+              limits.maxDepartments
+          ),
+        },
 
-        ...normalizeResource(
-          usage.departments ??
-            usage.totalDepartments ??
-            0,
+        {
+          key: "events",
 
-          limits.departments ??
-            limits.maxDepartments
-        ),
-      },
+          label:
+            "Événements",
 
-      {
-        key: "events",
+          description:
+            "Événements enregistrés",
 
-        label: "Événements",
+          ...normalizeResource(
+            usage.events ??
+              usage.totalEvents ??
+              0,
 
-        description:
-          "Événements enregistrés",
-
-        ...normalizeResource(
-          usage.events ??
-            usage.totalEvents ??
-            0,
-
-          limits.events ??
-            limits.maxEvents
-        ),
-      },
-    ];
-  }, [usage, limits]);
+            limits.events ??
+              limits.maxEvents
+          ),
+        },
+      ];
+    }, [
+      usage,
+      limits,
+    ]);
 
   // ====================================================
   // FONCTIONNALITÉS
-  // IMPORTANT :
-  // La clé backend est emailNotifications
   // ====================================================
 
   const featureList = [
     {
       key: "dashboard",
-      label: "Tableau de bord",
+      label:
+        "Tableau de bord",
     },
 
     {
       key: "members",
-      label: "Gestion des membres",
+      label:
+        "Gestion des membres",
     },
 
     {
@@ -403,7 +522,8 @@ export default function Subscription() {
 
     {
       key: "assignments",
-      label: "Programmations",
+      label:
+        "Programmations",
     },
 
     {
@@ -413,7 +533,9 @@ export default function Subscription() {
     },
 
     {
-      key: "emailNotifications",
+      key:
+        "emailNotifications",
+
       label:
         "Notifications email",
     },
@@ -431,7 +553,9 @@ export default function Subscription() {
     },
 
     {
-      key: "advancedSettings",
+      key:
+        "advancedSettings",
+
       label:
         "Paramètres avancés",
     },
@@ -448,10 +572,25 @@ export default function Subscription() {
     "active";
 
   // ====================================================
+  // ERREUR
+  // ====================================================
+
+  const errorMessage =
+    contextError
+      ? contextError.response
+          ?.data?.message ||
+        contextError.message ||
+        "Impossible de charger les informations de l'abonnement."
+      : "";
+
+  // ====================================================
   // LOADING
   // ====================================================
 
-  if (loading) {
+  if (
+    !initialized ||
+    loading
+  ) {
     return (
       <Layout>
         <div className="management-page">
@@ -459,12 +598,14 @@ export default function Subscription() {
             <div className="subscription-spinner" />
 
             <h3>
-              Chargement de votre abonnement
+              Chargement de votre
+              abonnement
             </h3>
 
             <p>
-              Récupération des informations
-              de votre formule...
+              Récupération des
+              informations de votre
+              formule...
             </p>
           </div>
         </div>
@@ -476,7 +617,10 @@ export default function Subscription() {
   // ERREUR
   // ====================================================
 
-  if (error) {
+  if (
+    contextError &&
+    !subscriptionData
+  ) {
     return (
       <Layout>
         <div className="management-page">
@@ -491,14 +635,14 @@ export default function Subscription() {
             </h2>
 
             <p>
-              {error}
+              {errorMessage}
             </p>
 
             <button
               type="button"
               className="btn btn-primary"
               onClick={() =>
-                window.location.reload()
+                refreshSubscription()
               }
             >
               Réessayer
@@ -516,6 +660,123 @@ export default function Subscription() {
   return (
     <Layout>
       <div className="management-page subscription-page">
+
+        {/* ==============================================
+            ALERTE FONCTIONNALITÉ BLOQUÉE
+        ============================================== */}
+
+        {blockedFeature && (
+          <div
+            style={{
+              marginBottom:
+                "22px",
+
+              padding:
+                "18px 20px",
+
+              borderRadius:
+                "14px",
+
+              border:
+                "1px solid rgba(245, 158, 11, 0.28)",
+
+              background:
+                "rgba(245, 158, 11, 0.08)",
+
+              display:
+                "flex",
+
+              gap:
+                "14px",
+
+              alignItems:
+                "flex-start",
+            }}
+          >
+            <div
+              style={{
+                width:
+                  "42px",
+
+                minWidth:
+                  "42px",
+
+                height:
+                  "42px",
+
+                borderRadius:
+                  "12px",
+
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                background:
+                  "rgba(245, 158, 11, 0.14)",
+
+                fontSize:
+                  "20px",
+              }}
+            >
+              🔒
+            </div>
+
+            <div>
+              <strong
+                style={{
+                  display:
+                    "block",
+
+                  marginBottom:
+                    "5px",
+
+                  fontSize:
+                    "15px",
+                }}
+              >
+                {getFeatureLabel(
+                  blockedFeature
+                )}{" "}
+                n'est pas inclus dans
+                votre formule
+              </strong>
+
+              <span
+                style={{
+                  fontSize:
+                    "13px",
+
+                  lineHeight:
+                    1.6,
+                }}
+              >
+                Cette fonctionnalité
+                nécessite au minimum
+                le plan{" "}
+
+                <strong>
+                  {requiredPlan}
+                </strong>
+
+                . Votre plan actuel
+                est{" "}
+
+                <strong>
+                  {getPlanLabel(
+                    currentPlan
+                  )}
+                </strong>
+                .
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ==============================================
             HEADER
         ============================================== */}
@@ -533,7 +794,8 @@ export default function Subscription() {
             <p className="page-subtitle">
               Consultez votre formule,
               vos limites et les
-              fonctionnalités accessibles.
+              fonctionnalités
+              accessibles.
             </p>
           </div>
 
@@ -599,12 +861,14 @@ export default function Subscription() {
         <section className="subscription-section">
           <div className="subscription-section-header">
             <h2>
-              Utilisation de votre formule
+              Utilisation de votre
+              formule
             </h2>
 
             <p>
               Suivez les ressources
-              utilisées par votre église.
+              utilisées par votre
+              église.
             </p>
           </div>
 
@@ -612,7 +876,9 @@ export default function Subscription() {
             {resources.map(
               (resource) => (
                 <div
-                  key={resource.key}
+                  key={
+                    resource.key
+                  }
                   className={
                     `subscription-resource-card ` +
                     (resource.reached
@@ -623,7 +889,9 @@ export default function Subscription() {
                   <div className="subscription-resource-header">
                     <div>
                       <h3>
-                        {resource.label}
+                        {
+                          resource.label
+                        }
                       </h3>
 
                       <p>
@@ -641,8 +909,8 @@ export default function Subscription() {
                       </strong>
 
                       <span>
-                        {" "}
-                        /{" "}
+                        {" / "}
+
                         {resource.unlimited
                           ? "Illimité"
                           : resource.limit}
@@ -666,14 +934,13 @@ export default function Subscription() {
                               : "")
                           }
                           style={{
-                            width:
-                              `${Math.min(
-                                Number(
-                                  resource.percentage ||
-                                    0
-                                ),
-                                100
-                              )}%`,
+                            width: `${Math.min(
+                              Number(
+                                resource.percentage ||
+                                  0
+                              ),
+                              100
+                            )}%`,
                           }}
                         />
                       </div>
@@ -720,8 +987,9 @@ export default function Subscription() {
               </h2>
 
               <p>
-                Modules disponibles avec
-                votre formule actuelle.
+                Modules disponibles
+                avec votre formule
+                actuelle.
               </p>
             </div>
 
@@ -735,7 +1003,9 @@ export default function Subscription() {
 
                   return (
                     <div
-                      key={feature.key}
+                      key={
+                        feature.key
+                      }
                       className={
                         `subscription-feature ` +
                         (enabled
@@ -781,12 +1051,14 @@ export default function Subscription() {
             </h2>
 
             <p>
-              Des offres adaptées à la
-              croissance de votre église.
+              Des offres adaptées à
+              la croissance de votre
+              église.
             </p>
           </div>
 
           <div className="subscription-plans-grid">
+
             {/* FREE */}
 
             <div
@@ -816,9 +1088,10 @@ export default function Subscription() {
               </h3>
 
               <p>
-                Pour commencer simplement
-                la gestion numérique de
-                votre église.
+                Pour commencer
+                simplement la gestion
+                numérique de votre
+                église.
               </p>
 
               <ul>
@@ -886,8 +1159,9 @@ export default function Subscription() {
 
               <p>
                 Pour les églises en
-                croissance qui ont besoin
-                de plus de capacité.
+                croissance qui ont
+                besoin de plus de
+                capacité.
               </p>
 
               <ul>
@@ -958,8 +1232,9 @@ export default function Subscription() {
               </h3>
 
               <p>
-                Une gestion complète et
-                professionnelle sans limite.
+                Une gestion complète
+                et professionnelle
+                sans limite.
               </p>
 
               <ul>
@@ -968,15 +1243,18 @@ export default function Subscription() {
                 </li>
 
                 <li>
-                  ✓ Utilisateurs illimités
+                  ✓ Utilisateurs
+                  illimités
                 </li>
 
                 <li>
-                  ✓ Départements illimités
+                  ✓ Départements
+                  illimités
                 </li>
 
                 <li>
-                  ✓ Événements illimités
+                  ✓ Événements
+                  illimités
                 </li>
 
                 <li>

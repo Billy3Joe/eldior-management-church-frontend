@@ -76,24 +76,72 @@ export default function Dashboard() {
   }, []);
 
   // ======================================================
-  // DONNÉES
+  // DONNÉES API
   // ======================================================
 
-  const overview =
-    dashboard?.overview || {};
-
   const members =
-    dashboard?.members || {};
+    dashboard?.members || {
+      total: 0,
+      active: 0,
+      inactive: 0,
+    };
+
+  const departments =
+    dashboard?.departments || {
+      total: 0,
+      active: 0,
+    };
 
   const events =
-    dashboard?.events || {};
+    dashboard?.events || {
+      total: 0,
+      upcoming: 0,
+    };
 
-  const recentActivity =
-    dashboard?.recentActivity || {};
+  const attendances =
+    dashboard?.attendances || {
+      total: 0,
+      present: 0,
+      absent: 0,
+      attendanceRate: 0,
+    };
+
+  const assignments =
+    dashboard?.assignments || {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      declined: 0,
+      confirmationRate: 0,
+    };
+
+  const nextEvents =
+    Array.isArray(
+      dashboard?.nextEvents
+    )
+      ? dashboard.nextEvents
+      : [];
+
+  const recentMembers =
+    Array.isArray(
+      dashboard?.recentMembers
+    )
+      ? dashboard.recentMembers
+      : [];
+
+  const recentAssignments =
+    Array.isArray(
+      dashboard?.recentAssignments
+    )
+      ? dashboard.recentAssignments
+      : [];
 
   const membersByDepartment =
-    dashboard?.membersByDepartment ||
-    [];
+    Array.isArray(
+      dashboard?.membersByDepartment
+    )
+      ? dashboard.membersByDepartment
+      : [];
 
   // ======================================================
   // MEMBRES
@@ -105,19 +153,17 @@ export default function Dashboard() {
         {
           name: "Actifs",
           value:
-            members.activeMembers ||
-            0,
+            members.active || 0,
         },
         {
           name: "Inactifs",
           value:
-            members.inactiveMembers ||
-            0,
+            members.inactive || 0,
         },
       ],
       [
-        members.activeMembers,
-        members.inactiveMembers,
+        members.active,
+        members.inactive,
       ]
     );
 
@@ -126,33 +172,31 @@ export default function Dashboard() {
   // ======================================================
 
   const eventStatusData =
-    useMemo(
-      () => [
+    useMemo(() => {
+      const upcoming =
+        events.upcoming || 0;
+
+      const otherEvents =
+        Math.max(
+          (events.total || 0) -
+            upcoming,
+          0
+        );
+
+      return [
         {
-          name: "Prévus",
-          value:
-            events.plannedEvents ||
-            0,
+          name: "À venir",
+          value: upcoming,
         },
         {
-          name: "Terminés",
-          value:
-            events.completedEvents ||
-            0,
+          name: "Autres",
+          value: otherEvents,
         },
-        {
-          name: "Annulés",
-          value:
-            events.cancelledEvents ||
-            0,
-        },
-      ],
-      [
-        events.plannedEvents,
-        events.completedEvents,
-        events.cancelledEvents,
-      ]
-    );
+      ];
+    }, [
+      events.total,
+      events.upcoming,
+    ]);
 
   // ======================================================
   // DÉPARTEMENTS
@@ -169,14 +213,17 @@ export default function Dashboard() {
 
             total:
               department.totalMembers ||
+              department.total ||
               0,
 
             actifs:
               department.activeMembers ||
+              department.active ||
               0,
 
             inactifs:
               department.inactiveMembers ||
+              department.inactive ||
               0,
           })
         ),
@@ -245,6 +292,18 @@ export default function Dashboard() {
       case "cancelled":
         return "Annulé";
 
+      case "Planifié":
+        return "Planifié";
+
+      case "En cours":
+        return "En cours";
+
+      case "Terminé":
+        return "Terminé";
+
+      case "Annulé":
+        return "Annulé";
+
       default:
         return status || "-";
     }
@@ -255,37 +314,20 @@ export default function Dashboard() {
   ) => {
     switch (status) {
       case "planned":
+      case "Planifié":
         return "status-badge status-planned";
 
       case "ongoing":
+      case "En cours":
         return "status-badge status-active";
 
       case "completed":
+      case "Terminé":
         return "status-badge status-completed";
 
       case "cancelled":
+      case "Annulé":
         return "status-badge status-cancelled";
-
-      default:
-        return "status-badge status-pending";
-    }
-  };
-
-  const getAttendanceClass = (
-    status
-  ) => {
-    switch (status) {
-      case "Présent":
-        return "status-badge status-active";
-
-      case "Absent":
-        return "status-badge status-inactive";
-
-      case "Excusé":
-        return "status-badge status-warning";
-
-      case "En retard":
-        return "status-badge status-planned";
 
       default:
         return "status-badge status-pending";
@@ -352,6 +394,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="management-page dashboard-page">
+
         {/* ================================================
             HEADER
         ================================================ */}
@@ -385,6 +428,9 @@ export default function Dashboard() {
         ================================================ */}
 
         <div className="dashboard-kpi-grid">
+
+          {/* MEMBRES */}
+
           <div className="dashboard-kpi-card">
             <div className="dashboard-kpi-top">
               <div className="dashboard-kpi-icon">
@@ -397,24 +443,23 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-kpi-value">
-              {overview.totalMembers ||
-                0}
+              {members.total || 0}
             </div>
 
             <div className="dashboard-kpi-footer">
               <span className="dashboard-positive">
-                {members.activeMembers ||
-                  0}{" "}
+                {members.active || 0}{" "}
                 actifs
               </span>
 
               <span>
-                {members.inactiveMembers ||
-                  0}{" "}
+                {members.inactive || 0}{" "}
                 inactifs
               </span>
             </div>
           </div>
+
+          {/* DÉPARTEMENTS */}
 
           <div className="dashboard-kpi-card">
             <div className="dashboard-kpi-top">
@@ -428,17 +473,23 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-kpi-value">
-              {overview.totalDepartments ||
+              {departments.total ||
                 0}
             </div>
 
             <div className="dashboard-kpi-footer">
               <span>
-                Organisation des
-                équipes
+                {departments.active ||
+                  0}{" "}
+                actif
+                {departments.active > 1
+                  ? "s"
+                  : ""}
               </span>
             </div>
           </div>
+
+          {/* ÉVÉNEMENTS */}
 
           <div className="dashboard-kpi-card">
             <div className="dashboard-kpi-top">
@@ -452,24 +503,24 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-kpi-value">
-              {overview.totalEvents ||
-                0}
+              {events.total || 0}
             </div>
 
             <div className="dashboard-kpi-footer">
               <span className="dashboard-info">
-                {events.plannedEvents ||
+                {events.upcoming ||
                   0}{" "}
-                planifiés
+                à venir
               </span>
 
               <span>
-                {events.completedEvents ||
-                  0}{" "}
-                terminés
+                {events.total || 0}{" "}
+                enregistrés
               </span>
             </div>
           </div>
+
+          {/* PRÉSENCES */}
 
           <div className="dashboard-kpi-card">
             <div className="dashboard-kpi-top">
@@ -483,23 +534,34 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-kpi-value">
-              {overview.totalAttendances ||
+              {attendances.total ||
                 0}
             </div>
 
             <div className="dashboard-kpi-footer">
+              <span className="dashboard-positive">
+                {attendances.present ||
+                  0}{" "}
+                présents
+              </span>
+
               <span>
-                Pointages enregistrés
+                {attendances.attendanceRate ||
+                  0}
+                %
               </span>
             </div>
           </div>
         </div>
 
         {/* ================================================
-            GRAPHIQUES PIE
+            GRAPHIQUES
         ================================================ */}
 
         <div className="dashboard-chart-grid">
+
+          {/* MEMBRES */}
+
           <div className="management-card dashboard-chart-card">
             <div className="dashboard-card-heading">
               <div>
@@ -547,8 +609,7 @@ export default function Dashboard() {
 
               <div className="dashboard-pie-center">
                 <strong>
-                  {overview.totalMembers ||
-                    0}
+                  {members.total || 0}
                 </strong>
 
                 <span>
@@ -557,6 +618,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* ÉVÉNEMENTS */}
 
           <div className="management-card dashboard-chart-card">
             <div className="dashboard-card-heading">
@@ -591,8 +654,7 @@ export default function Dashboard() {
                     paddingAngle={4}
                   >
                     <Cell fill="#4f46e5" />
-                    <Cell fill="#16a34a" />
-                    <Cell fill="#f59e0b" />
+                    <Cell fill="#cbd5e1" />
                   </Pie>
 
                   <Tooltip />
@@ -605,8 +667,7 @@ export default function Dashboard() {
 
               <div className="dashboard-pie-center">
                 <strong>
-                  {overview.totalEvents ||
-                    0}
+                  {events.total || 0}
                 </strong>
 
                 <span>
@@ -618,7 +679,88 @@ export default function Dashboard() {
         </div>
 
         {/* ================================================
-            BAR CHART
+            INDICATEURS PRÉSENCES
+        ================================================ */}
+
+        <div className="management-card dashboard-department-card">
+          <div className="dashboard-card-heading">
+            <div>
+              <h2>
+                Présences de l’église
+              </h2>
+
+              <p>
+                Résumé des pointages
+                enregistrés.
+              </p>
+            </div>
+
+            <span className="status-badge status-active">
+              {attendances.attendanceRate ||
+                0}
+              %
+            </span>
+          </div>
+
+          <div className="dashboard-kpi-grid">
+
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Pointages
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {attendances.total ||
+                  0}
+              </div>
+            </div>
+
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Présents
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {attendances.present ||
+                  0}
+              </div>
+            </div>
+
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Absents
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {attendances.absent ||
+                  0}
+              </div>
+            </div>
+
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Taux de présence
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {attendances.attendanceRate ||
+                  0}
+                %
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ================================================
+            MEMBRES PAR DÉPARTEMENT
         ================================================ */}
 
         <div className="management-card dashboard-department-card">
@@ -637,12 +779,10 @@ export default function Dashboard() {
             </div>
 
             <span className="status-badge status-planned">
-              {
-                membersByDepartment.length
-              }{" "}
+              {departments.total ||
+                0}{" "}
               département
-              {membersByDepartment.length >
-              1
+              {departments.total > 1
                 ? "s"
                 : ""}
             </span>
@@ -749,9 +889,11 @@ export default function Dashboard() {
               </h3>
 
               <p>
-                Les statistiques des
-                départements
-                apparaîtront ici.
+                Ajoutez des
+                départements pour
+                afficher ici la
+                répartition des
+                membres.
               </p>
             </div>
           )}
@@ -762,7 +904,8 @@ export default function Dashboard() {
         ================================================ */}
 
         <div className="dashboard-activity-grid">
-          {/* MEMBRES */}
+
+          {/* DERNIERS MEMBRES */}
 
           <div className="management-card dashboard-activity-card">
             <div className="dashboard-card-heading">
@@ -779,16 +922,13 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-activity-list">
-              {recentActivity
-                .recentMembers
-                ?.length > 0 ? (
-                recentActivity.recentMembers.map(
+              {recentMembers.length >
+              0 ? (
+                recentMembers.map(
                   (member) => (
                     <div
                       className="dashboard-activity-row"
-                      key={
-                        member._id
-                      }
+                      key={member._id}
                     >
                       <div className="person-avatar">
                         {getInitials(
@@ -809,7 +949,8 @@ export default function Dashboard() {
                           {member
                             .department
                             ?.name ||
-                            "Sans département"}
+                            member.membershipType ||
+                            "Membre"}
                         </span>
                       </div>
 
@@ -831,33 +972,30 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ÉVÉNEMENTS */}
+          {/* PROCHAINS ÉVÉNEMENTS */}
 
           <div className="management-card dashboard-activity-card">
             <div className="dashboard-card-heading">
               <div>
                 <h2>
-                  Derniers événements
+                  Prochains événements
                 </h2>
 
                 <p>
-                  Événements récemment
-                  enregistrés.
+                  Événements à venir
+                  dans votre église.
                 </p>
               </div>
             </div>
 
             <div className="dashboard-activity-list">
-              {recentActivity
-                .recentEvents
-                ?.length > 0 ? (
-                recentActivity.recentEvents.map(
+              {nextEvents.length >
+              0 ? (
+                nextEvents.map(
                   (event) => (
                     <div
                       className="dashboard-activity-row"
-                      key={
-                        event._id
-                      }
+                      key={event._id}
                     >
                       <div className="dashboard-event-icon">
                         ◷
@@ -870,8 +1008,12 @@ export default function Dashboard() {
                         </strong>
 
                         <span>
-                          {event.location ||
-                            "Lieu non renseigné"}
+                          {event.date
+                            ? formatDate(
+                                event.date
+                              )
+                            : event.location ||
+                              "Date non renseignée"}
                         </span>
                       </div>
 
@@ -889,7 +1031,8 @@ export default function Dashboard() {
                 )
               ) : (
                 <div className="dashboard-mini-empty">
-                  Aucun événement récent
+                  Aucun événement à
+                  venir
                 </div>
               )}
             </div>
@@ -897,120 +1040,111 @@ export default function Dashboard() {
         </div>
 
         {/* ================================================
-            PRÉSENCES
+            ASSIGNATIONS
         ================================================ */}
 
         <div className="management-card dashboard-attendance-card">
           <div className="dashboard-card-heading">
             <div>
               <h2>
-                Dernières présences
+                Organisation des équipes
               </h2>
 
               <p>
-                Derniers pointages
-                enregistrés dans
-                l’application.
+                État des affectations
+                et confirmations.
               </p>
             </div>
           </div>
 
-          {recentActivity
-            .recentAttendances
-            ?.length > 0 ? (
-            <div className="management-table-wrapper">
-              <table className="management-table">
-                <thead>
-                  <tr>
-                    <th>
-                      Membre
-                    </th>
+          <div className="dashboard-kpi-grid">
 
-                    <th>
-                      Événement
-                    </th>
-
-                    <th>
-                      Statut
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {recentActivity.recentAttendances.map(
-                    (
-                      attendance
-                    ) => (
-                      <tr
-                        key={
-                          attendance._id
-                        }
-                      >
-                        <td>
-                          <div className="person-cell">
-                            <div className="person-avatar">
-                              {getInitials(
-                                attendance
-                                  .memberId
-                                  ?.firstName,
-                                attendance
-                                  .memberId
-                                  ?.lastName
-                              )}
-                            </div>
-
-                            <div>
-                              <div className="person-name">
-                                {attendance
-                                  .memberId
-                                  ?.firstName ||
-                                  "-"}{" "}
-                                {attendance
-                                  .memberId
-                                  ?.lastName ||
-                                  "-"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          {attendance
-                            .eventId
-                            ?.title ||
-                            "Événement"}
-                        </td>
-
-                        <td>
-                          <span
-                            className={getAttendanceClass(
-                              attendance.status
-                            )}
-                          >
-                            {attendance.status ||
-                              "-"}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="management-empty">
-              <div className="management-empty-icon">
-                ✓
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Affectations
+                </span>
               </div>
 
-              <h3>
-                Aucune présence récente
-              </h3>
+              <div className="dashboard-kpi-value">
+                {assignments.total ||
+                  0}
+              </div>
+            </div>
 
-              <p>
-                Les derniers pointages
-                apparaîtront ici.
-              </p>
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  En attente
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {assignments.pending ||
+                  0}
+              </div>
+            </div>
+
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Confirmées
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {assignments.confirmed ||
+                  0}
+              </div>
+            </div>
+
+            <div className="dashboard-kpi-card">
+              <div className="dashboard-kpi-top">
+                <span>
+                  Confirmation
+                </span>
+              </div>
+
+              <div className="dashboard-kpi-value">
+                {assignments.confirmationRate ||
+                  0}
+                %
+              </div>
+            </div>
+          </div>
+
+          {recentAssignments.length >
+            0 && (
+            <div className="dashboard-activity-list">
+              {recentAssignments.map(
+                (assignment) => (
+                  <div
+                    className="dashboard-activity-row"
+                    key={
+                      assignment._id
+                    }
+                  >
+                    <div className="dashboard-event-icon">
+                      📋
+                    </div>
+
+                    <div className="dashboard-activity-content">
+                      <strong>
+                        {assignment.title ||
+                          assignment
+                            .event
+                            ?.title ||
+                          "Affectation"}
+                      </strong>
+
+                      <span>
+                        {assignment.status ||
+                          "En attente"}
+                      </span>
+                    </div>
+                  </div>
+                )
+              )}
             </div>
           )}
         </div>

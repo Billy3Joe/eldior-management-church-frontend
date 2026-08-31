@@ -1,5 +1,6 @@
 import {
   Navigate,
+  useLocation,
 } from "react-router-dom";
 
 import {
@@ -9,6 +10,9 @@ import {
 export default function PrivateRoute({
   children,
 }) {
+  const location =
+    useLocation();
+
   const token =
     localStorage.getItem(
       "token"
@@ -17,17 +21,27 @@ export default function PrivateRoute({
   const admin =
     getCurrentAdmin();
 
-  // Pas de JWT
+  // ======================================================
+  // PAS DE TOKEN
+  // ======================================================
+
   if (!token) {
     return (
       <Navigate
-        to="/"
+        to="/login"
         replace
+        state={{
+          from:
+            location.pathname,
+        }}
       />
     );
   }
 
-  // Token présent mais utilisateur local absent
+  // ======================================================
+  // TOKEN PRÉSENT MAIS UTILISATEUR LOCAL ABSENT
+  // ======================================================
+
   if (!admin) {
     localStorage.removeItem(
       "token"
@@ -37,15 +51,30 @@ export default function PrivateRoute({
       "admin"
     );
 
+    localStorage.removeItem(
+      "user"
+    );
+
+    localStorage.removeItem(
+      "church"
+    );
+
+    localStorage.removeItem(
+      "plan"
+    );
+
     return (
       <Navigate
-        to="/"
+        to="/login"
         replace
       />
     );
   }
 
-  // Compte éventuellement désactivé
+  // ======================================================
+  // COMPTE DÉSACTIVÉ
+  // ======================================================
+
   if (
     admin.isActive ===
     false
@@ -58,13 +87,29 @@ export default function PrivateRoute({
       "admin"
     );
 
+    localStorage.removeItem(
+      "user"
+    );
+
+    localStorage.removeItem(
+      "church"
+    );
+
+    localStorage.removeItem(
+      "plan"
+    );
+
     return (
       <Navigate
-        to="/"
+        to="/login"
         replace
       />
     );
   }
+
+  // ======================================================
+  // UTILISATEUR AUTORISÉ
+  // ======================================================
 
   return children;
 }

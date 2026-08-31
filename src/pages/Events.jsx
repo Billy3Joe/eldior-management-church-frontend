@@ -10,7 +10,20 @@ import Layout from "../components/Layout";
 import "../styles/ManagementPages.css";
 
 import API from "../api/axios";
-import { getCurrentAdmin } from "../utils/auth";
+
+import {
+  getCurrentAdmin,
+} from "../utils/auth";
+
+import {
+  getPlanLimit,
+  getPlanName,
+  normalizePlan,
+} from "../utils/subscription";
+
+import {
+  useSubscription,
+} from "../context/SubscriptionContext";
 
 const initialForm = {
   title: "",
@@ -21,25 +34,83 @@ const initialForm = {
 };
 
 export default function Events() {
-  const currentUser = getCurrentAdmin();
-  const isAdmin = currentUser?.role === "admin";
+  const currentUser =
+    getCurrentAdmin();
 
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const isAdmin =
+    currentUser?.role === "admin" ||
+    currentUser?.platformRole ===
+      "superadmin";
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState("all");
+  // ======================================================
+  // ABONNEMENT SYNCHRONISÉ
+  // ======================================================
 
-  const [form, setForm] =
-    useState(initialForm);
+  const {
+    plan,
+    initialized,
+  } = useSubscription();
 
-  const [editingId, setEditingId] =
-    useState(null);
+  const currentPlan =
+    normalizePlan(
+      initialized
+        ? plan
+        : currentUser?.church?.plan ||
+            "free"
+    );
 
-  const [showForm, setShowForm] =
-    useState(false);
+  const eventLimit =
+    getPlanLimit(
+      currentPlan,
+      "events"
+    );
+
+  const isUnlimited =
+    eventLimit === null;
+
+  // ======================================================
+  // STATES
+  // ======================================================
+
+  const [
+    events,
+    setEvents,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState("all");
+
+  const [
+    form,
+    setForm,
+  ] = useState(initialForm);
+
+  const [
+    editingId,
+    setEditingId,
+  ] = useState(null);
+
+  const [
+    showForm,
+    setShowForm,
+  ] = useState(false);
 
   // ======================================================
   // CHARGEMENT
@@ -49,14 +120,15 @@ export default function Events() {
     try {
       setLoading(true);
 
-      const response = await API.get(
-        "/events",
-        {
-          params: {
-            limit: 1000,
-          },
-        }
-      );
+      const response =
+        await API.get(
+          "/events",
+          {
+            params: {
+              limit: 1000,
+            },
+          }
+        );
 
       const data =
         response.data?.data ||
@@ -64,7 +136,9 @@ export default function Events() {
         [];
 
       setEvents(
-        Array.isArray(data) ? data : []
+        Array.isArray(data)
+          ? data
+          : []
       );
     } catch (error) {
       console.error(
@@ -73,7 +147,8 @@ export default function Events() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de charger les événements"
       );
     } finally {
@@ -86,31 +161,60 @@ export default function Events() {
   }, []);
 
   // ======================================================
+  // LIMITE DU PLAN
+  // ======================================================
+
+  const eventCount =
+    events.length;
+
+  const limitReached =
+    !isUnlimited &&
+    eventCount >= eventLimit;
+
+  const remainingEvents =
+    isUnlimited
+      ? null
+      : Math.max(
+          eventLimit -
+            eventCount,
+          0
+        );
+
+  // ======================================================
   // STATISTIQUES
   // ======================================================
 
   const stats = useMemo(() => {
-    const total = events.length;
+    const total =
+      events.length;
 
-    const planned = events.filter(
-      (event) =>
-        event.status === "planned"
-    ).length;
+    const planned =
+      events.filter(
+        (event) =>
+          event.status ===
+          "planned"
+      ).length;
 
-    const ongoing = events.filter(
-      (event) =>
-        event.status === "ongoing"
-    ).length;
+    const ongoing =
+      events.filter(
+        (event) =>
+          event.status ===
+          "ongoing"
+      ).length;
 
-    const completed = events.filter(
-      (event) =>
-        event.status === "completed"
-    ).length;
+    const completed =
+      events.filter(
+        (event) =>
+          event.status ===
+          "completed"
+      ).length;
 
-    const cancelled = events.filter(
-      (event) =>
-        event.status === "cancelled"
-    ).length;
+    const cancelled =
+      events.filter(
+        (event) =>
+          event.status ===
+          "cancelled"
+      ).length;
 
     return {
       total,
@@ -125,49 +229,68 @@ export default function Events() {
   // RECHERCHE + FILTRE
   // ======================================================
 
-  const filteredEvents = useMemo(() => {
-    const value = search
-      .trim()
-      .toLowerCase();
+  const filteredEvents =
+    useMemo(() => {
+      const value =
+        search
+          .trim()
+          .toLowerCase();
 
-    return events.filter((event) => {
-      const matchesStatus =
-        statusFilter === "all" ||
-        event.status === statusFilter;
+      return events.filter(
+        (event) => {
+          const matchesStatus =
+            statusFilter ===
+              "all" ||
+            event.status ===
+              statusFilter;
 
-      if (!matchesStatus) {
-        return false;
-      }
+          if (!matchesStatus) {
+            return false;
+          }
 
-      if (!value) {
-        return true;
-      }
+          if (!value) {
+            return true;
+          }
 
-      const searchableText = [
-        event.title,
-        event.type,
-        event.location,
-        event.status,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+          const searchableText = [
+            event.title,
+            event.type,
+            event.location,
+            event.status,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
 
-      return searchableText.includes(value);
-    });
-  }, [events, search, statusFilter]);
+          return searchableText.includes(
+            value
+          );
+        }
+      );
+    }, [
+      events,
+      search,
+      statusFilter,
+    ]);
 
   // ======================================================
   // FORMULAIRE
   // ======================================================
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+  const handleChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
   };
 
   const resetForm = () => {
@@ -177,6 +300,16 @@ export default function Events() {
   };
 
   const openCreateForm = () => {
+    if (limitReached) {
+      toast.warning(
+        `Limite atteinte : votre abonnement ${getPlanName(
+          currentPlan
+        )} autorise au maximum ${eventLimit} événements.`
+      );
+
+      return;
+    }
+
     setForm(initialForm);
     setEditingId(null);
     setShowForm(true);
@@ -186,15 +319,20 @@ export default function Events() {
   // DATE POUR INPUT
   // ======================================================
 
-  const formatDateForInput = (date) => {
+  const formatDateForInput = (
+    date
+  ) => {
     if (!date) {
       return "";
     }
 
-    const parsed = new Date(date);
+    const parsed =
+      new Date(date);
 
     if (
-      Number.isNaN(parsed.getTime())
+      Number.isNaN(
+        parsed.getTime()
+      )
     ) {
       return "";
     }
@@ -202,33 +340,46 @@ export default function Events() {
     const offset =
       parsed.getTimezoneOffset();
 
-    const localDate = new Date(
-      parsed.getTime() -
-        offset * 60000
-    );
+    const localDate =
+      new Date(
+        parsed.getTime() -
+          offset * 60000
+      );
 
     return localDate
       .toISOString()
       .slice(0, 16);
   };
 
-  const openEditForm = (event) => {
-    setEditingId(event._id);
+  // ======================================================
+  // MODIFICATION
+  // ======================================================
+
+  const openEditForm = (
+    event
+  ) => {
+    setEditingId(
+      event._id
+    );
 
     setForm({
-      title: event.title || "",
+      title:
+        event.title || "",
 
-      date: formatDateForInput(
-        event.date
-      ),
+      date:
+        formatDateForInput(
+          event.date
+        ),
 
-      type: event.type || "",
+      type:
+        event.type || "",
 
       location:
         event.location || "",
 
       status:
-        event.status || "planned",
+        event.status ||
+        "planned",
     });
 
     setShowForm(true);
@@ -259,22 +410,39 @@ export default function Events() {
       return;
     }
 
+    if (
+      !editingId &&
+      limitReached
+    ) {
+      toast.warning(
+        `Vous avez atteint la limite de ${eventLimit} événements de votre abonnement ${getPlanName(
+          currentPlan
+        )}.`
+      );
+
+      return;
+    }
+
     try {
       setSaving(true);
 
       const payload = {
-        title: form.title.trim(),
+        title:
+          form.title.trim(),
 
-        date: new Date(
-          form.date
-        ).toISOString(),
+        date:
+          new Date(
+            form.date
+          ).toISOString(),
 
-        type: form.type.trim(),
+        type:
+          form.type.trim(),
 
         location:
           form.location.trim(),
 
-        status: form.status,
+        status:
+          form.status,
       };
 
       if (editingId) {
@@ -306,8 +474,25 @@ export default function Events() {
         error
       );
 
+      if (
+        error.response
+          ?.data
+          ?.code ===
+        "PLAN_LIMIT_REACHED"
+      ) {
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "La limite d'événements de votre abonnement est atteinte."
+        );
+
+        return;
+      }
+
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible d'enregistrer l'événement"
       );
     } finally {
@@ -319,7 +504,9 @@ export default function Events() {
   // SUPPRESSION
   // ======================================================
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (
+    id
+  ) => {
     if (!isAdmin) {
       toast.error(
         "Seul un administrateur peut supprimer un événement"
@@ -354,7 +541,8 @@ export default function Events() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Impossible de supprimer l'événement"
       );
     }
@@ -364,15 +552,20 @@ export default function Events() {
   // DATE AFFICHAGE
   // ======================================================
 
-  const formatDate = (value) => {
+  const formatDate = (
+    value
+  ) => {
     if (!value) {
       return "—";
     }
 
-    const date = new Date(value);
+    const date =
+      new Date(value);
 
     if (
-      Number.isNaN(date.getTime())
+      Number.isNaN(
+        date.getTime()
+      )
     ) {
       return value;
     }
@@ -393,7 +586,9 @@ export default function Events() {
   // LIBELLÉ STATUT
   // ======================================================
 
-  const getStatusLabel = (status) => {
+  const getStatusLabel = (
+    status
+  ) => {
     switch (status) {
       case "planned":
         return "Planifié";
@@ -416,7 +611,9 @@ export default function Events() {
   // CLASSE STATUT
   // ======================================================
 
-  const getStatusClass = (status) => {
+  const getStatusClass = (
+    status
+  ) => {
     switch (status) {
       case "planned":
         return "status-planned";
@@ -442,9 +639,8 @@ export default function Events() {
   return (
     <Layout>
       <div className="management-page">
-        {/* ================================================
-            HEADER
-        ================================================ */}
+
+        {/* HEADER */}
 
         <div className="page-header">
           <div className="page-header-left">
@@ -463,16 +659,116 @@ export default function Events() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={openCreateForm}
+              onClick={
+                openCreateForm
+              }
+              disabled={
+                limitReached
+              }
+              title={
+                limitReached
+                  ? `Limite de ${eventLimit} événements atteinte`
+                  : "Créer un événement"
+              }
+              style={
+                limitReached
+                  ? {
+                      opacity: 0.55,
+                      cursor:
+                        "not-allowed",
+                    }
+                  : undefined
+              }
             >
-              + Nouvel événement
+              {limitReached
+                ? "🔒 Limite atteinte"
+                : "+ Nouvel événement"}
             </button>
           </div>
         </div>
 
-        {/* ================================================
-            STATISTIQUES
-        ================================================ */}
+        {/* INFORMATIONS ABONNEMENT */}
+
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "14px 18px",
+            borderRadius: "12px",
+
+            border:
+              limitReached
+                ? "1px solid rgba(239, 68, 68, 0.25)"
+                : "1px solid rgba(99, 102, 241, 0.18)",
+
+            background:
+              limitReached
+                ? "rgba(239, 68, 68, 0.06)"
+                : "rgba(99, 102, 241, 0.05)",
+
+            display: "flex",
+            alignItems: "center",
+            justifyContent:
+              "space-between",
+            gap: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <strong>
+              Événements utilisés :{" "}
+              {eventCount}
+              {" / "}
+              {isUnlimited
+                ? "Illimité"
+                : eventLimit}
+            </strong>
+
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "12px",
+                opacity: 0.75,
+              }}
+            >
+              Plan{" "}
+              {getPlanName(
+                currentPlan
+              )}
+            </div>
+          </div>
+
+          {!isUnlimited && (
+            <div>
+              {limitReached ? (
+                <strong>
+                  🔒 Limite atteinte
+                </strong>
+              ) : (
+                <span>
+                  {remainingEvents}{" "}
+                  événement
+                  {remainingEvents >
+                  1
+                    ? "s"
+                    : ""}{" "}
+                  restant
+                  {remainingEvents >
+                  1
+                    ? "s"
+                    : ""}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isUnlimited && (
+            <div>
+              ✓ Événements illimités
+            </div>
+          )}
+        </div>
+
+        {/* STATISTIQUES */}
 
         <div className="management-stats-grid">
           <div className="management-stat-card">
@@ -534,12 +830,9 @@ export default function Events() {
           </div>
         </div>
 
-        {/* ================================================
-            TABLEAU
-        ================================================ */}
+        {/* TABLEAU */}
 
         <div className="management-card">
-          {/* RECHERCHE */}
 
           <div className="management-toolbar">
             <div className="management-search">
@@ -551,7 +844,9 @@ export default function Events() {
                 type="search"
                 placeholder="Rechercher un événement..."
                 value={search}
-                onChange={(event) =>
+                onChange={(
+                  event
+                ) =>
                   setSearch(
                     event.target.value
                   )
@@ -562,8 +857,12 @@ export default function Events() {
             <div className="management-filters">
               <select
                 className="management-select"
-                value={statusFilter}
-                onChange={(event) =>
+                value={
+                  statusFilter
+                }
+                onChange={(
+                  event
+                ) =>
                   setStatusFilter(
                     event.target.value
                   )
@@ -592,8 +891,6 @@ export default function Events() {
             </div>
           </div>
 
-          {/* CHARGEMENT */}
-
           {loading ? (
             <div className="management-loading">
               <div className="management-spinner" />
@@ -615,10 +912,9 @@ export default function Events() {
               </h3>
 
               <p>
-                Créez un nouvel
-                événement ou modifiez
-                vos critères de
-                recherche.
+                Créez un nouvel événement
+                ou modifiez vos critères
+                de recherche.
               </p>
             </div>
           ) : (
@@ -656,10 +952,10 @@ export default function Events() {
                   {filteredEvents.map(
                     (event) => (
                       <tr
-                        key={event._id}
+                        key={
+                          event._id
+                        }
                       >
-                        {/* ÉVÉNEMENT */}
-
                         <td>
                           <div className="person-cell">
                             <div className="person-avatar">
@@ -668,7 +964,9 @@ export default function Events() {
 
                             <div>
                               <div className="person-name">
-                                {event.title}
+                                {
+                                  event.title
+                                }
                               </div>
 
                               <div className="person-secondary">
@@ -678,8 +976,6 @@ export default function Events() {
                           </div>
                         </td>
 
-                        {/* DATE */}
-
                         <td>
                           <div className="person-name">
                             {formatDate(
@@ -688,21 +984,15 @@ export default function Events() {
                           </div>
                         </td>
 
-                        {/* TYPE */}
-
                         <td>
                           {event.type ||
                             "—"}
                         </td>
 
-                        {/* LIEU */}
-
                         <td>
                           {event.location ||
                             "—"}
                         </td>
-
-                        {/* STATUT */}
 
                         <td>
                           <span
@@ -715,8 +1005,6 @@ export default function Events() {
                             )}
                           </span>
                         </td>
-
-                        {/* ACTIONS */}
 
                         <td>
                           <div className="table-actions">
@@ -757,14 +1045,14 @@ export default function Events() {
         </div>
       </div>
 
-      {/* ================================================
-          MODAL
-      ================================================ */}
+      {/* MODAL */}
 
       {showForm && (
         <div
           className="management-modal-overlay"
-          onMouseDown={(event) => {
+          onMouseDown={(
+            event
+          ) => {
             if (
               event.target ===
               event.currentTarget
@@ -774,7 +1062,6 @@ export default function Events() {
           }}
         >
           <div className="management-modal">
-            {/* HEADER */}
 
             <div className="management-modal-header">
               <div>
@@ -794,21 +1081,22 @@ export default function Events() {
               <button
                 type="button"
                 className="management-modal-close"
-                onClick={resetForm}
+                onClick={
+                  resetForm
+                }
                 aria-label="Fermer"
               >
                 ✕
               </button>
             </div>
 
-            {/* FORMULAIRE */}
-
             <form
-              onSubmit={handleSubmit}
+              onSubmit={
+                handleSubmit
+              }
             >
               <div className="management-modal-body">
                 <div className="management-form-grid">
-                  {/* TITRE */}
 
                   <div className="form-group form-group-full">
                     <label className="form-label">
@@ -819,7 +1107,9 @@ export default function Events() {
                     <input
                       className="form-input"
                       name="title"
-                      value={form.title}
+                      value={
+                        form.title
+                      }
                       onChange={
                         handleChange
                       }
@@ -827,8 +1117,6 @@ export default function Events() {
                       required
                     />
                   </div>
-
-                  {/* DATE */}
 
                   <div className="form-group">
                     <label className="form-label">
@@ -839,15 +1127,15 @@ export default function Events() {
                       className="form-input"
                       type="datetime-local"
                       name="date"
-                      value={form.date}
+                      value={
+                        form.date
+                      }
                       onChange={
                         handleChange
                       }
                       required
                     />
                   </div>
-
-                  {/* TYPE */}
 
                   <div className="form-group">
                     <label className="form-label">
@@ -857,15 +1145,15 @@ export default function Events() {
                     <input
                       className="form-input"
                       name="type"
-                      value={form.type}
+                      value={
+                        form.type
+                      }
                       onChange={
                         handleChange
                       }
                       placeholder="Culte, conférence..."
                     />
                   </div>
-
-                  {/* LIEU */}
 
                   <div className="form-group form-group-full">
                     <label className="form-label">
@@ -884,8 +1172,6 @@ export default function Events() {
                       placeholder="Lieu de l'événement"
                     />
                   </div>
-
-                  {/* STATUT */}
 
                   <div className="form-group form-group-full">
                     <label className="form-label">
@@ -922,13 +1208,13 @@ export default function Events() {
                 </div>
               </div>
 
-              {/* FOOTER */}
-
               <div className="management-modal-footer">
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={resetForm}
+                  onClick={
+                    resetForm
+                  }
                 >
                   Annuler
                 </button>
@@ -936,7 +1222,9 @@ export default function Events() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={saving}
+                  disabled={
+                    saving
+                  }
                 >
                   {saving
                     ? "Enregistrement..."

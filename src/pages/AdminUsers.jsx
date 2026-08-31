@@ -1,31 +1,105 @@
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  toast,
+} from "react-toastify";
 
 import Layout from "../components/Layout";
 import ConfirmModal from "../components/ConfirmModal";
 
 import API from "../api/axios";
 
+import {
+  getCurrentAdmin,
+} from "../utils/auth";
+
+import {
+  getPlanLimit,
+  getPlanName,
+  normalizePlan,
+} from "../utils/subscription";
+
+import {
+  useSubscription,
+} from "../context/SubscriptionContext";
+
 import "../styles/ManagementPages.css";
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // ======================================================
+  // UTILISATEUR CONNECTÉ
+  // ======================================================
 
-  const [editingUserId, setEditingUserId] =
-    useState(null);
+  const currentUser =
+    getCurrentAdmin();
 
-  const [deleteTargetId, setDeleteTargetId] =
-    useState(null);
+  // ======================================================
+  // ABONNEMENT SYNCHRONISÉ
+  // ======================================================
 
-  const [deleteLoading, setDeleteLoading] =
-    useState(false);
+  const {
+    plan,
+    initialized,
+  } = useSubscription();
+
+  const currentPlan =
+    normalizePlan(
+      initialized
+        ? plan
+        : currentUser?.church?.plan ||
+            "free"
+    );
+
+  const userLimit =
+    getPlanLimit(
+      currentPlan,
+      "users"
+    );
+
+  const isUnlimited =
+    userLimit === null;
+
+  // ======================================================
+  // STATES
+  // ======================================================
+
+  const [
+    users,
+    setUsers,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+  const [
+    editingUserId,
+    setEditingUserId,
+  ] = useState(null);
+
+  const [
+    deleteTargetId,
+    setDeleteTargetId,
+  ] = useState(null);
+
+  const [
+    deleteLoading,
+    setDeleteLoading,
+  ] = useState(false);
 
   // ======================================================
   // FILTRES
   // ======================================================
 
-  const [filters, setFilters] = useState({
+  const [
+    filters,
+    setFilters,
+  ] = useState({
     search: "",
     role: "",
     isActive: "",
@@ -37,7 +111,10 @@ export default function AdminUsers() {
   // PAGINATION
   // ======================================================
 
-  const [pagination, setPagination] = useState({
+  const [
+    pagination,
+    setPagination,
+  ] = useState({
     page: 1,
     totalPages: 1,
     total: 0,
@@ -48,7 +125,10 @@ export default function AdminUsers() {
   // FORMULAIRE
   // ======================================================
 
-  const [formData, setFormData] = useState({
+  const [
+    formData,
+    setFormData,
+  ] = useState({
     name: "",
     email: "",
     password: "",
@@ -66,23 +146,31 @@ export default function AdminUsers() {
     try {
       setLoading(true);
 
-      const query = new URLSearchParams();
+      const query =
+        new URLSearchParams();
 
-      if (customFilters.search) {
+      if (
+        customFilters.search
+      ) {
         query.append(
           "search",
           customFilters.search
         );
       }
 
-      if (customFilters.role) {
+      if (
+        customFilters.role
+      ) {
         query.append(
           "role",
           customFilters.role
         );
       }
 
-      if (customFilters.isActive !== "") {
+      if (
+        customFilters.isActive !==
+        ""
+      ) {
         query.append(
           "isActive",
           customFilters.isActive
@@ -99,20 +187,26 @@ export default function AdminUsers() {
         customFilters.limit
       );
 
-      const res = await API.get(
-        `/users?${query.toString()}`
-      );
+      const res =
+        await API.get(
+          `/users?${query.toString()}`
+        );
 
       setUsers(
         res.data?.data || []
       );
 
       setPagination({
-        page: res.data?.page || 1,
+        page:
+          res.data?.page || 1,
+
         totalPages:
-          res.data?.totalPages || 1,
+          res.data
+            ?.totalPages || 1,
+
         total:
           res.data?.total || 0,
+
         limit:
           res.data?.limit || 10,
       });
@@ -123,7 +217,9 @@ export default function AdminUsers() {
       );
 
       toast.error(
-        "Erreur lors du chargement des utilisateurs"
+        error.response?.data
+          ?.message ||
+          "Erreur lors du chargement des utilisateurs"
       );
     } finally {
       setLoading(false);
@@ -146,54 +242,91 @@ export default function AdminUsers() {
   ]);
 
   // ======================================================
+  // LIMITE DU PLAN
+  // ======================================================
+
+  const totalUsers =
+    Number(
+      pagination.total || 0
+    );
+
+  const limitReached =
+    !isUnlimited &&
+    totalUsers >= userLimit;
+
+  const remainingUsers =
+    isUnlimited
+      ? null
+      : Math.max(
+          userLimit -
+            totalUsers,
+          0
+        );
+
+  // ======================================================
   // STATISTIQUES
   // ======================================================
 
-  const stats = useMemo(() => {
-    const admins = users.filter(
-      (user) =>
-        user.role === "admin"
-    ).length;
+  const stats =
+    useMemo(() => {
+      const admins =
+        users.filter(
+          (user) =>
+            user.role ===
+            "admin"
+        ).length;
 
-    const managers = users.filter(
-      (user) =>
-        user.role === "manager"
-    ).length;
+      const managers =
+        users.filter(
+          (user) =>
+            user.role ===
+            "manager"
+        ).length;
 
-    const active = users.filter(
-      (user) => user.isActive
-    ).length;
+      const active =
+        users.filter(
+          (user) =>
+            user.isActive
+        ).length;
 
-    const inactive = users.filter(
-      (user) => !user.isActive
-    ).length;
+      const inactive =
+        users.filter(
+          (user) =>
+            !user.isActive
+        ).length;
 
-    return {
-      admins,
-      managers,
-      active,
-      inactive,
-    };
-  }, [users]);
+      return {
+        admins,
+        managers,
+        active,
+        inactive,
+      };
+    }, [users]);
 
   // ======================================================
   // FILTRES
   // ======================================================
 
-  const handleFilterChange = (e) => {
+  const handleFilterChange = (
+    e
+  ) => {
     const {
       name,
       value,
     } = e.target;
 
-    setFilters((prev) => ({
-      ...prev,
-      [name]: value,
-      page: 1,
-    }));
+    setFilters(
+      (prev) => ({
+        ...prev,
+        [name]: value,
+        page: 1,
+      })
+    );
   };
 
-  const applyFilters = (e) => {
+  const applyFilters = (
+    e
+  ) => {
     e.preventDefault();
 
     fetchUsers(filters);
@@ -208,16 +341,22 @@ export default function AdminUsers() {
       limit: 10,
     };
 
-    setFilters(newFilters);
+    setFilters(
+      newFilters
+    );
 
-    fetchUsers(newFilters);
+    fetchUsers(
+      newFilters
+    );
   };
 
   // ======================================================
   // FORMULAIRE
   // ======================================================
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e
+  ) => {
     const {
       name,
       value,
@@ -225,13 +364,17 @@ export default function AdminUsers() {
       checked,
     } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
-    }));
+    setFormData(
+      (prev) => ({
+        ...prev,
+
+        [name]:
+          type ===
+          "checkbox"
+            ? checked
+            : value,
+      })
+    );
   };
 
   const resetForm = () => {
@@ -243,25 +386,44 @@ export default function AdminUsers() {
       isActive: true,
     });
 
-    setEditingUserId(null);
+    setEditingUserId(
+      null
+    );
   };
 
   // ======================================================
   // CRÉER / MODIFIER
   // ======================================================
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (
+    e
+  ) => {
     e.preventDefault();
+
+    if (
+      !editingUserId &&
+      limitReached
+    ) {
+      toast.warning(
+        `Limite atteinte : votre abonnement ${getPlanName(
+          currentPlan
+        )} autorise au maximum ${userLimit} utilisateurs.`
+      );
+
+      return;
+    }
 
     setLoading(true);
 
     try {
       const payload = {
         ...formData,
+
         email:
           formData.email
             .trim()
             .toLowerCase(),
+
         name:
           formData.name.trim(),
       };
@@ -273,7 +435,9 @@ export default function AdminUsers() {
         delete payload.password;
       }
 
-      if (editingUserId) {
+      if (
+        editingUserId
+      ) {
         await API.put(
           `/users/${editingUserId}`,
           payload
@@ -295,8 +459,31 @@ export default function AdminUsers() {
 
       resetForm();
 
-      await fetchUsers(filters);
+      await fetchUsers(
+        filters
+      );
     } catch (error) {
+      console.error(
+        "Erreur enregistrement utilisateur :",
+        error
+      );
+
+      if (
+        error.response
+          ?.data
+          ?.code ===
+        "PLAN_LIMIT_REACHED"
+      ) {
+        toast.error(
+          error.response
+            ?.data
+            ?.message ||
+            "La limite d'utilisateurs de votre abonnement est atteinte."
+        );
+
+        return;
+      }
+
       toast.error(
         error.response?.data
           ?.message ||
@@ -317,9 +504,10 @@ export default function AdminUsers() {
     try {
       setLoading(true);
 
-      const res = await API.get(
-        `/users/${userId}`
-      );
+      const res =
+        await API.get(
+          `/users/${userId}`
+        );
 
       const user =
         res.data?.data;
@@ -339,11 +527,16 @@ export default function AdminUsers() {
       setFormData({
         name:
           user.name || "",
+
         email:
           user.email || "",
+
         password: "",
+
         role:
-          user.role || "admin",
+          user.role ||
+          "admin",
+
         isActive:
           !!user.isActive,
       });
@@ -353,7 +546,9 @@ export default function AdminUsers() {
         behavior: "smooth",
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        error
+      );
 
       toast.error(
         error.response?.data
@@ -379,12 +574,16 @@ export default function AdminUsers() {
 
   const confirmDelete =
     async () => {
-      if (!deleteTargetId) {
+      if (
+        !deleteTargetId
+      ) {
         return;
       }
 
       try {
-        setDeleteLoading(true);
+        setDeleteLoading(
+          true
+        );
 
         await API.delete(
           `/users/${deleteTargetId}`
@@ -401,9 +600,13 @@ export default function AdminUsers() {
           resetForm();
         }
 
-        setDeleteTargetId(null);
+        setDeleteTargetId(
+          null
+        );
 
-        await fetchUsers(filters);
+        await fetchUsers(
+          filters
+        );
       } catch (error) {
         toast.error(
           error.response?.data
@@ -411,7 +614,9 @@ export default function AdminUsers() {
             "Erreur lors de la suppression de l'utilisateur"
         );
       } finally {
-        setDeleteLoading(false);
+        setDeleteLoading(
+          false
+        );
       }
     };
 
@@ -430,10 +635,12 @@ export default function AdminUsers() {
       return;
     }
 
-    setFilters((prev) => ({
-      ...prev,
-      page,
-    }));
+    setFilters(
+      (prev) => ({
+        ...prev,
+        page,
+      })
+    );
   };
 
   // ======================================================
@@ -466,9 +673,8 @@ export default function AdminUsers() {
   return (
     <Layout>
       <div className="management-page">
-        {/* ================================================
-            HEADER
-        ================================================ */}
+
+        {/* HEADER */}
 
         <div className="page-header">
           <div className="page-header-left">
@@ -484,9 +690,109 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        {/* ================================================
-            STATISTIQUES
-        ================================================ */}
+        {/* ABONNEMENT */}
+
+        <div
+          style={{
+            marginBottom:
+              "20px",
+
+            padding:
+              "14px 18px",
+
+            borderRadius:
+              "12px",
+
+            border:
+              limitReached
+                ? "1px solid rgba(239, 68, 68, 0.25)"
+                : "1px solid rgba(99, 102, 241, 0.18)",
+
+            background:
+              limitReached
+                ? "rgba(239, 68, 68, 0.06)"
+                : "rgba(99, 102, 241, 0.05)",
+
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            justifyContent:
+              "space-between",
+
+            gap:
+              "16px",
+
+            flexWrap:
+              "wrap",
+          }}
+        >
+          <div>
+            <strong>
+              Utilisateurs utilisés :{" "}
+              {totalUsers}
+              {" / "}
+              {isUnlimited
+                ? "Illimité"
+                : userLimit}
+            </strong>
+
+            <div
+              style={{
+                marginTop:
+                  "4px",
+
+                fontSize:
+                  "12px",
+
+                opacity:
+                  0.75,
+              }}
+            >
+              Plan{" "}
+              {getPlanName(
+                currentPlan
+              )}
+            </div>
+          </div>
+
+          {!isUnlimited && (
+            <div>
+              {limitReached ? (
+                <strong>
+                  🔒 Limite atteinte
+                </strong>
+              ) : (
+                <span>
+                  {
+                    remainingUsers
+                  }{" "}
+                  utilisateur
+                  {remainingUsers >
+                  1
+                    ? "s"
+                    : ""}{" "}
+                  restant
+                  {remainingUsers >
+                  1
+                    ? "s"
+                    : ""}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isUnlimited && (
+            <div>
+              ✓ Utilisateurs
+              illimités
+            </div>
+          )}
+        </div>
+
+        {/* STATISTIQUES */}
 
         <div className="management-stats-grid">
           <div className="management-stat-card">
@@ -549,9 +855,7 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        {/* ================================================
-            FORMULAIRE
-        ================================================ */}
+        {/* FORMULAIRE */}
 
         <div
           className="management-card"
@@ -564,12 +868,18 @@ export default function AdminUsers() {
               <h2 className="management-card-title">
                 {editingUserId
                   ? "Modifier l'utilisateur"
+                  : limitReached
+                  ? "Limite d'utilisateurs atteinte"
                   : "Nouvel utilisateur"}
               </h2>
 
               <p className="page-subtitle">
                 {editingUserId
                   ? "Modifiez les informations et les droits de ce compte."
+                  : limitReached
+                  ? `Votre abonnement ${getPlanName(
+                      currentPlan
+                    )} autorise au maximum ${userLimit} utilisateurs.`
                   : "Créez un compte administrateur ou manager."}
               </p>
             </div>
@@ -579,16 +889,24 @@ export default function AdminUsers() {
                 Mode modification
               </span>
             )}
+
+            {!editingUserId &&
+              limitReached && (
+                <span className="status-badge status-inactive">
+                  🔒 Limite atteinte
+                </span>
+              )}
           </div>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={
+              handleSubmit
+            }
             style={{
               padding: 24,
             }}
           >
             <div className="management-form-grid">
-              {/* NOM */}
 
               <div className="form-group">
                 <label className="form-label">
@@ -600,13 +918,19 @@ export default function AdminUsers() {
                   name="name"
                   className="form-input"
                   placeholder="Ex : Jean Dupont"
-                  value={formData.name}
-                  onChange={handleChange}
+                  value={
+                    formData.name
+                  }
+                  onChange={
+                    handleChange
+                  }
                   required
+                  disabled={
+                    limitReached &&
+                    !editingUserId
+                  }
                 />
               </div>
-
-              {/* EMAIL */}
 
               <div className="form-group">
                 <label className="form-label">
@@ -618,13 +942,19 @@ export default function AdminUsers() {
                   name="email"
                   className="form-input"
                   placeholder="Ex : jean@email.com"
-                  value={formData.email}
-                  onChange={handleChange}
+                  value={
+                    formData.email
+                  }
+                  onChange={
+                    handleChange
+                  }
                   required
+                  disabled={
+                    limitReached &&
+                    !editingUserId
+                  }
                 />
               </div>
-
-              {/* PASSWORD */}
 
               <div className="form-group">
                 <label className="form-label">
@@ -649,17 +979,20 @@ export default function AdminUsers() {
                     handleChange
                   }
                   required={
-                    !editingUserId
+                    !editingUserId &&
+                    !limitReached
                   }
                   minLength={
                     formData.password
                       ? 6
                       : undefined
                   }
+                  disabled={
+                    limitReached &&
+                    !editingUserId
+                  }
                 />
               </div>
-
-              {/* ROLE */}
 
               <div className="form-group">
                 <label className="form-label">
@@ -675,6 +1008,10 @@ export default function AdminUsers() {
                   onChange={
                     handleChange
                   }
+                  disabled={
+                    limitReached &&
+                    !editingUserId
+                  }
                 >
                   <option value="admin">
                     Administrateur
@@ -686,23 +1023,39 @@ export default function AdminUsers() {
                 </select>
               </div>
 
-              {/* ACTIVE */}
-
               <div className="form-group form-group-full">
                 <label
                   style={{
-                    display: "flex",
+                    display:
+                      "flex",
+
                     alignItems:
                       "center",
+
                     gap: 12,
+
                     padding: 16,
+
                     border:
                       "1px solid #e5e7eb",
-                    borderRadius: 12,
+
+                    borderRadius:
+                      12,
+
                     background:
                       "#f8fafc",
+
                     cursor:
-                      "pointer",
+                      limitReached &&
+                      !editingUserId
+                        ? "not-allowed"
+                        : "pointer",
+
+                    opacity:
+                      limitReached &&
+                      !editingUserId
+                        ? 0.6
+                        : 1,
                   }}
                 >
                   <input
@@ -713,6 +1066,10 @@ export default function AdminUsers() {
                     }
                     onChange={
                       handleChange
+                    }
+                    disabled={
+                      limitReached &&
+                      !editingUserId
                     }
                     style={{
                       width: 18,
@@ -725,7 +1082,9 @@ export default function AdminUsers() {
                       style={{
                         display:
                           "block",
-                        fontSize: 14,
+
+                        fontSize:
+                          14,
                       }}
                     >
                       Compte actif
@@ -735,7 +1094,9 @@ export default function AdminUsers() {
                       style={{
                         color:
                           "#64748b",
-                        fontSize: 12,
+
+                        fontSize:
+                          12,
                       }}
                     >
                       L'utilisateur
@@ -750,12 +1111,19 @@ export default function AdminUsers() {
 
             <div
               style={{
-                display: "flex",
+                display:
+                  "flex",
+
                 justifyContent:
                   "flex-end",
+
                 gap: 10,
-                marginTop: 22,
-                flexWrap: "wrap",
+
+                marginTop:
+                  22,
+
+                flexWrap:
+                  "wrap",
               }}
             >
               {editingUserId && (
@@ -776,7 +1144,23 @@ export default function AdminUsers() {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={loading}
+                disabled={
+                  loading ||
+                  (limitReached &&
+                    !editingUserId)
+                }
+                style={
+                  limitReached &&
+                  !editingUserId
+                    ? {
+                        opacity:
+                          0.55,
+
+                        cursor:
+                          "not-allowed",
+                      }
+                    : undefined
+                }
               >
                 {loading
                   ? editingUserId
@@ -784,15 +1168,15 @@ export default function AdminUsers() {
                     : "Création..."
                   : editingUserId
                   ? "✓ Enregistrer les modifications"
+                  : limitReached
+                  ? "🔒 Limite atteinte"
                   : "+ Créer l'utilisateur"}
               </button>
             </div>
           </form>
         </div>
 
-        {/* ================================================
-            LISTE
-        ================================================ */}
+        {/* LISTE */}
 
         <div
           className="management-card"
@@ -817,13 +1201,11 @@ export default function AdminUsers() {
             </div>
           </div>
 
-          {/* ================================================
-              FILTRES
-          ================================================ */}
-
           <form
             className="management-toolbar"
-            onSubmit={applyFilters}
+            onSubmit={
+              applyFilters
+            }
           >
             <div className="management-search">
               <span className="management-search-icon">
@@ -847,7 +1229,9 @@ export default function AdminUsers() {
               <select
                 name="role"
                 className="management-select"
-                value={filters.role}
+                value={
+                  filters.role
+                }
                 onChange={
                   handleFilterChange
                 }
@@ -934,10 +1318,6 @@ export default function AdminUsers() {
             </div>
           </form>
 
-          {/* ================================================
-              TABLEAU
-          ================================================ */}
-
           {loading &&
           users.length === 0 ? (
             <div className="management-loading">
@@ -993,7 +1373,9 @@ export default function AdminUsers() {
 
                             <div>
                               <div className="person-name">
-                                {user.name}
+                                {
+                                  user.name
+                                }
                               </div>
 
                               <div className="person-secondary">
@@ -1008,7 +1390,9 @@ export default function AdminUsers() {
                         </td>
 
                         <td>
-                          {user.email}
+                          {
+                            user.email
+                          }
                         </td>
 
                         <td>
@@ -1103,10 +1487,6 @@ export default function AdminUsers() {
             </div>
           )}
 
-          {/* ================================================
-              PAGINATION
-          ================================================ */}
-
           {pagination.totalPages >
             1 && (
             <div className="management-pagination">
@@ -1130,7 +1510,9 @@ export default function AdminUsers() {
               <div className="management-pagination-info">
                 Page{" "}
                 <strong>
-                  {pagination.page}
+                  {
+                    pagination.page
+                  }
                 </strong>{" "}
                 sur{" "}
                 <strong>
@@ -1159,10 +1541,6 @@ export default function AdminUsers() {
             </div>
           )}
         </div>
-
-        {/* ================================================
-            CONFIRMATION SUPPRESSION
-        ================================================ */}
 
         <ConfirmModal
           isOpen={
