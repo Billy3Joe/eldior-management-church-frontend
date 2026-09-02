@@ -19,6 +19,10 @@ import SubscriptionRoute from "./components/SubscriptionRoute";
 
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
+import MemberProfile from "./pages/MemberProfile";
+import Families from "./pages/Families";
+import Groups from "./pages/Groups";
+import GroupDetails from "./pages/GroupDetails";
 import Departments from "./pages/Departments";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
@@ -26,6 +30,7 @@ import Attendance from "./pages/Attendance";
 import AttendanceStats from "./pages/AttendanceStats";
 import PastoralStatistics from "./pages/PastoralStatistics";
 import VisitorFollowUp from "./pages/VisitorFollowUp";
+import PastoralAlerts from "./pages/PastoralAlerts";
 import Assignments from "./pages/Assignments";
 import AssignmentResponse from "./pages/AssignmentResponse";
 import Reports from "./pages/Reports";
@@ -33,18 +38,16 @@ import Settings from "./pages/Settings";
 import AdminUsers from "./pages/AdminUsers";
 import ActivityLogs from "./pages/ActivityLogs";
 import Subscription from "./pages/Subscription";
-
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformChurches from "./pages/PlatformChurches";
 
 function App() {
   return (
     <BrowserRouter>
+
       <SubscriptionProvider>
+
         <Routes>
-          {/* ==================================================
-              RACINE
-          ================================================== */}
 
           <Route
             path="/"
@@ -56,15 +59,9 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              AUTHENTIFICATION
-          ================================================== */}
-
           <Route
             path="/login"
-            element={
-              <Login />
-            }
+            element={<Login />}
           />
 
           <Route
@@ -73,10 +70,6 @@ function App() {
               <RegisterChurch />
             }
           />
-
-          {/* ==================================================
-              DASHBOARD
-          ================================================== */}
 
           <Route
             path="/dashboard"
@@ -87,10 +80,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              MEMBRES
-          ================================================== */}
-
           <Route
             path="/members"
             element={
@@ -100,9 +89,41 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              DÉPARTEMENTS
-          ================================================== */}
+          <Route
+            path="/members/:id"
+            element={
+              <PrivateRoute>
+                <MemberProfile />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/families"
+            element={
+              <PrivateRoute>
+                <Families />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/groups"
+            element={
+              <PrivateRoute>
+                <Groups />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/groups/:id"
+            element={
+              <PrivateRoute>
+                <GroupDetails />
+              </PrivateRoute>
+            }
+          />
 
           <Route
             path="/departments"
@@ -112,10 +133,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* ==================================================
-              ÉVÉNEMENTS
-          ================================================== */}
 
           <Route
             path="/events"
@@ -135,10 +152,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              PRÉSENCES
-          ================================================== */}
-
           <Route
             path="/attendance"
             element={
@@ -157,10 +170,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              STATISTIQUES PASTORALES
-          ================================================== */}
-
           <Route
             path="/pastoral-statistics"
             element={
@@ -169,10 +178,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* ==================================================
-              SUIVI DES VISITEURS
-          ================================================== */}
 
           <Route
             path="/visitor-follow-up"
@@ -183,9 +188,14 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              PROGRAMMATIONS
-          ================================================== */}
+          <Route
+            path="/pastoral-alerts"
+            element={
+              <PrivateRoute>
+                <PastoralAlerts />
+              </PrivateRoute>
+            }
+          />
 
           <Route
             path="/assignments"
@@ -207,10 +217,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              RAPPORTS
-          ================================================== */}
-
           <Route
             path="/reports"
             element={
@@ -224,10 +230,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              ABONNEMENT
-          ================================================== */}
-
           <Route
             path="/subscription"
             element={
@@ -237,10 +239,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              PARAMÈTRES
-          ================================================== */}
-
           <Route
             path="/settings"
             element={
@@ -249,10 +247,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* ==================================================
-              UTILISATEURS
-          ================================================== */}
 
           <Route
             path="/users"
@@ -264,10 +258,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* ==================================================
-              JOURNAL
-          ================================================== */}
 
           <Route
             path="/activity-logs"
@@ -283,10 +273,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* ==================================================
-              PLATEFORME ELDIOR
-          ================================================== */}
 
           <Route
             path="/platform"
@@ -310,10 +296,6 @@ function App() {
             }
           />
 
-          {/* ==================================================
-              404 FRONTEND
-          ================================================== */}
-
           <Route
             path="*"
             element={
@@ -323,8 +305,11 @@ function App() {
               />
             }
           />
+
         </Routes>
+
       </SubscriptionProvider>
+
     </BrowserRouter>
   );
 }

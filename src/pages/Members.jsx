@@ -5,6 +5,10 @@ import {
 } from "react";
 
 import {
+  useNavigate,
+} from "react-router-dom";
+
+import {
   toast,
 } from "react-toastify";
 
@@ -236,6 +240,9 @@ const formatDateForInput = (
 // ======================================================
 
 export default function Members() {
+  const navigate =
+    useNavigate();
+
   const currentUser =
     getCurrentAdmin();
 
@@ -748,6 +755,18 @@ export default function Members() {
     });
 
     setShowForm(true);
+  };
+
+  // ======================================================
+  // PROFIL 360°
+  // ======================================================
+
+  const openProfile = (
+    memberId
+  ) => {
+    navigate(
+      `/members/${memberId}`
+    );
   };
 
   // ======================================================
@@ -1423,6 +1442,19 @@ export default function Members() {
 
                           <td>
                             <div className="table-actions">
+
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-small"
+                                onClick={() =>
+                                  openProfile(
+                                    member._id
+                                  )
+                                }
+                              >
+                                👤 Profil
+                              </button>
+
                               <button
                                 type="button"
                                 className="btn btn-secondary btn-small"
@@ -1448,6 +1480,7 @@ export default function Members() {
                                   🗑️ Supprimer
                                 </button>
                               )}
+
                             </div>
                           </td>
                         </tr>

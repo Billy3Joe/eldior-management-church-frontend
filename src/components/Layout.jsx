@@ -1,4 +1,6 @@
-import { useState } from "react";
+import {
+  useState,
+} from "react";
 
 import {
   NavLink,
@@ -22,7 +24,9 @@ import {
 
 import "./Layout.css";
 
-export default function Layout({ children }) {
+export default function Layout({
+  children,
+}) {
   const navigate =
     useNavigate();
 
@@ -35,17 +39,13 @@ export default function Layout({ children }) {
   ] = useState(false);
 
   // ======================================================
-  // ABONNEMENT SYNCHRONISÉ
+  // ABONNEMENT
   // ======================================================
 
   const {
     plan,
     initialized,
   } = useSubscription();
-
-  // ======================================================
-  // SUPER ADMIN
-  // ======================================================
 
   const isSuperAdmin =
     admin?.platformRole ===
@@ -80,7 +80,7 @@ export default function Layout({ children }) {
     currentPlan.toUpperCase();
 
   // ======================================================
-  // FONCTIONNALITÉS
+  // FEATURES
   // ======================================================
 
   const canUseAssignments =
@@ -105,19 +105,16 @@ export default function Layout({ children }) {
     );
 
   // ======================================================
-  // INITIAL
+  // HELPERS
   // ======================================================
 
   const getChurchInitial =
     () => {
-      if (!churchName) {
-        return "E";
-      }
-
       return churchName
-        .trim()
-        .charAt(0)
-        .toUpperCase();
+        ?.trim()
+        ?.charAt(0)
+        ?.toUpperCase() ||
+        "E";
     };
 
   const churchLocation = [
@@ -189,12 +186,29 @@ export default function Layout({ children }) {
       icon: "🏠",
       visible: true,
     },
+
     {
       to: "/members",
       label: "Membres",
       icon: "👥",
       visible: true,
     },
+
+    {
+      to: "/families",
+      label: "Familles",
+      icon: "👨‍👩‍👧",
+      visible: true,
+    },
+
+    {
+      to: "/groups",
+      label:
+        "Groupes / Cellules",
+      icon: "🏘️",
+      visible: true,
+    },
+
     {
       to: "/departments",
       label:
@@ -202,6 +216,7 @@ export default function Layout({ children }) {
       icon: "🏢",
       visible: true,
     },
+
     {
       to: "/events",
       label:
@@ -209,10 +224,6 @@ export default function Layout({ children }) {
       icon: "🗓️",
       visible: true,
     },
-
-    // ==================================================
-    // PRÉSENCES
-    // ==================================================
 
     {
       to: "/attendance",
@@ -222,10 +233,6 @@ export default function Layout({ children }) {
       visible: true,
     },
 
-    // ==================================================
-    // STATISTIQUES DE PRÉSENCE
-    // ==================================================
-
     {
       to:
         "/attendance-stats",
@@ -234,10 +241,6 @@ export default function Layout({ children }) {
       icon: "📊",
       visible: true,
     },
-
-    // ==================================================
-    // STATISTIQUES PASTORALES
-    // ==================================================
 
     {
       to:
@@ -249,6 +252,24 @@ export default function Layout({ children }) {
     },
 
     {
+      to:
+        "/visitor-follow-up",
+      label:
+        "Suivi des visiteurs",
+      icon: "🤝",
+      visible: true,
+    },
+
+    {
+      to:
+        "/pastoral-alerts",
+      label:
+        "Alertes pastorales",
+      icon: "🛟",
+      visible: true,
+    },
+
+    {
       to: "/assignments",
       label:
         "Programmations",
@@ -256,6 +277,7 @@ export default function Layout({ children }) {
       visible:
         canUseAssignments,
     },
+
     {
       to: "/reports",
       label:
@@ -264,6 +286,7 @@ export default function Layout({ children }) {
       visible:
         canUseReports,
     },
+
     {
       to: "/settings",
       label:
@@ -271,6 +294,7 @@ export default function Layout({ children }) {
       icon: "⚙️",
       visible: true,
     },
+
     {
       to:
         "/subscription",
@@ -285,7 +309,7 @@ export default function Layout({ children }) {
   );
 
   // ======================================================
-  // ADMINISTRATION
+  // ADMIN
   // ======================================================
 
   const adminLinks = [
@@ -296,6 +320,7 @@ export default function Layout({ children }) {
       icon: "👤",
       visible: true,
     },
+
     {
       to:
         "/activity-logs",
@@ -357,8 +382,10 @@ export default function Layout({ children }) {
           return {
             background:
               "rgba(168, 85, 247, 0.16)",
+
             color:
               "#c4b5fd",
+
             border:
               "1px solid rgba(196, 181, 253, 0.18)",
           };
@@ -367,8 +394,10 @@ export default function Layout({ children }) {
           return {
             background:
               "rgba(59, 130, 246, 0.16)",
+
             color:
               "#93c5fd",
+
             border:
               "1px solid rgba(147, 197, 253, 0.18)",
           };
@@ -377,8 +406,10 @@ export default function Layout({ children }) {
           return {
             background:
               "rgba(34, 197, 94, 0.15)",
+
             color:
               "#86efac",
+
             border:
               "1px solid rgba(134, 239, 172, 0.16)",
           };
@@ -386,48 +417,57 @@ export default function Layout({ children }) {
     };
 
   // ======================================================
-  // LIEN
+  // RENDER LINK
   // ======================================================
 
-  const renderLink = (
-    item,
-    closeMobile = false
-  ) => (
-    <NavLink
-      key={item.to}
-      to={item.to}
-      end={
-        item.to ===
-        "/platform"
-      }
-      onClick={() => {
-        if (
-          closeMobile
-        ) {
-          setMobileOpen(
-            false
-          );
+  const renderLink =
+    (
+      item,
+      closeMobile = false
+    ) => (
+      <NavLink
+        key={
+          item.to
         }
-      }}
-      className={({
-        isActive,
-      }) =>
-        `sidebar-link ${
-          isActive
-            ? "active"
-            : ""
-        }`
-      }
-    >
-      <span className="sidebar-link-icon">
-        {item.icon}
-      </span>
+        to={
+          item.to
+        }
+        end={
+          item.to ===
+          "/platform"
+        }
+        onClick={() => {
+          if (
+            closeMobile
+          ) {
+            setMobileOpen(
+              false
+            );
+          }
+        }}
+        className={({
+          isActive,
+        }) =>
+          `sidebar-link ${
+            isActive
+              ? "active"
+              : ""
+          }`
+        }
+      >
+        <span className="sidebar-link-icon">
+          {
+            item.icon
+          }
+        </span>
 
-      <span className="sidebar-link-label">
-        {item.label}
-      </span>
-    </NavLink>
-  );
+        <span className="sidebar-link-label">
+          {
+            item.label
+          }
+        </span>
+      </NavLink>
+    );
 
   // ======================================================
   // CARTE ÉGLISE
@@ -444,14 +484,19 @@ export default function Layout({ children }) {
           style={{
             margin:
               "18px 0 16px",
+
             padding:
               "16px",
+
             borderRadius:
               "16px",
+
             background:
               "linear-gradient(135deg, rgba(91, 72, 238, 0.20), rgba(37, 99, 235, 0.08))",
+
             border:
               "1px solid rgba(139, 126, 255, 0.20)",
+
             boxShadow:
               "0 10px 25px rgba(0,0,0,0.08)",
           }}
@@ -460,13 +505,18 @@ export default function Layout({ children }) {
             style={{
               marginBottom:
                 "11px",
+
               color:
                 "#8b93a7",
+
               fontSize:
                 "9px",
+
               fontWeight: 900,
+
               textTransform:
                 "uppercase",
+
               letterSpacing:
                 "1px",
             }}
@@ -480,8 +530,10 @@ export default function Layout({ children }) {
             style={{
               display:
                 "flex",
+
               alignItems:
                 "center",
+
               gap: "11px",
             }}
           >
@@ -489,31 +541,44 @@ export default function Layout({ children }) {
               style={{
                 width:
                   "42px",
+
                 minWidth:
                   "42px",
+
                 height:
                   "42px",
+
                 display:
                   "flex",
+
                 alignItems:
                   "center",
+
                 justifyContent:
                   "center",
+
                 borderRadius:
                   "12px",
+
                 background:
                   "linear-gradient(135deg, #6d4aff, #4938d7)",
+
                 color:
                   "#ffffff",
+
                 fontSize:
                   "17px",
+
                 fontWeight:
                   900,
+
                 boxShadow:
                   "0 7px 17px rgba(92, 70, 235, 0.30)",
               }}
             >
-              {getChurchInitial()}
+              {
+                getChurchInitial()
+              }
             </div>
 
             <div
@@ -526,14 +591,19 @@ export default function Layout({ children }) {
                 style={{
                   color:
                     "#ffffff",
+
                   fontSize:
                     "13px",
+
                   fontWeight:
                     900,
+
                   lineHeight:
                     1.3,
+
                   overflow:
                     "hidden",
+
                   textOverflow:
                     "ellipsis",
                 }}
@@ -541,7 +611,9 @@ export default function Layout({ children }) {
                   churchName
                 }
               >
-                {churchName}
+                {
+                  churchName
+                }
               </div>
 
               {churchLocation && (
@@ -549,10 +621,13 @@ export default function Layout({ children }) {
                   style={{
                     marginTop:
                       "3px",
+
                     color:
                       "#9ca8c2",
+
                     fontSize:
                       "9px",
+
                     fontWeight:
                       600,
                   }}
@@ -569,16 +644,22 @@ export default function Layout({ children }) {
             style={{
               marginTop:
                 "12px",
+
               paddingTop:
                 "11px",
+
               borderTop:
                 "1px solid rgba(255,255,255,0.08)",
+
               display:
                 "flex",
+
               justifyContent:
                 "space-between",
+
               alignItems:
                 "center",
+
               gap: "8px",
             }}
           >
@@ -586,8 +667,10 @@ export default function Layout({ children }) {
               style={{
                 fontSize:
                   "9px",
+
                 color:
                   "#8993aa",
+
                 fontWeight:
                   700,
               }}
@@ -598,14 +681,19 @@ export default function Layout({ children }) {
             <span
               style={{
                 ...getPlanStyle(),
+
                 padding:
                   "4px 8px",
+
                 borderRadius:
                   "999px",
+
                 fontSize:
                   "8px",
+
                 fontWeight:
                   900,
+
                 letterSpacing:
                   "0.5px",
               }}
@@ -629,6 +717,7 @@ export default function Layout({ children }) {
     ) => (
       <>
         <div className="sidebar-brand">
+
           <div className="sidebar-logo">
             E
           </div>
@@ -642,18 +731,22 @@ export default function Layout({ children }) {
               Management Church
             </div>
           </div>
+
         </div>
 
         {renderChurchCard()}
 
         <div className="sidebar-user">
+
           <div className="sidebar-user-name">
             {admin?.name ||
               "Utilisateur"}
           </div>
 
           <div className="sidebar-user-role">
-            {getRoleLabel()}
+            {
+              getRoleLabel()
+            }
           </div>
 
           {isSuperAdmin && (
@@ -661,14 +754,19 @@ export default function Layout({ children }) {
               style={{
                 marginTop:
                   "5px",
+
                 color:
                   "#8b7cff",
+
                 fontSize:
                   "9px",
+
                 fontWeight:
                   900,
+
                 textTransform:
                   "uppercase",
+
                 letterSpacing:
                   "0.8px",
               }}
@@ -676,9 +774,11 @@ export default function Layout({ children }) {
               Propriétaire ElDior
             </div>
           )}
+
         </div>
 
         <nav className="sidebar-nav">
+
           {isSuperAdmin && (
             <>
               <div className="sidebar-section-title">
@@ -730,6 +830,7 @@ export default function Layout({ children }) {
                 )}
               </>
             )}
+
         </nav>
 
         <div className="sidebar-footer">
@@ -752,6 +853,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="app-layout">
+
       <aside className="sidebar desktop-sidebar">
         {renderSidebarContent(
           false
@@ -759,7 +861,9 @@ export default function Layout({ children }) {
       </aside>
 
       <div className="main-wrapper">
+
         <header className="mobile-header">
+
           <button
             type="button"
             className="mobile-menu-button"
@@ -783,6 +887,7 @@ export default function Layout({ children }) {
             {admin?.name ||
               ""}
           </div>
+
         </header>
 
         <main className="main-content">
@@ -790,6 +895,7 @@ export default function Layout({ children }) {
             <Outlet />
           )}
         </main>
+
       </div>
 
       {mobileOpen && (
@@ -811,6 +917,7 @@ export default function Layout({ children }) {
         }`}
       >
         <div className="mobile-sidebar-header">
+
           <strong>
             Menu
           </strong>
@@ -825,12 +932,14 @@ export default function Layout({ children }) {
           >
             ✕
           </button>
+
         </div>
 
         {renderSidebarContent(
           true
         )}
       </aside>
+
     </div>
   );
 }

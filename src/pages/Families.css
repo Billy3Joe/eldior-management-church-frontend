@@ -1,0 +1,325 @@
+.families-page {
+    padding-bottom: 50px;
+  }
+  
+  .families-grid {
+    display: grid;
+    grid-template-columns:
+      repeat(
+        auto-fit,
+        minmax(320px, 1fr)
+      );
+    gap: 18px;
+    padding: 20px;
+  }
+  
+  .family-card {
+    overflow: hidden;
+    border: 1px solid #e6e9ef;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow:
+      0 7px 20px
+      rgba(15, 23, 42, 0.04);
+  }
+  
+  .family-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px;
+    border-bottom:
+      1px solid #eef0f4;
+  }
+  
+  .family-card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .family-home-icon {
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 13px;
+    background: #fff7ed;
+    font-size: 21px;
+  }
+  
+  .family-card-title h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 17px;
+  }
+  
+  .family-card-title p {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  
+  .family-card-details {
+    display: grid;
+    gap: 10px;
+    padding: 16px 18px;
+    border-bottom:
+      1px solid #eef0f4;
+  }
+  
+  .family-card-details > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  
+  .family-card-details span {
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  
+  .family-card-details strong {
+    color: #334155;
+    font-size: 11px;
+    text-align: right;
+  }
+  
+  .family-members-preview {
+    padding: 16px 18px;
+  }
+  
+  .family-members-preview-title {
+    margin-bottom: 10px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  
+  .family-person-preview {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px;
+    margin-bottom: 7px;
+    border: 1px solid #edf0f5;
+    border-radius: 10px;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .family-person-preview:hover {
+    border-color: #c7d2fe;
+    background: #f8faff;
+  }
+  
+  .family-person-avatar {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 10px;
+    font-weight: 900;
+  }
+  
+  .family-person-text {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .family-person-text strong {
+    display: block;
+    color: #1f2937;
+    font-size: 12px;
+  }
+  
+  .family-person-text span {
+    display: block;
+    margin-top: 3px;
+    color: #94a3b8;
+    font-size: 10px;
+  }
+  
+  .family-person-arrow {
+    color: #4f46e5;
+    font-weight: 900;
+  }
+  
+  .family-no-members,
+  .family-more-members {
+    padding: 10px;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  
+  .family-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 18px;
+    border-top:
+      1px solid #eef0f4;
+    background: #fafbfc;
+  }
+  
+  .family-modal {
+    width: min(
+      850px,
+      calc(100vw - 30px)
+    );
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  
+  .family-textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  .family-form-section {
+    margin-top: 26px;
+    padding-top: 22px;
+    border-top:
+      1px solid #edf0f5;
+  }
+  
+  .family-form-section-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  
+  .family-form-section-header h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 15px;
+  }
+  
+  .family-form-section-header p {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  
+  .family-selection-count {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  
+  .family-member-selection {
+    display: grid;
+    gap: 8px;
+    max-height: 330px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  
+  .family-select-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px;
+    border: 1px solid #e6e9ef;
+    border-radius: 11px;
+    background: #ffffff;
+  }
+  
+  .family-select-person.selected {
+    border-color: #c7d2fe;
+    background: #f8faff;
+  }
+  
+  .family-select-person-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .family-select-check {
+    width: 23px;
+    height: 23px;
+    min-width: 23px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 900;
+  }
+  
+  .family-select-person.selected
+    .family-select-check {
+    border-color: #4f46e5;
+    background: #4f46e5;
+    color: #ffffff;
+  }
+  
+  .family-role-select {
+    width: 190px;
+  }
+  
+  .family-selection-empty {
+    padding: 16px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    color: #94a3b8;
+    font-size: 12px;
+    text-align: center;
+  }
+  
+  @media (
+    max-width: 700px
+  ) {
+    .families-grid {
+      grid-template-columns:
+        1fr;
+      padding: 12px;
+    }
+  
+    .family-select-person {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .family-role-select {
+      width: 100%;
+    }
+  
+    .family-card-details
+      > div {
+      flex-direction: column;
+      gap: 4px;
+    }
+  
+    .family-card-details strong {
+      text-align: left;
+    }
+  }

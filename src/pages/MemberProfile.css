@@ -1,0 +1,1262 @@
+.member-profile-page {
+  padding-bottom: 48px;
+}
+
+.member-profile-back {
+  border: none;
+  background: transparent;
+  color: #4f46e5;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 18px;
+}
+
+/* ======================================================
+   HERO
+====================================================== */
+
+.member-profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+  margin-bottom: 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.member-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.member-profile-avatar {
+  width: 78px;
+  height: 78px;
+  min-width: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    #4f46e5,
+    #7c3aed
+  );
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.member-profile-eyebrow {
+  margin-bottom: 5px;
+  color: #4f46e5;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+}
+
+.member-profile-hero h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 30px;
+}
+
+.member-profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.member-profile-category,
+.member-profile-family-badge,
+.member-profile-spiritual-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.member-profile-category {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.member-profile-family-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.member-profile-spiritual-badge {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+/* ======================================================
+   KPI
+====================================================== */
+
+.member-profile-kpis {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.member-profile-kpi {
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.member-profile-kpi span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-profile-kpi strong {
+  display: block;
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.member-profile-kpi small {
+  display: block;
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.member-profile-kpi
+.member-profile-kpi-date {
+  font-size: 16px;
+}
+
+.member-profile-kpi
+.member-profile-kpi-status {
+  font-size: 17px;
+}
+
+/* ======================================================
+   PARCOURS SPIRITUEL PRINCIPAL
+====================================================== */
+
+.spiritual-journey-card {
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid #ddd6fe;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #fbfaff 100%
+    );
+}
+
+.spiritual-journey-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  border-bottom: 1px solid #ede9fe;
+}
+
+.spiritual-journey-header-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.spiritual-journey-header-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: linear-gradient(
+    135deg,
+    #ede9fe,
+    #f3e8ff
+  );
+  font-size: 22px;
+}
+
+.spiritual-journey-eyebrow {
+  margin-bottom: 4px;
+  color: #7c3aed;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.spiritual-journey-header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+}
+
+.spiritual-journey-header p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* ======================================================
+   TRACK DES ÉTAPES
+====================================================== */
+
+.spiritual-stage-wrapper {
+  overflow-x: auto;
+  padding: 30px 24px 24px;
+}
+
+.spiritual-stage-track {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    repeat(9, minmax(90px, 1fr));
+  min-width: 900px;
+}
+
+.spiritual-stage-track::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: 5%;
+  right: 5%;
+  height: 3px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.spiritual-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.spiritual-stage-marker {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #e5e7eb;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.spiritual-stage-name {
+  margin-top: 9px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.spiritual-stage-passed
+.spiritual-stage-marker {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.spiritual-stage-passed
+.spiritual-stage-name {
+  color: #166534;
+}
+
+.spiritual-stage-current
+.spiritual-stage-marker {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+  box-shadow:
+    0 0 0 6px
+    rgba(124, 58, 237, 0.12);
+}
+
+.spiritual-stage-current
+.spiritual-stage-name {
+  color: #6d28d9;
+  font-weight: 900;
+}
+
+/* ======================================================
+   SYNTHÈSE PARCOURS
+====================================================== */
+
+.spiritual-journey-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 24px 24px;
+  overflow: hidden;
+  border: 1px solid #ede9fe;
+  border-radius: 14px;
+  background: #ede9fe;
+}
+
+.spiritual-journey-summary > div {
+  padding: 15px;
+  background: #ffffff;
+}
+
+.spiritual-journey-summary span {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.spiritual-journey-summary strong {
+  display: block;
+  margin-top: 6px;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.spiritual-journey-general-note {
+  margin: -5px 24px 24px;
+  padding: 14px;
+  border: 1px solid #ede9fe;
+  border-radius: 12px;
+  background: #faf5ff;
+}
+
+.spiritual-journey-general-note strong {
+  color: #6d28d9;
+  font-size: 11px;
+}
+
+.spiritual-journey-general-note p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ======================================================
+   GRILLE PRINCIPALE
+====================================================== */
+
+.member-profile-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(300px, 0.9fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.member-profile-main,
+.member-profile-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.member-profile-card {
+  overflow: hidden;
+}
+
+.member-profile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.member-profile-card-header > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-profile-card-header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+}
+
+.member-profile-card-header p {
+  margin: 3px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.member-profile-section-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #eef2ff;
+  font-size: 18px;
+}
+
+/* ======================================================
+   IDENTITÉ
+====================================================== */
+
+.member-profile-info-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  padding: 6px 22px 22px;
+}
+
+.member-profile-info {
+  padding: 17px 0;
+  border-bottom: 1px solid #f0f2f6;
+}
+
+.member-profile-info:nth-child(odd) {
+  padding-right: 18px;
+}
+
+.member-profile-info:nth-child(even) {
+  padding-left: 18px;
+  border-left: 1px solid #f0f2f6;
+}
+
+.member-profile-info-full {
+  grid-column: 1 / -1;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  border-left: none !important;
+}
+
+.member-profile-info span {
+  display: block;
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.member-profile-info strong {
+  color: #1f2937;
+  font-size: 14px;
+}
+
+/* ======================================================
+   FAMILLE
+====================================================== */
+
+.member-family-summary {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 0.9fr)
+    minmax(0, 1.4fr);
+  gap: 24px;
+  padding: 22px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.member-family-summary-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.member-family-house-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #fff7ed;
+  font-size: 22px;
+}
+
+.member-family-summary-main span,
+.member-family-contact span {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.member-family-summary-main h3 {
+  margin: 4px 0 5px;
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.member-family-summary-main p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.member-family-contact {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.member-family-contact > div {
+  padding: 12px;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.member-family-contact
+> div:last-child {
+  grid-column: 1 / -1;
+}
+
+.member-family-contact strong {
+  display: block;
+  margin-top: 5px;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.member-family-members {
+  padding: 20px 22px;
+}
+
+.member-family-members-title {
+  margin-bottom: 12px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.member-family-members-list {
+  display: grid;
+  gap: 8px;
+}
+
+.member-family-person {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.member-family-person:hover {
+  border-color: #c7d2fe;
+  background: #f8faff;
+  transform: translateY(-1px);
+}
+
+.member-family-person-current {
+  border-color: #c7d2fe;
+  background: #f5f7ff;
+  cursor: default;
+}
+
+.member-family-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.member-family-person-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-family-person-name {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.member-family-person-name span {
+  display: inline-flex;
+  margin-left: 7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.member-family-person-meta {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.member-family-arrow {
+  color: #4f46e5;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.member-family-note {
+  margin-top: 0 !important;
+}
+
+.member-family-empty {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 28px 22px;
+}
+
+.member-family-empty-icon {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #f8fafc;
+  font-size: 22px;
+}
+
+.member-family-empty strong {
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.member-family-empty p {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* ======================================================
+   HISTORIQUE SPIRITUEL
+====================================================== */
+
+.spiritual-history {
+  padding: 22px;
+}
+
+.spiritual-history-item {
+  display: grid;
+  grid-template-columns:
+    34px 1fr;
+  gap: 10px;
+  position: relative;
+}
+
+.spiritual-history-item:not(:last-child)
+.spiritual-history-line::after {
+  content: "";
+  position: absolute;
+  top: 29px;
+  left: 15px;
+  bottom: -8px;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.spiritual-history-line {
+  position: relative;
+}
+
+.spiritual-history-dot {
+  position: relative;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.spiritual-history-current
+.spiritual-history-dot {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.spiritual-history-content {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.spiritual-history-current
+.spiritual-history-content {
+  border-color: #ddd6fe;
+  background: #faf5ff;
+}
+
+.spiritual-history-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spiritual-history-date {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.spiritual-history-top h3 {
+  margin: 4px 0 0;
+  color: #111827;
+  font-size: 15px;
+}
+
+.spiritual-current-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.spiritual-history-content p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.spiritual-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 11px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.spiritual-history-meta strong {
+  color: #64748b;
+}
+
+/* ======================================================
+   PARCOURS ÉGLISE
+====================================================== */
+
+.member-profile-journey {
+  padding: 22px;
+}
+
+.member-profile-journey-item {
+  position: relative;
+  display: flex;
+  gap: 15px;
+  min-height: 68px;
+}
+
+.member-profile-journey-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 18px;
+  width: 2px;
+  height: calc(100% - 4px);
+  background: #e0e7ff;
+}
+
+.member-profile-journey-dot {
+  position: relative;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin-top: 3px;
+  border-radius: 50%;
+  border: 4px solid #c7d2fe;
+  background: #ffffff;
+}
+
+.member-profile-journey-dot-current {
+  border-color: #4f46e5;
+}
+
+.member-profile-journey-item span {
+  display: block;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.member-profile-journey-item strong {
+  display: block;
+  margin-top: 4px;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+/* ======================================================
+   SIDEBAR
+====================================================== */
+
+.member-profile-sidebar-list {
+  padding: 8px 22px 18px;
+}
+
+.member-profile-sidebar-list > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f2f6;
+}
+
+.member-profile-sidebar-list > div:last-child {
+  border-bottom: none;
+}
+
+.member-profile-sidebar-list span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.member-profile-sidebar-list strong {
+  color: #111827;
+  font-size: 12px;
+  text-align: right;
+}
+
+.member-profile-note {
+  margin: 0 22px 22px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.member-profile-note strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.member-profile-note p {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.member-profile-mini-stats {
+  display: grid;
+  grid-template-columns:
+    repeat(2, 1fr);
+  padding: 18px 22px;
+  gap: 10px;
+}
+
+.member-profile-mini-stats div {
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.member-profile-mini-stats strong {
+  display: block;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.member-profile-mini-stats span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.member-profile-rate {
+  padding: 0 22px 22px;
+}
+
+.member-profile-rate > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.member-profile-rate strong {
+  color: #111827;
+}
+
+.member-profile-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.member-profile-progress div {
+  height: 100%;
+  border-radius: inherit;
+  background: #4f46e5;
+}
+
+.member-profile-coming {
+  margin: 0 22px 22px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.member-profile-coming span {
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.member-profile-coming p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.member-profile-future {
+  background: linear-gradient(
+    145deg,
+    #ffffff,
+    #f8f7ff
+  );
+}
+
+.member-profile-future-list {
+  display: grid;
+  gap: 9px;
+  padding: 18px 22px 22px;
+}
+
+.member-profile-future-list span {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #ffffff;
+  border: 1px solid #eceef4;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-profile-feature-done {
+  border-color: #bbf7d0 !important;
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+}
+
+/* ======================================================
+   MODALE PARCOURS
+====================================================== */
+
+.spiritual-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.spiritual-modal {
+  width: 100%;
+  max-width: 560px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 30px 80px
+    rgba(15, 23, 42, 0.25);
+}
+
+.spiritual-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.spiritual-modal-header span {
+  color: #7c3aed;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.spiritual-modal-header h2 {
+  margin: 5px 0 0;
+  color: #0f172a;
+  font-size: 21px;
+}
+
+.spiritual-modal-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.spiritual-modal-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.spiritual-modal-body {
+  padding: 24px;
+}
+
+.spiritual-form-group {
+  margin-bottom: 18px;
+}
+
+.spiritual-form-group label {
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.spiritual-form-group select,
+.spiritual-form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dbe1ea;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.spiritual-form-group select {
+  height: 46px;
+  padding: 0 12px;
+}
+
+.spiritual-form-group textarea {
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.spiritual-form-group select:focus,
+.spiritual-form-group textarea:focus {
+  border-color: #8b5cf6;
+  box-shadow:
+    0 0 0 3px
+    rgba(139, 92, 246, 0.1);
+}
+
+.spiritual-form-group small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.spiritual-form-error,
+.spiritual-form-success {
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spiritual-form-error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.spiritual-form-success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.spiritual-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+/* ======================================================
+   RESPONSIVE
+====================================================== */
+
+@media (max-width: 1100px) {
+  .member-profile-kpis {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .member-profile-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .spiritual-journey-summary {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .member-family-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+  .spiritual-journey-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .member-profile-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .member-profile-identity {
+    align-items: flex-start;
+  }
+
+  .member-profile-avatar {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    border-radius: 17px;
+    font-size: 20px;
+  }
+
+  .member-profile-hero h1 {
+    font-size: 23px;
+  }
+
+  .member-profile-kpis {
+    grid-template-columns:
+      1fr;
+  }
+
+  .member-profile-info-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .member-profile-info,
+  .member-profile-info:nth-child(odd),
+  .member-profile-info:nth-child(even) {
+    padding-left: 0;
+    padding-right: 0;
+    border-left: none;
+  }
+
+  .member-family-contact {
+    grid-template-columns:
+      1fr;
+  }
+
+  .member-family-contact
+  > div:last-child {
+    grid-column: auto;
+  }
+
+  .spiritual-journey-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+  .spiritual-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .spiritual-modal-footer
+  .btn {
+    width: 100%;
+  }
+}
