@@ -5,10 +5,15 @@ import {
 } from "react";
 
 import {
+  useNavigate,
+} from "react-router-dom";
+
+import {
   toast,
 } from "react-toastify";
 
 import Layout from "../components/Layout";
+
 import "../styles/ManagementPages.css";
 
 import API from "../api/axios";
@@ -27,23 +32,39 @@ import {
   useSubscription,
 } from "../context/SubscriptionContext";
 
+// ======================================================
+// FORMULAIRE INITIAL
+// ======================================================
+
 const initialForm = {
   name: "",
-  leader: "",
+  description: "",
   status: "active",
+  meetingDay: "",
+  meetingTime: "",
+  location: "",
+  notes: "",
 };
 
+// ======================================================
+// PAGE
+// ======================================================
+
 export default function Departments() {
+  const navigate =
+    useNavigate();
+
   const currentUser =
     getCurrentAdmin();
 
   const isAdmin =
-    currentUser?.role === "admin" ||
+    currentUser?.role ===
+      "admin" ||
     currentUser?.platformRole ===
       "superadmin";
 
   // ======================================================
-  // ABONNEMENT SYNCHRONISÉ
+  // ABONNEMENT
   // ======================================================
 
   const {
@@ -55,7 +76,8 @@ export default function Departments() {
     normalizePlan(
       initialized
         ? plan
-        : currentUser?.church?.plan ||
+        : currentUser?.church
+            ?.plan ||
             "free"
     );
 
@@ -66,7 +88,8 @@ export default function Departments() {
     );
 
   const isUnlimited =
-    departmentLimit === null;
+    departmentLimit ===
+    null;
 
   // ======================================================
   // STATES
@@ -76,6 +99,11 @@ export default function Departments() {
     departments,
     setDepartments,
   ] = useState([]);
+
+  const [
+    backendStats,
+    setBackendStats,
+  ] = useState(null);
 
   const [
     loading,
@@ -100,7 +128,9 @@ export default function Departments() {
   const [
     form,
     setForm,
-  ] = useState(initialForm);
+  ] = useState(
+    initialForm
+  );
 
   const [
     editingId,
@@ -121,26 +151,45 @@ export default function Departments() {
       try {
         setLoading(true);
 
-        const response =
-          await API.get(
-            "/departments",
-            {
-              params: {
-                limit: 1000,
-              },
-            }
-          );
+        const [
+          departmentsResponse,
+          statsResponse,
+        ] =
+          await Promise.all([
+            API.get(
+              "/departments",
+              {
+                params: {
+                  limit: 1000,
+                },
+              }
+            ),
 
-        const data =
-          response.data?.data ||
-          response.data
+            API.get(
+              "/departments/stats/all"
+            ),
+          ]);
+
+        const departmentData =
+          departmentsResponse
+            .data?.data ||
+          departmentsResponse
+            .data
             ?.departments ||
           [];
 
         setDepartments(
-          Array.isArray(data)
-            ? data
+          Array.isArray(
+            departmentData
+          )
+            ? departmentData
             : []
+        );
+
+        setBackendStats(
+          statsResponse.data
+            ?.summary ||
+            null
         );
       } catch (error) {
         console.error(
@@ -163,7 +212,7 @@ export default function Departments() {
   }, []);
 
   // ======================================================
-  // LIMITE DU PLAN
+  // LIMITE ABONNEMENT
   // ======================================================
 
   const departmentCount =
@@ -182,6 +231,78 @@ export default function Departments() {
             departmentCount,
           0
         );
+
+  // ======================================================
+  // HELPERS
+  // ======================================================
+
+  const getPersonName = (
+    person
+  ) => {
+    if (!person) {
+      return "";
+    }
+
+    if (
+      typeof person ===
+      "string"
+    ) {
+      return person;
+    }
+
+    const fullName = [
+      person.firstName,
+      person.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    return (
+      fullName ||
+      person.name ||
+      person.email ||
+      ""
+    );
+  };
+
+  const getMemberCount = (
+    department
+  ) => {
+    if (
+      typeof department
+        ?.memberCount ===
+      "number"
+    ) {
+      return department
+        .memberCount;
+    }
+
+    if (
+      typeof department
+        ?.totalMembers ===
+      "number"
+    ) {
+      return department
+        .totalMembers;
+    }
+
+    return (
+      department?.members ||
+      []
+    ).filter(
+      (entry) =>
+        entry.isActive !==
+        false
+    ).length;
+  };
+
+  const getDepartmentInitial =
+    (department) =>
+      department?.name
+        ?.charAt(0)
+        ?.toUpperCase() ||
+      "D";
 
   // ======================================================
   // STATISTIQUES
@@ -214,16 +335,71 @@ export default function Departments() {
             )
         ).length;
 
+      const totalAssignments =
+        departments.reduce(
+          (
+            totalValue,
+            department
+          ) =>
+            totalValue +
+            getMemberCount(
+              department
+            ),
+          0
+        );
+
       return {
-        total,
-        active,
-        inactive,
+        total:
+          backendStats
+            ?.totalDepartments ??
+          total,
+
+        active:
+          backendStats
+            ?.activeDepartments ??
+          active,
+
+        inactive:
+          backendStats
+            ?.inactiveDepartments ??
+          inactive,
+
         withLeader,
+
+        totalAssignments,
+
+        membersInDepartments:
+          backendStats
+            ?.membersInDepartments ??
+          0,
+
+        membersWithoutDepartment:
+          backendStats
+            ?.membersWithoutDepartment ??
+          0,
+
+        totalChurchMembers:
+          backendStats
+            ?.totalChurchMembers ??
+          0,
+
+        coverageRate:
+          backendStats
+            ?.coverageRate ??
+          0,
+
+        averageDepartmentSize:
+          backendStats
+            ?.averageDepartmentSize ??
+          0,
       };
-    }, [departments]);
+    }, [
+      departments,
+      backendStats,
+    ]);
 
   // ======================================================
-  // RECHERCHE + FILTRE
+  // RECHERCHE + FILTRES
   // ======================================================
 
   const filteredDepartments =
@@ -249,10 +425,31 @@ export default function Departments() {
             return true;
           }
 
+          const leaderName =
+            getPersonName(
+              department.leader
+            );
+
+          const memberNames =
+            (
+              department.members ||
+              []
+            )
+              .map(
+                (entry) =>
+                  getPersonName(
+                    entry.member
+                  )
+              )
+              .join(" ");
+
           const text = [
             department.name,
-            department.leader,
-            department.status,
+            department.description,
+            leaderName,
+            department.location,
+            department.meetingDay,
+            memberNames,
           ]
             .filter(Boolean)
             .join(" ")
@@ -290,26 +487,45 @@ export default function Departments() {
   };
 
   const resetForm = () => {
-    setForm(initialForm);
-    setEditingId(null);
-    setShowForm(false);
+    setForm(
+      initialForm
+    );
+
+    setEditingId(
+      null
+    );
+
+    setShowForm(
+      false
+    );
   };
 
-  const openCreateForm = () => {
-    if (limitReached) {
-      toast.warning(
-        `Limite atteinte : votre abonnement ${getPlanName(
-          currentPlan
-        )} autorise au maximum ${departmentLimit} départements.`
+  const openCreateForm =
+    () => {
+      if (
+        limitReached
+      ) {
+        toast.warning(
+          `Limite atteinte : votre abonnement ${getPlanName(
+            currentPlan
+          )} autorise au maximum ${departmentLimit} départements.`
+        );
+
+        return;
+      }
+
+      setForm(
+        initialForm
       );
 
-      return;
-    }
+      setEditingId(
+        null
+      );
 
-    setForm(initialForm);
-    setEditingId(null);
-    setShowForm(true);
-  };
+      setShowForm(
+        true
+      );
+    };
 
   const openEditForm = (
     department
@@ -323,179 +539,196 @@ export default function Departments() {
         department.name ||
         "",
 
-      leader:
-        department.leader ||
+      description:
+        department.description ||
         "",
 
       status:
         department.status ||
         "active",
+
+      meetingDay:
+        department.meetingDay ||
+        "",
+
+      meetingTime:
+        department.meetingTime ||
+        "",
+
+      location:
+        department.location ||
+        "",
+
+      notes:
+        department.notes ||
+        "",
     });
 
-    setShowForm(true);
+    setShowForm(
+      true
+    );
   };
 
   // ======================================================
   // CRÉATION / MODIFICATION
   // ======================================================
 
-  const handleSubmit = async (
-    event
-  ) => {
-    event.preventDefault();
-
-    if (!form.name.trim()) {
-      toast.warning(
-        "Le nom du département est obligatoire"
-      );
-
-      return;
-    }
-
-    if (
-      !editingId &&
-      limitReached
-    ) {
-      toast.warning(
-        `Vous avez atteint la limite de ${departmentLimit} départements de votre abonnement ${getPlanName(
-          currentPlan
-        )}.`
-      );
-
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const payload = {
-        name:
-          form.name.trim(),
-
-        leader:
-          form.leader.trim(),
-
-        status:
-          form.status,
-      };
-
-      if (editingId) {
-        await API.put(
-          `/departments/${editingId}`,
-          payload
-        );
-
-        toast.success(
-          "Département modifié avec succès"
-        );
-      } else {
-        await API.post(
-          "/departments",
-          payload
-        );
-
-        toast.success(
-          "Département créé avec succès"
-        );
-      }
-
-      resetForm();
-
-      await fetchDepartments();
-    } catch (error) {
-      console.error(
-        "Erreur département :",
-        error
-      );
+  const handleSubmit =
+    async (event) => {
+      event.preventDefault();
 
       if (
-        error.response
-          ?.data
-          ?.code ===
-        "PLAN_LIMIT_REACHED"
+        !form.name.trim()
       ) {
-        toast.error(
-          error.response
-            ?.data
-            ?.message ||
-            "La limite de départements de votre abonnement est atteinte."
+        toast.warning(
+          "Le nom du département est obligatoire"
         );
 
         return;
       }
 
-      toast.error(
-        error.response?.data
-          ?.message ||
-          "Impossible d'enregistrer le département"
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+      if (
+        !editingId &&
+        limitReached
+      ) {
+        toast.warning(
+          `Vous avez atteint la limite de ${departmentLimit} départements de votre abonnement ${getPlanName(
+            currentPlan
+          )}.`
+        );
+
+        return;
+      }
+
+      try {
+        setSaving(true);
+
+        const payload = {
+          name:
+            form.name.trim(),
+
+          description:
+            form.description.trim(),
+
+          status:
+            form.status,
+
+          meetingDay:
+            form.meetingDay.trim(),
+
+          meetingTime:
+            form.meetingTime.trim(),
+
+          location:
+            form.location.trim(),
+
+          notes:
+            form.notes.trim(),
+        };
+
+        if (editingId) {
+          await API.put(
+            `/departments/${editingId}`,
+            payload
+          );
+
+          toast.success(
+            "Département modifié avec succès"
+          );
+        } else {
+          await API.post(
+            "/departments",
+            payload
+          );
+
+          toast.success(
+            "Département créé avec succès"
+          );
+        }
+
+        resetForm();
+
+        await fetchDepartments();
+      } catch (error) {
+        console.error(
+          "Erreur département :",
+          error
+        );
+
+        if (
+          error.response
+            ?.data
+            ?.code ===
+          "PLAN_LIMIT_REACHED"
+        ) {
+          toast.error(
+            error.response
+              ?.data
+              ?.message ||
+              "La limite de départements de votre abonnement est atteinte."
+          );
+
+          return;
+        }
+
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Impossible d'enregistrer le département"
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
   // ======================================================
   // SUPPRESSION
   // ======================================================
 
-  const handleDelete = async (
-    id
-  ) => {
-    if (!isAdmin) {
-      toast.error(
-        "Suppression réservée aux administrateurs"
-      );
+  const handleDelete =
+    async (
+      id
+    ) => {
+      if (!isAdmin) {
+        toast.error(
+          "Suppression réservée aux administrateurs"
+        );
 
-      return;
-    }
+        return;
+      }
 
-    const confirmed =
-      window.confirm(
-        "Voulez-vous vraiment supprimer ce département ?"
-      );
+      const confirmed =
+        window.confirm(
+          "Voulez-vous vraiment supprimer ce département ?"
+        );
 
-    if (!confirmed) {
-      return;
-    }
+      if (!confirmed) {
+        return;
+      }
 
-    try {
-      await API.delete(
-        `/departments/${id}`
-      );
+      try {
+        await API.delete(
+          `/departments/${id}`
+        );
 
-      toast.success(
-        "Département supprimé avec succès"
-      );
+        toast.success(
+          "Département supprimé avec succès"
+        );
 
-      await fetchDepartments();
-    } catch (error) {
-      console.error(
-        "Erreur suppression département :",
-        error
-      );
+        await fetchDepartments();
+      } catch (error) {
+        console.error(
+          "Erreur suppression département :",
+          error
+        );
 
-      toast.error(
-        error.response?.data
-          ?.message ||
-          "Impossible de supprimer le département"
-      );
-    }
-  };
-
-  // ======================================================
-  // INITIAL DU DÉPARTEMENT
-  // ======================================================
-
-  const getDepartmentInitial = (
-    department
-  ) => {
-    return (
-      department.name
-        ?.charAt(0)
-        ?.toUpperCase() ||
-      "D"
-    );
-  };
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Impossible de supprimer le département"
+        );
+      }
+    };
 
   // ======================================================
   // AFFICHAGE
@@ -505,19 +738,22 @@ export default function Departments() {
     <Layout>
       <div className="management-page">
 
-        {/* HEADER */}
+        {/* ==================================================
+            HEADER
+        ================================================== */}
 
         <div className="page-header">
           <div className="page-header-left">
             <h1 className="page-title">
-              Départements
+              Départements &
+              Responsabilités
             </h1>
 
             <p className="page-subtitle">
-              Organisez les différents
-              départements de votre
-              église et leurs
-              responsables.
+              Organisez les équipes,
+              responsables et
+              responsabilités de votre
+              église.
             </p>
           </div>
 
@@ -531,21 +767,6 @@ export default function Departments() {
               disabled={
                 limitReached
               }
-              title={
-                limitReached
-                  ? `Limite de ${departmentLimit} départements atteinte`
-                  : "Créer un département"
-              }
-              style={
-                limitReached
-                  ? {
-                      opacity:
-                        0.55,
-                      cursor:
-                        "not-allowed",
-                    }
-                  : undefined
-              }
             >
               {limitReached
                 ? "🔒 Limite atteinte"
@@ -554,7 +775,9 @@ export default function Departments() {
           </div>
         </div>
 
-        {/* ABONNEMENT */}
+        {/* ==================================================
+            ABONNEMENT
+        ================================================== */}
 
         <div
           style={{
@@ -607,8 +830,10 @@ export default function Departments() {
               style={{
                 marginTop:
                   "4px",
+
                 fontSize:
                   "12px",
+
                 opacity:
                   0.75,
               }}
@@ -654,12 +879,15 @@ export default function Departments() {
           )}
         </div>
 
-        {/* STATISTIQUES */}
+        {/* ==================================================
+            STATISTIQUES
+        ================================================== */}
 
         <div className="management-stats-grid">
+
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Total départements
+              Départements
             </div>
 
             <div className="management-stat-value">
@@ -667,62 +895,202 @@ export default function Departments() {
             </div>
 
             <div className="management-stat-description">
-              Tous les départements
-              enregistrés
+              {stats.active} actif
+              {stats.active !== 1
+                ? "s"
+                : ""}
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Départements actifs
+              Personnes engagées
             </div>
 
             <div className="management-stat-value">
-              {stats.active}
+              {
+                stats.membersInDepartments
+              }
             </div>
 
             <div className="management-stat-description">
-              Départements actuellement
-              actifs
+              Personnes dans au moins
+              un département
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Départements inactifs
+              Sans département
             </div>
 
             <div className="management-stat-value">
-              {stats.inactive}
+              {
+                stats.membersWithoutDepartment
+              }
             </div>
 
             <div className="management-stat-description">
-              Départements actuellement
-              inactifs
+              Sur{" "}
+              {
+                stats.totalChurchMembers
+              }{" "}
+              membre
+              {stats.totalChurchMembers !==
+              1
+                ? "s"
+                : ""}{" "}
+              actif
+              {stats.totalChurchMembers !==
+              1
+                ? "s"
+                : ""}
             </div>
           </div>
 
           <div className="management-stat-card">
             <div className="management-stat-label">
-              Avec responsable
+              Couverture
             </div>
 
             <div className="management-stat-value">
-              {stats.withLeader}
+              {
+                stats.coverageRate
+              }
+              %
             </div>
 
             <div className="management-stat-description">
-              Départements ayant un
-              responsable
+              Membres intégrés dans
+              les départements
+            </div>
+          </div>
+
+        </div>
+
+        {/* ==================================================
+            COUVERTURE
+        ================================================== */}
+
+        <div
+          className="management-card"
+          style={{
+            marginBottom:
+              "20px",
+          }}
+        >
+          <div
+            style={{
+              padding:
+                "20px",
+            }}
+          >
+            <div
+              style={{
+                display:
+                  "flex",
+
+                justifyContent:
+                  "space-between",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  "16px",
+
+                flexWrap:
+                  "wrap",
+
+                marginBottom:
+                  "10px",
+              }}
+            >
+              <div>
+                <strong>
+                  Engagement dans les
+                  départements
+                </strong>
+
+                <div className="person-secondary">
+                  {
+                    stats.membersInDepartments
+                  }{" "}
+                  personne
+                  {stats.membersInDepartments !==
+                  1
+                    ? "s"
+                    : ""}{" "}
+                  engagée
+                  {stats.membersInDepartments !==
+                  1
+                    ? "s"
+                    : ""}{" "}
+                  sur{" "}
+                  {
+                    stats.totalChurchMembers
+                  }
+                </div>
+              </div>
+
+              <strong>
+                {
+                  stats.coverageRate
+                }
+                %
+              </strong>
+            </div>
+
+            <div
+              style={{
+                height:
+                  "10px",
+
+                borderRadius:
+                  "999px",
+
+                background:
+                  "rgba(148, 163, 184, 0.18)",
+
+                overflow:
+                  "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(
+                    Math.max(
+                      stats.coverageRate,
+                      0
+                    ),
+                    100
+                  )}%`,
+
+                  height:
+                    "100%",
+
+                  borderRadius:
+                    "999px",
+
+                  background:
+                    "currentColor",
+
+                  transition:
+                    "width 0.3s ease",
+                }}
+              />
             </div>
           </div>
         </div>
 
-        {/* LISTE DES DÉPARTEMENTS */}
+        {/* ==================================================
+            LISTE
+        ================================================== */}
 
         <div className="management-card">
 
           <div className="management-toolbar">
+
             <div className="management-search">
               <span className="management-search-icon">
                 🔎
@@ -730,7 +1098,7 @@ export default function Departments() {
 
               <input
                 type="search"
-                placeholder="Rechercher un département..."
+                placeholder="Rechercher un département, responsable ou personne..."
                 value={search}
                 onChange={(
                   event
@@ -771,6 +1139,7 @@ export default function Departments() {
                 </option>
               </select>
             </div>
+
           </div>
 
           {loading ? (
@@ -785,6 +1154,7 @@ export default function Departments() {
           ) : filteredDepartments.length ===
             0 ? (
             <div className="management-empty">
+
               <div className="management-empty-icon">
                 🏢
               </div>
@@ -797,13 +1167,16 @@ export default function Departments() {
               <p>
                 Créez votre premier
                 département ou
-                modifiez les critères
+                modifiez vos critères
                 de recherche.
               </p>
+
             </div>
           ) : (
             <div className="management-table-wrapper">
+
               <table className="management-table">
+
                 <thead>
                   <tr>
                     <th>
@@ -812,6 +1185,14 @@ export default function Departments() {
 
                     <th>
                       Responsable
+                    </th>
+
+                    <th>
+                      Équipe
+                    </th>
+
+                    <th>
+                      Organisation
                     </th>
 
                     <th>
@@ -828,110 +1209,188 @@ export default function Departments() {
                   {filteredDepartments.map(
                     (
                       department
-                    ) => (
-                      <tr
-                        key={
-                          department._id
-                        }
-                      >
-                        <td>
-                          <div className="person-cell">
-                            <div className="person-avatar">
-                              {getDepartmentInitial(
-                                department
+                    ) => {
+                      const leaderName =
+                        getPersonName(
+                          department.leader
+                        );
+
+                      const memberCount =
+                        getMemberCount(
+                          department
+                        );
+
+                      return (
+                        <tr
+                          key={
+                            department._id
+                          }
+                        >
+                          <td>
+                            <div className="person-cell">
+                              <div className="person-avatar">
+                                {getDepartmentInitial(
+                                  department
+                                )}
+                              </div>
+
+                              <div>
+                                <div className="person-name">
+                                  {
+                                    department.name
+                                  }
+                                </div>
+
+                                <div className="person-secondary">
+                                  {department.description ||
+                                    "Département de l'église"}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            {leaderName ? (
+                              <div>
+                                <div className="person-name">
+                                  {
+                                    leaderName
+                                  }
+                                </div>
+
+                                <div className="person-secondary">
+                                  Responsable
+                                  principal
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="person-secondary">
+                                Non assigné
+                              </span>
+                            )}
+                          </td>
+
+                          <td>
+                            <div className="person-name">
+                              {
+                                memberCount
+                              }{" "}
+                              personne
+                              {memberCount !==
+                              1
+                                ? "s"
+                                : ""}
+                            </div>
+
+                            <div className="person-secondary">
+                              Équipe active
+                            </div>
+                          </td>
+
+                          <td>
+                            <div>
+                              {department.meetingDay ||
+                              department.meetingTime ? (
+                                <>
+                                  <div className="person-name">
+                                    {department.meetingDay ||
+                                      "Jour non défini"}
+
+                                    {department.meetingTime
+                                      ? ` • ${department.meetingTime}`
+                                      : ""}
+                                  </div>
+
+                                  <div className="person-secondary">
+                                    {department.location ||
+                                      "Lieu non renseigné"}
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="person-secondary">
+                                  Non renseigné
+                                </span>
                               )}
                             </div>
+                          </td>
 
-                            <div>
-                              <div className="person-name">
-                                {
-                                  department.name
-                                }
-                              </div>
-
-                              <div className="person-secondary">
-                                Département
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          {department.leader ? (
-                            <div>
-                              <div className="person-name">
-                                {
-                                  department.leader
-                                }
-                              </div>
-
-                              <div className="person-secondary">
-                                Responsable
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="person-secondary">
-                              Non renseigné
-                            </span>
-                          )}
-                        </td>
-
-                        <td>
-                          <span
-                            className={`status-badge ${
-                              department.status ===
-                              "active"
-                                ? "status-active"
-                                : "status-inactive"
-                            }`}
-                          >
-                            {department.status ===
-                            "active"
-                              ? "Actif"
-                              : "Inactif"}
-                          </span>
-                        </td>
-
-                        <td>
-                          <div className="table-actions">
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-small"
-                              onClick={() =>
-                                openEditForm(
-                                  department
-                                )
-                              }
+                          <td>
+                            <span
+                              className={`status-badge ${
+                                department.status ===
+                                "active"
+                                  ? "status-active"
+                                  : "status-inactive"
+                              }`}
                             >
-                              ✏️ Modifier
-                            </button>
+                              {department.status ===
+                              "active"
+                                ? "Actif"
+                                : "Inactif"}
+                            </span>
+                          </td>
 
-                            {isAdmin && (
+                          <td>
+                            <div className="table-actions">
+
                               <button
                                 type="button"
-                                className="btn btn-danger btn-small"
+                                className="btn btn-primary btn-small"
                                 onClick={() =>
-                                  handleDelete(
-                                    department._id
+                                  navigate(
+                                    `/departments/${department._id}`
                                   )
                                 }
                               >
-                                🗑️ Supprimer
+                                👁 Ouvrir
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
+
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-small"
+                                onClick={() =>
+                                  openEditForm(
+                                    department
+                                  )
+                                }
+                              >
+                                ✏️ Modifier
+                              </button>
+
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  className="btn btn-danger btn-small"
+                                  onClick={() =>
+                                    handleDelete(
+                                      department._id
+                                    )
+                                  }
+                                >
+                                  🗑️ Supprimer
+                                </button>
+                              )}
+
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
                   )}
                 </tbody>
+
               </table>
+
             </div>
           )}
+
         </div>
+
       </div>
 
-      {/* MODAL CRÉATION / MODIFICATION */}
+      {/* ==================================================
+          MODAL CRÉATION / MODIFICATION
+      ================================================== */}
 
       {showForm && (
         <div
@@ -950,6 +1409,7 @@ export default function Departments() {
           <div className="management-modal">
 
             <div className="management-modal-header">
+
               <div>
                 <h2>
                   {editingId
@@ -959,8 +1419,8 @@ export default function Departments() {
 
                 <p className="page-subtitle">
                   {editingId
-                    ? "Modifiez les informations de ce département."
-                    : "Renseignez les informations du nouveau département."}
+                    ? "Modifiez l'organisation générale de ce département."
+                    : "Créez une nouvelle équipe de service dans votre église."}
                 </p>
               </div>
 
@@ -974,6 +1434,7 @@ export default function Departments() {
               >
                 ✕
               </button>
+
             </div>
 
             <form
@@ -982,6 +1443,7 @@ export default function Departments() {
               }
             >
               <div className="management-modal-body">
+
                 <div className="management-form-grid">
 
                   <div className="form-group form-group-full">
@@ -1005,19 +1467,74 @@ export default function Departments() {
 
                   <div className="form-group form-group-full">
                     <label className="form-label">
-                      Responsable
+                      Description
                     </label>
 
-                    <input
+                    <textarea
                       className="form-input"
-                      name="leader"
+                      name="description"
                       value={
-                        form.leader
+                        form.description
                       }
                       onChange={
                         handleChange
                       }
-                      placeholder="Nom du responsable"
+                      placeholder="Mission et rôle du département..."
+                      rows="3"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Jour
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="meetingDay"
+                      value={
+                        form.meetingDay
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Ex. Samedi"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Heure
+                    </label>
+
+                    <input
+                      className="form-input"
+                      type="time"
+                      name="meetingTime"
+                      value={
+                        form.meetingTime
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Lieu
+                    </label>
+
+                    <input
+                      className="form-input"
+                      name="location"
+                      value={
+                        form.location
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Ex. Salle principale"
                     />
                   </div>
 
@@ -1045,10 +1562,32 @@ export default function Departments() {
                       </option>
                     </select>
                   </div>
+
+                  <div className="form-group form-group-full">
+                    <label className="form-label">
+                      Notes internes
+                    </label>
+
+                    <textarea
+                      className="form-input"
+                      name="notes"
+                      value={
+                        form.notes
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      placeholder="Informations complémentaires..."
+                      rows="3"
+                    />
+                  </div>
+
                 </div>
+
               </div>
 
               <div className="management-modal-footer">
+
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -1072,11 +1611,14 @@ export default function Departments() {
                     ? "Enregistrer les modifications"
                     : "Créer le département"}
                 </button>
+
               </div>
             </form>
+
           </div>
         </div>
       )}
+
     </Layout>
   );
 }

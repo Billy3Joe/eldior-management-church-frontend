@@ -18,36 +18,52 @@ import PlatformRoute from "./components/PlatformRoute";
 import SubscriptionRoute from "./components/SubscriptionRoute";
 
 import Dashboard from "./pages/Dashboard";
+
 import Members from "./pages/Members";
 import MemberProfile from "./pages/MemberProfile";
+
 import Families from "./pages/Families";
+
 import Groups from "./pages/Groups";
 import GroupDetails from "./pages/GroupDetails";
+
 import Departments from "./pages/Departments";
+import DepartmentDetails from "./pages/DepartmentDetails";
+
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
+
 import Attendance from "./pages/Attendance";
 import AttendanceStats from "./pages/AttendanceStats";
+
 import PastoralStatistics from "./pages/PastoralStatistics";
 import VisitorFollowUp from "./pages/VisitorFollowUp";
 import PastoralAlerts from "./pages/PastoralAlerts";
+
 import Assignments from "./pages/Assignments";
 import AssignmentResponse from "./pages/AssignmentResponse";
+
 import Reports from "./pages/Reports";
+
 import Settings from "./pages/Settings";
+
 import AdminUsers from "./pages/AdminUsers";
 import ActivityLogs from "./pages/ActivityLogs";
+
 import Subscription from "./pages/Subscription";
+
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformChurches from "./pages/PlatformChurches";
 
 function App() {
   return (
     <BrowserRouter>
-
       <SubscriptionProvider>
-
         <Routes>
+
+          {/* ==================================================
+              RACINE
+          ================================================== */}
 
           <Route
             path="/"
@@ -59,9 +75,15 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              AUTHENTIFICATION
+          ================================================== */}
+
           <Route
             path="/login"
-            element={<Login />}
+            element={
+              <Login />
+            }
           />
 
           <Route
@@ -71,6 +93,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              DASHBOARD
+          ================================================== */}
+
           <Route
             path="/dashboard"
             element={
@@ -79,6 +105,10 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* ==================================================
+              MEMBRES
+          ================================================== */}
 
           <Route
             path="/members"
@@ -98,6 +128,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              FAMILLES
+          ================================================== */}
+
           <Route
             path="/families"
             element={
@@ -106,6 +140,10 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* ==================================================
+              GROUPES / CELLULES
+          ================================================== */}
 
           <Route
             path="/groups"
@@ -125,6 +163,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              DÉPARTEMENTS & RESPONSABILITÉS
+          ================================================== */}
+
           <Route
             path="/departments"
             element={
@@ -133,6 +175,19 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          <Route
+            path="/departments/:id"
+            element={
+              <PrivateRoute>
+                <DepartmentDetails />
+              </PrivateRoute>
+            }
+          />
+
+          {/* ==================================================
+              ÉVÉNEMENTS
+          ================================================== */}
 
           <Route
             path="/events"
@@ -152,6 +207,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              PRÉSENCES
+          ================================================== */}
+
           <Route
             path="/attendance"
             element={
@@ -169,6 +228,10 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* ==================================================
+              SUIVI PASTORAL
+          ================================================== */}
 
           <Route
             path="/pastoral-statistics"
@@ -197,6 +260,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              AFFECTATIONS
+          ================================================== */}
+
           <Route
             path="/assignments"
             element={
@@ -217,6 +284,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              RAPPORTS
+          ================================================== */}
+
           <Route
             path="/reports"
             element={
@@ -230,6 +301,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              ABONNEMENT
+          ================================================== */}
+
           <Route
             path="/subscription"
             element={
@@ -239,6 +314,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              PARAMÈTRES
+          ================================================== */}
+
           <Route
             path="/settings"
             element={
@@ -247,6 +326,10 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* ==================================================
+              UTILISATEURS DE L'ÉGLISE
+          ================================================== */}
 
           <Route
             path="/users"
@@ -258,6 +341,10 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* ==================================================
+              JOURNAL D'ACTIVITÉ
+          ================================================== */}
 
           <Route
             path="/activity-logs"
@@ -273,6 +360,10 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* ==================================================
+              ESPACE PLATEFORME
+          ================================================== */}
 
           <Route
             path="/platform"
@@ -296,6 +387,10 @@ function App() {
             }
           />
 
+          {/* ==================================================
+              ROUTE INCONNUE
+          ================================================== */}
+
           <Route
             path="*"
             element={
@@ -307,9 +402,7 @@ function App() {
           />
 
         </Routes>
-
       </SubscriptionProvider>
-
     </BrowserRouter>
   );
 }

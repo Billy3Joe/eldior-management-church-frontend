@@ -243,6 +243,11 @@ export default function MemberProfile() {
   ] = useState([]);
 
   const [
+    departments,
+    setDepartments,
+  ] = useState([]);
+
+  const [
     loading,
     setLoading,
   ] = useState(true);
@@ -333,6 +338,10 @@ export default function MemberProfile() {
               API.get(
                 `/groups/member/${id}`
               ),
+
+              API.get(
+                `/departments/member/${id}`
+              ),
             ]);
 
           const [
@@ -342,6 +351,7 @@ export default function MemberProfile() {
             journeyResult,
             pastoralAlertResult,
             groupsResult,
+            departmentsResult,
           ] = results;
 
           // ==================================================
@@ -484,6 +494,37 @@ export default function MemberProfile() {
             );
 
             setGroups([]);
+          }
+
+          // ==================================================
+          // DÉPARTEMENTS / RESPONSABILITÉS
+          // ==================================================
+
+          if (
+            departmentsResult.status ===
+            "fulfilled"
+          ) {
+            const departmentData =
+              departmentsResult.value
+                .data
+                ?.data
+                ?.departments ||
+              [];
+
+            setDepartments(
+              Array.isArray(
+                departmentData
+              )
+                ? departmentData
+                : []
+            );
+          } else {
+            console.error(
+              "Erreur départements / responsabilités :",
+              departmentsResult.reason
+            );
+
+            setDepartments([]);
           }
         } catch (err) {
           console.error(
@@ -766,6 +807,51 @@ export default function MemberProfile() {
 
       return (
         group.members.find(
+          (entry) => {
+            const memberId =
+              entry?.member?._id ||
+              entry?.member;
+
+            return (
+              String(
+                memberId
+              ) ===
+                String(id) &&
+              entry.isActive !==
+                false
+            );
+          }
+        ) || null
+      );
+    };
+
+  // ======================================================
+  // DÉPARTEMENTS / RESPONSABILITÉS
+  // ======================================================
+
+  const activeDepartments =
+    useMemo(
+      () =>
+        departments.filter(
+          (department) =>
+            department.status !==
+            "inactive"
+        ),
+      [departments]
+    );
+
+  const getDepartmentMembership =
+    (department) => {
+      if (
+        !Array.isArray(
+          department?.members
+        )
+      ) {
+        return null;
+      }
+
+      return (
+        department.members.find(
           (entry) => {
             const memberId =
               entry?.member?._id ||
@@ -1075,6 +1161,23 @@ export default function MemberProfile() {
                     {activeGroups.length === 1
                       ? activeGroups[0].name
                       : `${activeGroups.length} groupes`}
+                  </span>
+                )}
+
+                {activeDepartments.length > 0 && (
+                  <span
+                    className="member-profile-family-badge"
+                    style={{
+                      background:
+                        "rgba(37, 99, 235, 0.08)",
+                      color:
+                        "#2563eb",
+                    }}
+                  >
+                    🏢{" "}
+                    {activeDepartments.length === 1
+                      ? activeDepartments[0].name
+                      : `${activeDepartments.length} départements`}
                   </span>
                 )}
               </div>
@@ -2311,6 +2414,382 @@ export default function MemberProfile() {
               )}
             </section>
 
+            {/* DÉPARTEMENTS / RESPONSABILITÉS */}
+
+            <section className="management-card member-profile-card">
+
+              <div className="member-profile-card-header">
+                <div>
+                  <div className="member-profile-section-icon">
+                    🏢
+                  </div>
+
+                  <div>
+                    <h2>
+                      Départements & Responsabilités
+                    </h2>
+
+                    <p>
+                      Services, fonctions et responsabilités exercés actuellement dans l’église.
+                    </p>
+                  </div>
+                </div>
+
+                {activeDepartments.length > 0 && (
+                  <span className="status-badge status-active">
+                    {activeDepartments.length}{" "}
+                    département
+                    {activeDepartments.length > 1
+                      ? "s"
+                      : ""}
+                  </span>
+                )}
+              </div>
+
+              {activeDepartments.length > 0 ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: "14px",
+                  }}
+                >
+                  {activeDepartments.map(
+                    (department) => {
+                      const membership =
+                        getDepartmentMembership(
+                          department
+                        );
+
+                      const activeMemberCount =
+                        Array.isArray(
+                          department.members
+                        )
+                          ? department.members.filter(
+                              (entry) =>
+                                entry.isActive !==
+                                false
+                            ).length
+                          : 0;
+
+                      const leaderName =
+                        department.leader
+                          ? `${department.leader.firstName || ""} ${department.leader.lastName || ""}`.trim()
+                          : "Non assigné";
+
+                      return (
+                        <button
+                          key={
+                            department._id
+                          }
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/departments/${department._id}`
+                            )
+                          }
+                          style={{
+                            width: "100%",
+                            padding: "18px",
+                            border:
+                              "1px solid rgba(37,99,235,.14)",
+                            borderRadius:
+                              "16px",
+                            background:
+                              "linear-gradient(135deg, rgba(37,99,235,.055), rgba(99,72,223,.035))",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            fontFamily:
+                              "inherit",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display:
+                                "flex",
+                              justifyContent:
+                                "space-between",
+                              gap: "14px",
+                              alignItems:
+                                "flex-start",
+                            }}
+                          >
+                            <div
+                              style={{
+                                minWidth: 0,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  color:
+                                    "#2563eb",
+                                  fontSize:
+                                    "10px",
+                                  fontWeight:
+                                    900,
+                                  letterSpacing:
+                                    ".8px",
+                                  textTransform:
+                                    "uppercase",
+                                  marginBottom:
+                                    "6px",
+                                }}
+                              >
+                                Département
+                              </div>
+
+                              <strong
+                                style={{
+                                  display:
+                                    "block",
+                                  color:
+                                    "#1f2937",
+                                  fontSize:
+                                    "16px",
+                                  fontWeight:
+                                    900,
+                                }}
+                              >
+                                {
+                                  department.name
+                                }
+                              </strong>
+
+                              <div
+                                style={{
+                                  marginTop:
+                                    "9px",
+                                  display:
+                                    "flex",
+                                  flexWrap:
+                                    "wrap",
+                                  gap: "6px",
+                                }}
+                              >
+                                <span
+                                  className="status-badge status-active"
+                                  style={{
+                                    fontSize:
+                                      "9px",
+                                  }}
+                                >
+                                  {membership?.role ||
+                                    "Membre"}
+                                </span>
+
+                                {membership?.responsibility && (
+                                  <span
+                                    className="status-badge status-planned"
+                                    style={{
+                                      fontSize:
+                                        "9px",
+                                    }}
+                                  >
+                                    🎯{" "}
+                                    {
+                                      membership.responsibility
+                                    }
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <span
+                              style={{
+                                color:
+                                  "#2563eb",
+                                fontSize:
+                                  "18px",
+                                fontWeight:
+                                  900,
+                              }}
+                            >
+                              →
+                            </span>
+                          </div>
+
+                          <div
+                            style={{
+                              display:
+                                "grid",
+                              gridTemplateColumns:
+                                "1fr 1fr",
+                              gap: "10px",
+                              marginTop:
+                                "16px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                padding:
+                                  "10px",
+                                background:
+                                  "rgba(255,255,255,.72)",
+                                borderRadius:
+                                  "10px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display:
+                                    "block",
+                                  color:
+                                    "#9ca3af",
+                                  fontSize:
+                                    "9px",
+                                  fontWeight:
+                                    800,
+                                  textTransform:
+                                    "uppercase",
+                                }}
+                              >
+                                Responsable
+                              </span>
+
+                              <strong
+                                style={{
+                                  display:
+                                    "block",
+                                  marginTop:
+                                    "3px",
+                                  color:
+                                    "#374151",
+                                  fontSize:
+                                    "11px",
+                                }}
+                              >
+                                {leaderName}
+                              </strong>
+                            </div>
+
+                            <div
+                              style={{
+                                padding:
+                                  "10px",
+                                background:
+                                  "rgba(255,255,255,.72)",
+                                borderRadius:
+                                  "10px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display:
+                                    "block",
+                                  color:
+                                    "#9ca3af",
+                                  fontSize:
+                                    "9px",
+                                  fontWeight:
+                                    800,
+                                  textTransform:
+                                    "uppercase",
+                                }}
+                              >
+                                Équipe active
+                              </span>
+
+                              <strong
+                                style={{
+                                  display:
+                                    "block",
+                                  marginTop:
+                                    "3px",
+                                  color:
+                                    "#374151",
+                                  fontSize:
+                                    "11px",
+                                }}
+                              >
+                                {activeMemberCount}{" "}
+                                personne
+                                {activeMemberCount > 1
+                                  ? "s"
+                                  : ""}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop:
+                                "12px",
+                              display:
+                                "flex",
+                              flexWrap:
+                                "wrap",
+                              gap: "10px",
+                              color:
+                                "#7b8495",
+                              fontSize:
+                                "10px",
+                              fontWeight:
+                                700,
+                            }}
+                          >
+                            {(department.meetingDay ||
+                              department.meetingTime) && (
+                              <span>
+                                🗓️{" "}
+                                {department.meetingDay ||
+                                  "Jour non renseigné"}
+                                {department.meetingTime
+                                  ? ` • ${department.meetingTime}`
+                                  : ""}
+                              </span>
+                            )}
+
+                            <span>
+                              📍{" "}
+                              {department.location ||
+                                "Lieu non renseigné"}
+                            </span>
+                          </div>
+
+                          {membership?.joinedAt && (
+                            <div
+                              style={{
+                                marginTop:
+                                  "10px",
+                                color:
+                                  "#9ca3af",
+                                fontSize:
+                                  "9px",
+                                fontWeight:
+                                  700,
+                              }}
+                            >
+                              Engagé depuis le{" "}
+                              {formatShortDate(
+                                membership.joinedAt
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              ) : (
+                <div className="member-family-empty">
+                  <div className="member-family-empty-icon">
+                    🏢
+                  </div>
+
+                  <div>
+                    <strong>
+                      Aucun département associé
+                    </strong>
+
+                    <p>
+                      Cette personne n’exerce actuellement aucune responsabilité dans un département.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
+
             {/* HISTORIQUE PARCOURS */}
 
             <section className="management-card member-profile-card">
@@ -2911,13 +3390,35 @@ export default function MemberProfile() {
               <div className="member-profile-sidebar-list">
                 <div>
                   <span>
-                    Département
+                    Département(s)
                   </span>
 
                   <strong>
-                    {member.department
-                      ?.name ||
-                      "Aucun département"}
+                    {activeDepartments.length === 0
+                      ? "Aucun département"
+                      : activeDepartments.length === 1
+                        ? activeDepartments[0].name
+                        : `${activeDepartments.length} départements`}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Responsabilité principale
+                  </span>
+
+                  <strong>
+                    {activeDepartments.length > 0
+                      ? (
+                          getDepartmentMembership(
+                            activeDepartments[0]
+                          )?.responsibility ||
+                          getDepartmentMembership(
+                            activeDepartments[0]
+                          )?.role ||
+                          "Non renseignée"
+                        )
+                      : "Aucune responsabilité"}
                   </strong>
                 </div>
 
@@ -2944,16 +3445,6 @@ export default function MemberProfile() {
                         : `${activeGroups.length} groupes`}
                   </strong>
                 </div>
-              </div>
-
-              <div className="member-profile-coming">
-                <span>
-                  Prochainement
-                </span>
-
-                <p>
-                  Responsabilités, bénévolat, ministères et historique d’engagement seront reliés ici.
-                </p>
               </div>
             </section>
 
@@ -2995,6 +3486,10 @@ export default function MemberProfile() {
 
                 <span className="member-profile-feature-done">
                   ✅ Cellules / Groupes
+                </span>
+
+                <span className="member-profile-feature-done">
+                  ✅ Départements / Responsabilités
                 </span>
 
                 <span>
