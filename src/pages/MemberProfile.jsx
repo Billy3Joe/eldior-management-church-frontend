@@ -201,6 +201,84 @@ const getPastoralAlertStyle = (
   }
 };
 
+const formatDateTime = (value) => {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getHistoryIcon = (category) => {
+  switch (category) {
+    case "Identité":
+      return "👤";
+    case "Visiteur":
+      return "👋";
+    case "Intégration":
+      return "🤝";
+    case "Parcours spirituel":
+      return "✨";
+    case "Famille":
+      return "👨‍👩‍👧";
+    case "Groupe":
+      return "🏘️";
+    case "Département":
+      return "🏢";
+    case "Responsabilité":
+      return "🎯";
+    case "Présence":
+      return "✅";
+    case "Suivi pastoral":
+      return "🛟";
+    case "Administration":
+      return "⚙️";
+    default:
+      return "🕓";
+  }
+};
+
+const getHistoryAccent = (category) => {
+  switch (category) {
+    case "Identité":
+      return "#475569";
+    case "Visiteur":
+      return "#d97706";
+    case "Intégration":
+      return "#059669";
+    case "Parcours spirituel":
+      return "#7c3aed";
+    case "Famille":
+      return "#db2777";
+    case "Groupe":
+      return "#6048df";
+    case "Département":
+      return "#2563eb";
+    case "Responsabilité":
+      return "#0f766e";
+    case "Présence":
+      return "#16a34a";
+    case "Suivi pastoral":
+      return "#dc2626";
+    case "Administration":
+      return "#64748b";
+    default:
+      return "#6b7280";
+  }
+};
+
 // ======================================================
 // PAGE
 // ======================================================
@@ -246,6 +324,21 @@ export default function MemberProfile() {
     departments,
     setDepartments,
   ] = useState([]);
+
+  const [
+    personHistory,
+    setPersonHistory,
+  ] = useState([]);
+
+  const [
+    historyCategories,
+    setHistoryCategories,
+  ] = useState([]);
+
+  const [
+    selectedHistoryCategory,
+    setSelectedHistoryCategory,
+  ] = useState("Tous");
 
   const [
     loading,
@@ -342,6 +435,15 @@ export default function MemberProfile() {
               API.get(
                 `/departments/member/${id}`
               ),
+
+              API.get(
+                `/person-history/member/${id}`,
+                {
+                  params: {
+                    limit: 100,
+                  },
+                }
+              ),
             ]);
 
           const [
@@ -352,6 +454,7 @@ export default function MemberProfile() {
             pastoralAlertResult,
             groupsResult,
             departmentsResult,
+            historyResult,
           ] = results;
 
           // ==================================================
@@ -525,6 +628,46 @@ export default function MemberProfile() {
             );
 
             setDepartments([]);
+          }
+
+          // ==================================================
+          // HISTORIQUE COMPLET DE LA PERSONNE
+          // ==================================================
+
+          if (
+            historyResult.status ===
+            "fulfilled"
+          ) {
+            const historyPayload =
+              historyResult.value
+                .data
+                ?.data || {};
+
+            const historyData =
+              historyPayload.history || [];
+
+            const categoryData =
+              historyPayload.categories || [];
+
+            setPersonHistory(
+              Array.isArray(historyData)
+                ? historyData
+                : []
+            );
+
+            setHistoryCategories(
+              Array.isArray(categoryData)
+                ? categoryData
+                : []
+            );
+          } else {
+            console.error(
+              "Erreur historique complet :",
+              historyResult.reason
+            );
+
+            setPersonHistory([]);
+            setHistoryCategories([]);
           }
         } catch (err) {
           console.error(
@@ -869,6 +1012,38 @@ export default function MemberProfile() {
         ) || null
       );
     };
+
+  // ======================================================
+  // HISTORIQUE COMPLET
+  // ======================================================
+
+  const filteredPersonHistory =
+    useMemo(() => {
+      if (
+        selectedHistoryCategory ===
+        "Tous"
+      ) {
+        return personHistory;
+      }
+
+      return personHistory.filter(
+        (item) =>
+          item.category ===
+          selectedHistoryCategory
+      );
+    }, [
+      personHistory,
+      selectedHistoryCategory,
+    ]);
+
+  const availableHistoryCategories =
+    useMemo(
+      () => [
+        "Tous",
+        ...historyCategories,
+      ],
+      [historyCategories]
+    );
 
   // ======================================================
   // OUVRIR MODALE
@@ -2790,6 +2965,361 @@ export default function MemberProfile() {
               )}
             </section>
 
+            {/* HISTORIQUE COMPLET */}
+
+            <section className="management-card member-profile-card">
+
+              <div className="member-profile-card-header">
+                <div>
+                  <div className="member-profile-section-icon">
+                    🕓
+                  </div>
+
+                  <div>
+                    <h2>
+                      Historique complet
+                    </h2>
+
+                    <p>
+                      Timeline unifiée de toutes les étapes, actions et évolutions de cette personne.
+                    </p>
+                  </div>
+                </div>
+
+                <span className="status-badge status-active">
+                  {personHistory.length}{" "}
+                  événement
+                  {personHistory.length > 1
+                    ? "s"
+                    : ""}
+                </span>
+              </div>
+
+              {availableHistoryCategories.length > 1 && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    margin: "4px 0 22px",
+                  }}
+                >
+                  {availableHistoryCategories.map(
+                    (categoryName) => {
+                      const active =
+                        selectedHistoryCategory ===
+                        categoryName;
+
+                      return (
+                        <button
+                          key={categoryName}
+                          type="button"
+                          onClick={() =>
+                            setSelectedHistoryCategory(
+                              categoryName
+                            )
+                          }
+                          style={{
+                            border: active
+                              ? "1px solid #6048df"
+                              : "1px solid #e5e7eb",
+                            background: active
+                              ? "rgba(96,72,223,.10)"
+                              : "#fff",
+                            color: active
+                              ? "#6048df"
+                              : "#64748b",
+                            borderRadius: "999px",
+                            padding: "8px 12px",
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {categoryName === "Tous"
+                            ? "Tous"
+                            : `${getHistoryIcon(categoryName)} ${categoryName}`}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              )}
+
+              {filteredPersonHistory.length > 0 ? (
+                <div
+                  style={{
+                    position: "relative",
+                    display: "grid",
+                    gap: "14px",
+                  }}
+                >
+                  {filteredPersonHistory.map(
+                    (historyItem) => {
+                      const accent =
+                        getHistoryAccent(
+                          historyItem.category
+                        );
+
+                      const actorName =
+                        historyItem.createdBy
+                          ?.name ||
+                        historyItem.createdByName ||
+                        "Système";
+
+                      const hasValueChange =
+                        Boolean(
+                          historyItem.previousValue ||
+                          historyItem.newValue
+                        );
+
+                      return (
+                        <article
+                          key={historyItem._id}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns:
+                              "52px minmax(0, 1fr)",
+                            gap: "14px",
+                            alignItems: "stretch",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "42px",
+                                height: "42px",
+                                borderRadius: "14px",
+                                display: "grid",
+                                placeItems: "center",
+                                background: `${accent}12`,
+                                border: `1px solid ${accent}26`,
+                                fontSize: "18px",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {getHistoryIcon(
+                                historyItem.category
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                width: "2px",
+                                flex: 1,
+                                minHeight: "18px",
+                                marginTop: "7px",
+                                background: "#eef2f7",
+                              }}
+                            />
+                          </div>
+
+                          <div
+                            style={{
+                              padding: "16px 18px",
+                              border:
+                                "1px solid #e8edf4",
+                              borderRadius: "15px",
+                              background: "#fff",
+                              boxShadow:
+                                "0 6px 18px rgba(15,23,42,.025)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent:
+                                  "space-between",
+                                alignItems: "flex-start",
+                                gap: "12px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  minWidth: 0,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    color: "#94a3b8",
+                                    fontSize: "10px",
+                                    fontWeight: 800,
+                                    textTransform:
+                                      "uppercase",
+                                    letterSpacing: ".5px",
+                                    marginBottom: "5px",
+                                  }}
+                                >
+                                  {formatDateTime(
+                                    historyItem.occurredAt
+                                  )}
+                                </div>
+
+                                <h3
+                                  style={{
+                                    margin: 0,
+                                    color: "#111827",
+                                    fontSize: "15px",
+                                    lineHeight: 1.35,
+                                  }}
+                                >
+                                  {historyItem.title ||
+                                    "Événement"}
+                                </h3>
+                              </div>
+
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  borderRadius: "999px",
+                                  padding: "6px 9px",
+                                  background: `${accent}10`,
+                                  color: accent,
+                                  fontSize: "9px",
+                                  fontWeight: 900,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {getHistoryIcon(
+                                  historyItem.category
+                                )}{" "}
+                                {historyItem.category ||
+                                  "Autre"}
+                              </span>
+                            </div>
+
+                            {historyItem.description && (
+                              <p
+                                style={{
+                                  margin: "10px 0 0",
+                                  color: "#667085",
+                                  fontSize: "12px",
+                                  lineHeight: 1.65,
+                                }}
+                              >
+                                {historyItem.description}
+                              </p>
+                            )}
+
+                            {hasValueChange && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  flexWrap: "wrap",
+                                  gap: "8px",
+                                  marginTop: "12px",
+                                  padding: "10px 12px",
+                                  background: "#f8fafc",
+                                  borderRadius: "11px",
+                                  border:
+                                    "1px solid #eef2f7",
+                                }}
+                              >
+                                {historyItem.previousValue && (
+                                  <span
+                                    style={{
+                                      color: "#64748b",
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {historyItem.previousValue}
+                                  </span>
+                                )}
+
+                                {historyItem.previousValue &&
+                                  historyItem.newValue && (
+                                    <span
+                                      style={{
+                                        color: accent,
+                                        fontWeight: 900,
+                                      }}
+                                    >
+                                      →
+                                    </span>
+                                  )}
+
+                                {historyItem.newValue && (
+                                  <strong
+                                    style={{
+                                      color: accent,
+                                      fontSize: "11px",
+                                    }}
+                                  >
+                                    {historyItem.newValue}
+                                  </strong>
+                                )}
+                              </div>
+                            )}
+
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent:
+                                  "space-between",
+                                flexWrap: "wrap",
+                                gap: "8px",
+                                marginTop: "12px",
+                                paddingTop: "10px",
+                                borderTop:
+                                  "1px solid #f1f5f9",
+                                color: "#94a3b8",
+                                fontSize: "10px",
+                                fontWeight: 700,
+                              }}
+                            >
+                              <span>
+                                Par :{" "}
+                                <strong
+                                  style={{
+                                    color: "#475569",
+                                  }}
+                                >
+                                  {actorName}
+                                </strong>
+                              </span>
+
+                              <span>
+                                {historyItem.origin ===
+                                "manual"
+                                  ? "✍️ Action manuelle"
+                                  : "⚙️ Automatique"}
+                              </span>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
+                  )}
+                </div>
+              ) : (
+                <div className="management-empty">
+                  <div className="management-empty-icon">
+                    🕓
+                  </div>
+
+                  <h3>
+                    Aucun événement historique
+                  </h3>
+
+                  <p>
+                    Aucun événement n’est disponible pour le filtre sélectionné.
+                  </p>
+                </div>
+              )}
+            </section>
+
             {/* HISTORIQUE PARCOURS */}
 
             <section className="management-card member-profile-card">
@@ -3496,8 +4026,8 @@ export default function MemberProfile() {
                   📚 Formations
                 </span>
 
-                <span>
-                  🕓 Historique complet
+                <span className="member-profile-feature-done">
+                  ✅ Historique complet
                 </span>
 
               </div>
