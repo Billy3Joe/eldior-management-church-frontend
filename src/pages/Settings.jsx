@@ -1,20 +1,12 @@
-import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  toast,
-} from "react-toastify";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 import Layout from "../components/Layout";
 import "../styles/ManagementPages.css";
 
 import API from "../api/axios";
 
-import {
-  getCurrentAdmin,
-} from "../utils/auth";
+import { getCurrentAdmin } from "../utils/auth";
 
 import {
   getPlanName,
@@ -26,29 +18,25 @@ import {
   useSubscription,
 } from "../context/SubscriptionContext";
 
-const AVAILABLE_DAYS = [
-  1,
-  2,
-  3,
-  7,
-];
+import {
+  CURRENCIES,
+} from "../constants/currencies";
+
+const AVAILABLE_DAYS = [1, 2, 3, 7];
 
 export default function Settings() {
   // ======================================================
   // UTILISATEUR
   // ======================================================
 
-  const currentUser =
-    getCurrentAdmin();
+  const currentUser = getCurrentAdmin();
 
   const isAdmin =
-    currentUser?.role ===
-      "admin" ||
-    currentUser?.platformRole ===
-      "superadmin";
+    currentUser?.role === "admin" ||
+    currentUser?.platformRole === "superadmin";
 
   // ======================================================
-  // ABONNEMENT SYNCHRONISÉ
+  // ABONNEMENT
   // ======================================================
 
   const {
@@ -56,26 +44,21 @@ export default function Settings() {
     initialized,
   } = useSubscription();
 
-  const currentPlan =
-    normalizePlan(
-      initialized
-        ? plan
-        : currentUser?.church
-            ?.plan ||
-            "free"
-    );
+  const currentPlan = normalizePlan(
+    initialized
+      ? plan
+      : currentUser?.church?.plan || "free"
+  );
 
   const canUseEmailNotifications =
-    currentUser?.platformRole ===
-      "superadmin" ||
+    currentUser?.platformRole === "superadmin" ||
     hasFeature(
       currentPlan,
       "emailNotifications"
     );
 
   const canUseReminders =
-    currentUser?.platformRole ===
-      "superadmin" ||
+    currentUser?.platformRole === "superadmin" ||
     hasFeature(
       currentPlan,
       "reminders"
@@ -85,122 +68,104 @@ export default function Settings() {
   // STATES
   // ======================================================
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
-  const [
-    settings,
-    setSettings,
-  ] = useState({
-    churchName:
-      "ElDior Management Church",
+  const [settings, setSettings] =
+    useState({
+      churchName:
+        "ElDior Management Church",
 
-    reminderEnabled: false,
+      defaultCurrency: "EUR",
 
-    reminderDays: [
-      2,
-      1,
-    ],
+      reminderEnabled: false,
 
-    reminderHour: 9,
+      reminderDays: [2, 1],
 
-    timezone:
-      "Europe/Paris",
+      reminderHour: 9,
 
-    emailNotificationsEnabled:
-      false,
+      timezone: "Europe/Paris",
 
-    primaryColor: "",
+      emailNotificationsEnabled:
+        false,
 
-    logo: "",
-  });
+      primaryColor: "",
+
+      logo: "",
+    });
 
   // ======================================================
-  // CHARGER LES PARAMÈTRES
+  // CHARGER
   // ======================================================
 
-  const fetchSettings =
-    async () => {
-      try {
-        setLoading(true);
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
 
-        const res =
-          await API.get(
-            "/settings"
-          );
+      const res =
+        await API.get("/settings");
 
-        if (res.data?.data) {
-          setSettings({
-            churchName:
-              res.data.data
-                .churchName ||
-              "ElDior Management Church",
+      if (res.data?.data) {
+        const data = res.data.data;
 
-            reminderEnabled:
-              res.data.data
-                .reminderEnabled ===
-              true,
+        setSettings({
+          churchName:
+            data.churchName ||
+            "ElDior Management Church",
 
-            reminderDays:
-              Array.isArray(
-                res.data.data
-                  .reminderDays
-              )
-                ? res.data.data
-                    .reminderDays
-                : [
-                    2,
-                    1,
-                  ],
+          defaultCurrency:
+            data.defaultCurrency ||
+            res.data?.church
+              ?.defaultCurrency ||
+            "EUR",
 
-            reminderHour:
-              res.data.data
-                .reminderHour ??
-              9,
+          reminderEnabled:
+            data.reminderEnabled ===
+            true,
 
-            timezone:
-              res.data.data
-                .timezone ||
-              "Europe/Paris",
+          reminderDays:
+            Array.isArray(
+              data.reminderDays
+            )
+              ? data.reminderDays
+              : [2, 1],
 
-            emailNotificationsEnabled:
-              res.data.data
-                .emailNotificationsEnabled ===
-              true,
+          reminderHour:
+            data.reminderHour ?? 9,
 
-            primaryColor:
-              res.data.data
-                .primaryColor ||
-              "",
+          timezone:
+            data.timezone ||
+            "Europe/Paris",
 
-            logo:
-              res.data.data
-                .logo ||
-              "",
-          });
-        }
-      } catch (error) {
-        console.error(
-          "Erreur chargement paramètres :",
-          error
-        );
+          emailNotificationsEnabled:
+            data.emailNotificationsEnabled ===
+            true,
 
-        toast.error(
-          error.response?.data
-            ?.message ||
-            "Impossible de charger les paramètres"
-        );
-      } finally {
-        setLoading(false);
+          primaryColor:
+            data.primaryColor || "",
+
+          logo:
+            data.logo || "",
+        });
       }
-    };
+    } catch (error) {
+      console.error(
+        "Erreur chargement paramètres :",
+        error
+      );
+
+      toast.error(
+        error.response?.data
+          ?.message ||
+          "Impossible de charger les paramètres"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -210,82 +175,86 @@ export default function Settings() {
   // NOM ÉGLISE
   // ======================================================
 
-  const handleChurchNameChange =
-    (event) => {
-      if (!isAdmin) {
-        return;
-      }
+  const handleChurchNameChange = (
+    event
+  ) => {
+    if (!isAdmin) return;
 
-      setSettings(
-        (previous) => ({
-          ...previous,
+    setSettings((previous) => ({
+      ...previous,
+      churchName:
+        event.target.value,
+    }));
+  };
 
-          churchName:
-            event.target.value,
-        })
+  // ======================================================
+  // DEVISE PRINCIPALE
+  // ======================================================
+
+  const handleCurrencyChange = (
+    event
+  ) => {
+    if (!isAdmin) return;
+
+    setSettings((previous) => ({
+      ...previous,
+      defaultCurrency:
+        event.target.value,
+    }));
+  };
+
+  // ======================================================
+  // EMAILS
+  // ======================================================
+
+  const handleEmailNotifications = (
+    event
+  ) => {
+    if (!isAdmin) return;
+
+    if (!canUseEmailNotifications) {
+      toast.warning(
+        "Les notifications email sont disponibles à partir du plan Standard."
       );
-    };
+
+      return;
+    }
+
+    setSettings((previous) => ({
+      ...previous,
+
+      emailNotificationsEnabled:
+        event.target.checked,
+    }));
+  };
 
   // ======================================================
-  // EMAILS ON / OFF
+  // RAPPELS
   // ======================================================
 
-  const handleEmailNotifications =
-    (event) => {
-      if (!isAdmin) {
-        return;
-      }
+  const handleReminderEnabled = (
+    event
+  ) => {
+    if (!isAdmin) return;
 
-      if (
-        !canUseEmailNotifications
-      ) {
-        toast.warning(
-          "Les notifications email sont disponibles à partir du plan Standard."
-        );
-
-        return;
-      }
-
-      setSettings(
-        (previous) => ({
-          ...previous,
-
-          emailNotificationsEnabled:
-            event.target.checked,
-        })
+    if (!canUseReminders) {
+      toast.warning(
+        "Les rappels automatiques sont réservés au plan Premium."
       );
-    };
+
+      return;
+    }
+
+    setSettings((previous) => ({
+      ...previous,
+
+      reminderEnabled:
+        event.target.checked,
+    }));
+  };
 
   // ======================================================
-  // RAPPELS ON / OFF
-  // ======================================================
-
-  const handleReminderEnabled =
-    (event) => {
-      if (!isAdmin) {
-        return;
-      }
-
-      if (!canUseReminders) {
-        toast.warning(
-          "Les rappels automatiques sont réservés au plan Premium."
-        );
-
-        return;
-      }
-
-      setSettings(
-        (previous) => ({
-          ...previous,
-
-          reminderEnabled:
-            event.target.checked,
-        })
-      );
-    };
-
-  // ======================================================
-  // JOURS DE RAPPEL
+  // JOURS
   // ======================================================
 
   const handleReminderDay = (
@@ -298,90 +267,85 @@ export default function Settings() {
       return;
     }
 
-    setSettings(
-      (previous) => {
-        const exists =
-          previous.reminderDays.includes(
-            day
-          );
-
-        let newDays;
-
-        if (exists) {
-          newDays =
-            previous.reminderDays.filter(
-              (item) =>
-                item !== day
-            );
-        } else {
-          newDays = [
-            ...previous.reminderDays,
-            day,
-          ];
-        }
-
-        newDays.sort(
-          (a, b) =>
-            b - a
+    setSettings((previous) => {
+      const exists =
+        previous.reminderDays.includes(
+          day
         );
 
-        return {
-          ...previous,
+      let newDays;
 
-          reminderDays:
-            newDays,
-        };
+      if (exists) {
+        newDays =
+          previous.reminderDays.filter(
+            (item) =>
+              item !== day
+          );
+      } else {
+        newDays = [
+          ...previous.reminderDays,
+          day,
+        ];
       }
-    );
+
+      newDays.sort(
+        (a, b) => b - a
+      );
+
+      return {
+        ...previous,
+
+        reminderDays:
+          newDays,
+      };
+    });
   };
 
   // ======================================================
   // HEURE
   // ======================================================
 
-  const handleHourChange =
-    (event) => {
-      if (
-        !isAdmin ||
-        !canUseReminders
-      ) {
-        return;
-      }
+  const handleHourChange = (
+    event
+  ) => {
+    if (
+      !isAdmin ||
+      !canUseReminders
+    ) {
+      return;
+    }
 
-      setSettings(
-        (previous) => ({
-          ...previous,
+    setSettings((previous) => ({
+      ...previous,
 
-          reminderHour:
-            Number(
-              event.target.value
-            ),
-        })
-      );
-    };
+      reminderHour:
+        Number(
+          event.target.value
+        ),
+    }));
+  };
 
   // ======================================================
   // TIMEZONE
   // ======================================================
 
-  const handleTimezoneChange =
-    (event) => {
-      if (
-        !isAdmin ||
-        !canUseReminders
-      ) {
-        return;
-      }
+  const handleTimezoneChange = (
+    event
+  ) => {
+    if (
+      !isAdmin ||
+      !canUseReminders
+    ) {
+      return;
+    }
 
-      setSettings(
-        (previous) => ({
-          ...previous,
+    setSettings((previous) => ({
+      ...previous,
 
-          timezone:
-            event.target.value,
-        })
-      );
-    };
+      timezone:
+        event.target.value,
+    }));
+  };
 
   // ======================================================
   // ENREGISTRER
@@ -411,6 +375,16 @@ export default function Settings() {
     }
 
     if (
+      !settings.defaultCurrency
+    ) {
+      toast.warning(
+        "Sélectionnez une devise principale"
+      );
+
+      return;
+    }
+
+    if (
       canUseReminders &&
       settings.reminderEnabled &&
       settings.reminderDays
@@ -426,13 +400,12 @@ export default function Settings() {
     try {
       setSaving(true);
 
-      // IMPORTANT :
-      // On envoie les champs avancés seulement
-      // si le plan les autorise.
-
       const payload = {
         churchName:
           settings.churchName.trim(),
+
+        defaultCurrency:
+          settings.defaultCurrency,
       };
 
       if (
@@ -475,6 +448,12 @@ export default function Settings() {
             churchName:
               data.churchName ||
               previous.churchName,
+
+            defaultCurrency:
+              data.defaultCurrency ||
+              res.data?.church
+                ?.defaultCurrency ||
+              previous.defaultCurrency,
 
             reminderEnabled:
               data.reminderEnabled ??
@@ -556,8 +535,7 @@ export default function Settings() {
               <div className="management-spinner" />
 
               <div>
-                Chargement des
-                paramètres...
+                Chargement des paramètres...
               </div>
             </div>
           </div>
@@ -573,7 +551,6 @@ export default function Settings() {
   return (
     <Layout>
       <div className="management-page">
-
         {/* ================================================
             HEADER
         ================================================ */}
@@ -586,6 +563,7 @@ export default function Settings() {
 
             <p className="page-subtitle">
               Configurez votre église,
+              les paramètres financiers,
               les notifications et les
               rappels automatiques.
             </p>
@@ -608,7 +586,7 @@ export default function Settings() {
         </div>
 
         {/* ================================================
-            PLAN ACTUEL
+            PLAN
         ================================================ */}
 
         <div
@@ -625,8 +603,7 @@ export default function Settings() {
               display: "flex",
               justifyContent:
                 "space-between",
-              alignItems:
-                "center",
+              alignItems: "center",
               gap: 16,
               flexWrap: "wrap",
             }}
@@ -645,9 +622,8 @@ export default function Settings() {
               </div>
 
               <div className="person-secondary">
-                Les paramètres
-                disponibles dépendent
-                de votre formule.
+                Les paramètres disponibles
+                dépendent de votre formule.
               </div>
             </div>
 
@@ -660,7 +636,7 @@ export default function Settings() {
         </div>
 
         {/* ================================================
-            CONSULTATION SEULE
+            CONSULTATION
         ================================================ */}
 
         {!isAdmin && (
@@ -670,8 +646,7 @@ export default function Settings() {
               marginBottom: 24,
               borderLeft:
                 "4px solid #f59e0b",
-              background:
-                "#fffbeb",
+              background: "#fffbeb",
             }}
           >
             <div
@@ -694,29 +669,23 @@ export default function Settings() {
                 <div
                   style={{
                     fontWeight: 800,
-                    color:
-                      "#92400e",
+                    color: "#92400e",
                     marginBottom: 4,
                   }}
                 >
-                  Consultation
-                  uniquement
+                  Consultation uniquement
                 </div>
 
                 <div
                   style={{
-                    color:
-                      "#78350f",
+                    color: "#78350f",
                     lineHeight: 1.6,
                   }}
                 >
-                  Vous êtes connecté
-                  en tant que manager.
-                  Seul un
-                  administrateur peut
-                  modifier les
-                  paramètres de
-                  l'église.
+                  Vous êtes connecté en tant
+                  que manager. Seul un
+                  administrateur peut modifier
+                  les paramètres de l'église.
                 </div>
               </div>
             </div>
@@ -727,7 +696,6 @@ export default function Settings() {
           id="settings-form"
           onSubmit={handleSave}
         >
-
           {/* ==============================================
               INFORMATIONS ÉGLISE
           ============================================== */}
@@ -736,14 +704,13 @@ export default function Settings() {
             <div className="management-card-header">
               <div>
                 <h2 className="management-card-title">
-                  Informations de
-                  l'église
+                  Informations de l'église
                 </h2>
 
                 <p className="page-subtitle">
-                  Informations
-                  générales de votre
-                  organisation.
+                  Informations générales et
+                  paramètres régionaux de
+                  votre organisation.
                 </p>
               </div>
 
@@ -772,11 +739,63 @@ export default function Settings() {
                     onChange={
                       handleChurchNameChange
                     }
-                    disabled={
-                      !isAdmin
-                    }
+                    disabled={!isAdmin}
                     placeholder="Nom de votre église"
                   />
+                </div>
+
+                {/* DEVISE */}
+
+                <div className="form-group form-group-full">
+                  <label className="form-label">
+                    Devise principale
+                  </label>
+
+                  <select
+                    className="form-select"
+                    value={
+                      settings.defaultCurrency
+                    }
+                    onChange={
+                      handleCurrencyChange
+                    }
+                    disabled={!isAdmin}
+                  >
+                    {CURRENCIES.map(
+                      (currency) => (
+                        <option
+                          key={
+                            currency.code
+                          }
+                          value={
+                            currency.code
+                          }
+                        >
+                          {currency.code}
+                          {" — "}
+                          {currency.name}
+                          {" ("}
+                          {currency.symbol}
+                          {")"}
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  <div
+                    className="person-secondary"
+                    style={{
+                      marginTop: 8,
+                    }}
+                  >
+                    Cette devise sera utilisée
+                    par défaut pour les
+                    nouveaux comptes,
+                    transactions et budgets.
+                    Les comptes existants
+                    conservent leur propre
+                    devise.
+                  </div>
                 </div>
               </div>
             </div>
@@ -803,8 +822,8 @@ export default function Settings() {
                 </h2>
 
                 <p className="page-subtitle">
-                  Gérez les emails
-                  envoyés aux membres.
+                  Gérez les emails envoyés
+                  aux membres.
                 </p>
               </div>
 
@@ -848,9 +867,9 @@ export default function Settings() {
                     lineHeight: 1.6,
                   }}
                 >
-                  🔒 Les notifications
-                  email sont disponibles
-                  à partir du plan{" "}
+                  🔒 Les notifications email
+                  sont disponibles à partir
+                  du plan{" "}
                   <strong>
                     Standard
                   </strong>
@@ -889,15 +908,14 @@ export default function Settings() {
                         "#111827",
                     }}
                   >
-                    Activer les
-                    notifications email
+                    Activer les notifications
+                    email
                   </div>
 
                   <div className="person-secondary">
                     Les membres peuvent
-                    recevoir les emails
-                    liés à leurs
-                    programmations.
+                    recevoir les emails liés
+                    à leurs programmations.
                   </div>
                 </div>
 
@@ -945,10 +963,9 @@ export default function Settings() {
                 </h2>
 
                 <p className="page-subtitle">
-                  Relancez les membres
-                  qui n'ont pas encore
-                  répondu à une
-                  programmation.
+                  Relancez les membres qui
+                  n'ont pas encore répondu à
+                  une programmation.
                 </p>
               </div>
 
@@ -992,9 +1009,8 @@ export default function Settings() {
                     lineHeight: 1.6,
                   }}
                 >
-                  🔒 Les rappels
-                  automatiques sont
-                  réservés au plan{" "}
+                  🔒 Les rappels automatiques
+                  sont réservés au plan{" "}
                   <strong>
                     Premium
                   </strong>
@@ -1037,14 +1053,13 @@ export default function Settings() {
                         "#111827",
                     }}
                   >
-                    🔔 Activer les
-                    rappels automatiques
+                    🔔 Activer les rappels
+                    automatiques
                   </div>
 
                   <div className="person-secondary">
-                    Les membres sans
-                    réponse seront
-                    relancés avant
+                    Les membres sans réponse
+                    seront relancés avant
                     l'événement.
                   </div>
                 </div>
@@ -1072,7 +1087,6 @@ export default function Settings() {
               {canUseReminders &&
                 settings.reminderEnabled && (
                   <div className="management-form-grid">
-
                     {/* JOURS */}
 
                     <div className="form-group form-group-full">
@@ -1183,8 +1197,7 @@ export default function Settings() {
                       >
                         {Array.from(
                           {
-                            length:
-                              24,
+                            length: 24,
                           },
                           (
                             _,
@@ -1243,13 +1256,11 @@ export default function Settings() {
                         </option>
 
                         <option value="America/New_York">
-                          Amérique / New
-                          York
+                          Amérique / New York
                         </option>
 
                         <option value="America/Toronto">
-                          Amérique /
-                          Toronto
+                          Amérique / Toronto
                         </option>
                       </select>
                     </div>
@@ -1280,8 +1291,7 @@ export default function Settings() {
                               8,
                           }}
                         >
-                          Configuration
-                          actuelle
+                          Configuration actuelle
                         </div>
 
                         <div
@@ -1293,9 +1303,8 @@ export default function Settings() {
                               1.7,
                           }}
                         >
-                          Les membres
-                          sans réponse
-                          recevront un
+                          Les membres sans
+                          réponse recevront un
                           rappel à{" "}
 
                           <strong>

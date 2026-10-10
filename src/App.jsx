@@ -45,6 +45,17 @@ import AssignmentResponse from "./pages/AssignmentResponse";
 
 import Reports from "./pages/Reports";
 
+// ======================================================
+// FINANCES
+// ======================================================
+
+import FinanceDashboard from "./pages/finance/FinanceDashboard";
+import FinanceAccounts from "./pages/finance/FinanceAccounts";
+import FinanceCategories from "./pages/finance/FinanceCategories";
+import FinanceTransactions from "./pages/finance/FinanceTransactions";
+import FinanceBudgets from "./pages/finance/FinanceBudgets";
+import FinanceReconciliation from "./pages/finance/FinanceReconciliation";
+
 import Settings from "./pages/Settings";
 
 import AdminUsers from "./pages/AdminUsers";
@@ -81,16 +92,12 @@ function App() {
 
           <Route
             path="/login"
-            element={
-              <Login />
-            }
+            element={<Login />}
           />
 
           <Route
             path="/register-church"
-            element={
-              <RegisterChurch />
-            }
+            element={<RegisterChurch />}
           />
 
           {/* ==================================================
@@ -164,7 +171,7 @@ function App() {
           />
 
           {/* ==================================================
-              DÉPARTEMENTS & RESPONSABILITÉS
+              DÉPARTEMENTS
           ================================================== */}
 
           <Route
@@ -268,9 +275,7 @@ function App() {
             path="/assignments"
             element={
               <PrivateRoute>
-                <SubscriptionRoute
-                  feature="assignments"
-                >
+                <SubscriptionRoute feature="assignments">
                   <Assignments />
                 </SubscriptionRoute>
               </PrivateRoute>
@@ -279,9 +284,7 @@ function App() {
 
           <Route
             path="/assignment-response/:token"
-            element={
-              <AssignmentResponse />
-            }
+            element={<AssignmentResponse />}
           />
 
           {/* ==================================================
@@ -292,11 +295,69 @@ function App() {
             path="/reports"
             element={
               <PrivateRoute>
-                <SubscriptionRoute
-                  feature="reports"
-                >
+                <SubscriptionRoute feature="reports">
                   <Reports />
                 </SubscriptionRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* ==================================================
+              FINANCES
+          ================================================== */}
+
+          <Route
+            path="/finance"
+            element={
+              <PrivateRoute>
+                <FinanceDashboard />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/finance/accounts"
+            element={
+              <PrivateRoute>
+                <FinanceAccounts />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/finance/categories"
+            element={
+              <PrivateRoute>
+                <FinanceCategories />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/finance/transactions"
+            element={
+              <PrivateRoute>
+                <FinanceTransactions />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/finance/budgets"
+            element={
+              <PrivateRoute>
+                <FinanceBudgets />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/finance/reconciliation"
+            element={
+              <PrivateRoute>
+                <AdminRoute>
+                  <FinanceReconciliation />
+                </AdminRoute>
               </PrivateRoute>
             }
           />
@@ -328,7 +389,7 @@ function App() {
           />
 
           {/* ==================================================
-              UTILISATEURS DE L'ÉGLISE
+              UTILISATEURS
           ================================================== */}
 
           <Route
@@ -351,9 +412,7 @@ function App() {
             element={
               <PrivateRoute>
                 <AdminRoute>
-                  <SubscriptionRoute
-                    feature="activityLogs"
-                  >
+                  <SubscriptionRoute feature="activityLogs">
                     <ActivityLogs />
                   </SubscriptionRoute>
                 </AdminRoute>
