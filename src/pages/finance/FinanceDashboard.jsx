@@ -1,4 +1,3 @@
-// src/pages/finance/FinanceDashboard.jsx
 
 import {
   useCallback,
@@ -23,9 +22,7 @@ import { useNavigate } from "react-router-dom";
 
 import API from "../../api/axios";
 import Layout from "../../components/Layout";
-import {
-  formatCurrency,
-} from "../../constants/currencies";
+import { formatCurrency } from "../../constants/currencies";
 
 import "../../styles/ManagementPages.css";
 
@@ -64,7 +61,7 @@ const TRANSACTION_TYPES = {
 };
 
 // ======================================================
-// HELPERS
+// FONCTIONS UTILITAIRES
 // ======================================================
 
 const getCurrentPeriod = () => {
@@ -93,19 +90,47 @@ const formatDate = (value) => {
 };
 
 const getErrorMessage = (error, fallback) => {
-  return (
-    error?.response?.data?.message ||
-    fallback
-  );
+  return error?.response?.data?.message || fallback;
 };
 
 // ======================================================
-// COMPOSANT
+// COMPOSANT PRINCIPAL
 // ======================================================
 
 export default function FinanceDashboard() {
   const navigate = useNavigate();
+
   const currentPeriod = getCurrentPeriod();
+
+  // ====================================================
+  // ÉTATS
+  // ====================================================
+
+  const [month, setMonth] = useState(
+    currentPeriod.month
+  );
+
+  const [year, setYear] = useState(
+    currentPeriod.year
+  );
+
+  const [loading, setLoading] = useState(true);
+
+  const [data, setData] = useState(null);
+
+  const [
+    defaultCurrency,
+    setDefaultCurrency,
+  ] = useState("");
+
+  const [
+    selectedCurrency,
+    setSelectedCurrency,
+  ] = useState("");
+
+  // ====================================================
+  // NAVIGATION
+  // ====================================================
 
   const buildTransactionUrl = (extraParams = {}) => {
     const params = new URLSearchParams({
@@ -130,114 +155,67 @@ export default function FinanceDashboard() {
     }
   };
 
-  const [month, setMonth] = useState(
-    currentPeriod.month
-  );
-
-  const [year, setYear] = useState(
-    currentPeriod.year
-  );
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [data, setData] =
-    useState(null);
-
-  const [
-    defaultCurrency,
-    setDefaultCurrency,
-  ] = useState("");
-
-  const [
-    selectedCurrency,
-    setSelectedCurrency,
-  ] = useState("");
-
   // ====================================================
-  // CHARGEMENT
+  // CHARGEMENT DU DASHBOARD
   // ====================================================
 
-  const fetchDashboard =
-    useCallback(async () => {
-      try {
-        setLoading(true);
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        const [
-          dashboardResponse,
-          settingsResponse,
-        ] = await Promise.all([
-          API.get(
-            "/finance/dashboard",
-            {
-              params: {
-                month,
-                year,
-              },
-            }
-          ),
+      const [
+        dashboardResponse,
+        settingsResponse,
+      ] = await Promise.all([
+        API.get("/finance/dashboard", {
+          params: {
+            month,
+            year,
+          },
+        }),
 
-          API.get("/settings"),
-        ]);
+        API.get("/settings"),
+      ]);
 
-        const dashboardData =
-          dashboardResponse?.data?.data ||
-          null;
+      const dashboardData =
+        dashboardResponse?.data?.data || null;
 
-        const churchCurrency = String(
-          settingsResponse?.data?.data
-            ?.defaultCurrency ||
-            settingsResponse?.data?.church
-              ?.defaultCurrency ||
-            settingsResponse?.data
-              ?.defaultCurrency ||
-            "EUR"
+      const churchCurrency = String(
+        settingsResponse?.data?.data?.defaultCurrency ||
+        settingsResponse?.data?.church?.defaultCurrency ||
+        settingsResponse?.data?.defaultCurrency ||
+        "EUR"
+      )
+        .trim()
+        .toUpperCase();
+
+      setDefaultCurrency(churchCurrency);
+
+      setData(dashboardData);
+
+      // Conserver le choix manuel de la devise.
+      setSelectedCurrency(
+        (currentCurrency) =>
+          currentCurrency || churchCurrency
+      );
+    } catch (error) {
+      console.error(
+        "Erreur dashboard financier :",
+        error
+      );
+
+      toast.error(
+        getErrorMessage(
+          error,
+          "Impossible de charger le tableau de bord financier."
         )
-          .trim()
-          .toUpperCase();
+      );
 
-        setDefaultCurrency(
-          churchCurrency
-        );
-
-        setData(
-          dashboardData
-        );
-
-        /*
-         * On applique la devise principale
-         * uniquement si aucune devise n'est
-         * actuellement sélectionnée.
-         *
-         * Le choix manuel EUR / XAF / USD...
-         * reste donc respecté.
-         */
-        setSelectedCurrency(
-          (currentCurrency) =>
-            currentCurrency ||
-            churchCurrency
-        );
-      } catch (error) {
-        console.error(
-          "Erreur dashboard financier :",
-          error
-        );
-
-        toast.error(
-          getErrorMessage(
-            error,
-            "Impossible de charger le tableau de bord financier."
-          )
-        );
-
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    }, [
-      month,
-      year,
-    ]);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [month, year]);
 
   useEffect(() => {
     fetchDashboard();
@@ -250,15 +228,8 @@ export default function FinanceDashboard() {
   const currencies = useMemo(() => {
     const values = new Set();
 
-    /*
-     * Toujours inclure la devise principale
-     * de l'église même s'il n'existe encore
-     * aucun mouvement dans cette devise.
-     */
     if (defaultCurrency) {
-      values.add(
-        defaultCurrency
-      );
+      values.add(defaultCurrency);
     }
 
     Object.keys(
@@ -266,9 +237,7 @@ export default function FinanceDashboard() {
     ).forEach((currency) => {
       if (currency) {
         values.add(
-          String(currency)
-            .trim()
-            .toUpperCase()
+          String(currency).trim().toUpperCase()
         );
       }
     });
@@ -278,9 +247,7 @@ export default function FinanceDashboard() {
     ).forEach((currency) => {
       if (currency) {
         values.add(
-          String(currency)
-            .trim()
-            .toUpperCase()
+          String(currency).trim().toUpperCase()
         );
       }
     });
@@ -290,71 +257,46 @@ export default function FinanceDashboard() {
     ).forEach((currency) => {
       if (currency) {
         values.add(
-          String(currency)
-            .trim()
-            .toUpperCase()
+          String(currency).trim().toUpperCase()
         );
       }
     });
 
     Object.keys(
-      data?.reconciliation
-        ?.currencies || {}
+      data?.reconciliation?.currencies || {}
     ).forEach((currency) => {
       if (currency) {
         values.add(
-          String(currency)
-            .trim()
-            .toUpperCase()
+          String(currency).trim().toUpperCase()
         );
       }
     });
 
-    return Array
-      .from(values)
-      .sort();
-  }, [
-    data,
-    defaultCurrency,
-  ]);
+    return Array.from(values).sort();
+  }, [data, defaultCurrency]);
 
-  /*
-   * Sécurité :
-   * si la devise sélectionnée n'existe
-   * réellement plus, retour sur la devise
-   * principale de l'église.
-   */
+  // ====================================================
+  // VALIDATION DE LA DEVISE SÉLECTIONNÉE
+  // ====================================================
+
   useEffect(() => {
     if (!defaultCurrency) {
       return;
     }
 
     if (!selectedCurrency) {
-      setSelectedCurrency(
-        defaultCurrency
-      );
-
+      setSelectedCurrency(defaultCurrency);
       return;
     }
 
     if (
       currencies.length > 0 &&
-      !currencies.includes(
-        selectedCurrency
-      )
+      !currencies.includes(selectedCurrency)
     ) {
-      if (
-        currencies.includes(
-          defaultCurrency
-        )
-      ) {
-        setSelectedCurrency(
-          defaultCurrency
-        );
+      if (currencies.includes(defaultCurrency)) {
+        setSelectedCurrency(defaultCurrency);
       } else {
-        setSelectedCurrency(
-          currencies[0]
-        );
+        setSelectedCurrency(currencies[0]);
       }
     }
   }, [
@@ -364,7 +306,7 @@ export default function FinanceDashboard() {
   ]);
 
   // ====================================================
-  // DONNÉES DE LA DEVISE
+  // STATISTIQUES DES COMPTES
   // ====================================================
 
   const accountStats =
@@ -376,6 +318,10 @@ export default function FinanceDashboard() {
       totalAccounts: 0,
       activeAccounts: 0,
     };
+
+  // ====================================================
+  // STATISTIQUES DES MOUVEMENTS
+  // ====================================================
 
   const movementStats =
     data?.movements?.byCurrency?.[
@@ -399,10 +345,12 @@ export default function FinanceDashboard() {
       offeringCount: 0,
       donationCount: 0,
 
-      // IMPORTANT :
-      // compteur par devise
       donorCount: 0,
     };
+
+  // ====================================================
+  // STATISTIQUES DES BUDGETS
+  // ====================================================
 
   const budgetStats =
     data?.budgets?.byCurrency?.[
@@ -421,11 +369,14 @@ export default function FinanceDashboard() {
       exceededBudgets: 0,
     };
 
+  // ====================================================
+  // RAPPROCHEMENT FINANCIER
+  // ====================================================
+
   const reconciliationStats =
-    data?.reconciliation
-      ?.currencies?.[
-        selectedCurrency
-      ] || {
+    data?.reconciliation?.currencies?.[
+      selectedCurrency
+    ] || {
       openingBalance: 0,
       income: 0,
       expense: 0,
@@ -436,92 +387,150 @@ export default function FinanceDashboard() {
       difference: 0,
     };
 
+  // L'état affiché doit correspondre à la devise
+  // sélectionnée, et non à toutes les devises.
+  const selectedCurrencyIsBalanced =
+    Math.abs(
+      Number(reconciliationStats.difference || 0)
+    ) < 0.005;
+
   // ====================================================
-  // GRAPHIQUE
+  // GRAPHIQUE : ÉVOLUTION QUOTIDIENNE
   // ====================================================
 
   const chartData = useMemo(() => {
-    return (
-      data?.movements
-        ?.dailyEvolution || []
-    )
+    const daysInMonth = new Date(
+      Number(year),
+      Number(month),
+      0
+    ).getDate();
+
+    if (
+      !Number.isInteger(daysInMonth) ||
+      daysInMonth < 28 ||
+      daysInMonth > 31
+    ) {
+      return [];
+    }
+
+    const daily = new Map();
+
+    const movements =
+      data?.movements?.dailyEvolution || [];
+
+    movements
       .filter(
         (item) =>
           String(
             item.currency || ""
-          ).toUpperCase() ===
-          selectedCurrency
+          ).toUpperCase() === selectedCurrency
       )
-      .map((item) => ({
-        jour: item.day,
+      .forEach((item) => {
+        const day = Number(item.day);
 
-        Entrées: Number(
-          item.income || 0
-        ),
+        if (
+          !Number.isInteger(day) ||
+          day < 1 ||
+          day > daysInMonth
+        ) {
+          return;
+        }
 
-        Sorties: Number(
-          item.expense || 0
-        ),
-      }));
+        const previous = daily.get(day) || {
+          income: 0,
+          expense: 0,
+        };
+
+        daily.set(day, {
+          income:
+            previous.income +
+            Number(item.income || 0),
+
+          expense:
+            previous.expense +
+            Number(item.expense || 0),
+        });
+      });
+
+    // Tous les jours du mois sont représentés.
+    return Array.from(
+      { length: daysInMonth },
+      (_, index) => {
+        const day = index + 1;
+
+        const values = daily.get(day) || {
+          income: 0,
+          expense: 0,
+        };
+
+        return {
+          jour: day,
+          Entrées: values.income,
+          Sorties: values.expense,
+        };
+      }
+    );
+  }, [
+    data,
+    selectedCurrency,
+    month,
+    year,
+  ]);
+
+  const hasChartMovements = chartData.some(
+    (item) =>
+      item.Entrées !== 0 ||
+      item.Sorties !== 0
+  );
+
+  // ====================================================
+  // LISTE DES COMPTES PAR DEVISE
+  // ====================================================
+
+  const currencyAccounts = useMemo(() => {
+    return (
+      data?.accounts?.list || []
+    ).filter(
+      (account) =>
+        String(
+          account.currency || ""
+        ).toUpperCase() === selectedCurrency
+    );
   }, [
     data,
     selectedCurrency,
   ]);
 
   // ====================================================
-  // COMPTES
+  // TRANSACTIONS RÉCENTES PAR DEVISE
   // ====================================================
 
-  const currencyAccounts =
-    useMemo(() => {
-      return (
-        data?.accounts?.list || []
-      ).filter(
-        (account) =>
-          String(
-            account.currency || ""
-          ).toUpperCase() ===
-          selectedCurrency
-      );
-    }, [
-      data,
-      selectedCurrency,
-    ]);
+  const recentTransactions = useMemo(() => {
+    return (
+      data?.recentTransactions || []
+    ).filter(
+      (transaction) =>
+        String(
+          transaction.currency || ""
+        ).toUpperCase() === selectedCurrency
+    );
+  }, [
+    data,
+    selectedCurrency,
+  ]);
 
   // ====================================================
-  // TRANSACTIONS RÉCENTES
-  // ====================================================
-
-  const recentTransactions =
-    useMemo(() => {
-      return (
-        data?.recentTransactions || []
-      ).filter(
-        (transaction) =>
-          String(
-            transaction.currency ||
-              ""
-          ).toUpperCase() ===
-          selectedCurrency
-      );
-    }, [
-      data,
-      selectedCurrency,
-    ]);
-
-  // ====================================================
-  // PÉRIODE
+  // PÉRIODE AFFICHÉE
   // ====================================================
 
   const selectedMonthLabel =
     MONTHS.find(
       (item) =>
-        item.value ===
-        Number(month)
+        item.value === Number(month)
     )?.label || "";
 
   // ====================================================
-  // LOADING
+  // AFFICHAGE PENDANT LE CHARGEMENT
   // ====================================================
 
   if (loading && !data) {
@@ -535,8 +544,7 @@ export default function FinanceDashboard() {
               </div>
 
               <p>
-                Chargement du tableau de
-                bord financier...
+                Chargement du tableau de bord financier...
               </p>
             </div>
           </div>
@@ -546,22 +554,25 @@ export default function FinanceDashboard() {
   }
 
   // ====================================================
-  // RENDER
+  // DÉBUT DE L'AFFICHAGE PRINCIPAL
   // ====================================================
 
   return (
     <Layout>
       <div className="management-page">
-        {/* HEADER */}
+
+        {/* ============================================= */}
+        {/* EN-TÊTE DU TABLEAU DE BORD */}
+        {/* ============================================= */}
 
         <div className="page-header">
           <div>
             <h1 className="page-title">
-              Tableau de bord financier
+              Tableau de bord des finances de l’église
             </h1>
 
             <p className="page-subtitle">
-              Vue financière de l'église —
+              Vue des finances de l’église —
               {` ${selectedMonthLabel} ${year}`}
             </p>
           </div>
@@ -586,7 +597,9 @@ export default function FinanceDashboard() {
           </button>
         </div>
 
-        {/* FILTRES */}
+        {/* ============================================= */}
+        {/* FILTRES : MOIS, ANNÉE ET DEVISE */}
+        {/* ============================================= */}
 
         <div
           className="management-card"
@@ -602,12 +615,15 @@ export default function FinanceDashboard() {
               alignItems: "end",
             }}
           >
+            {/* MOIS */}
+
             <div
               style={{
                 minWidth: "180px",
               }}
             >
               <label
+                htmlFor="finance-dashboard-month"
                 style={{
                   display: "block",
                   marginBottom: "6px",
@@ -618,12 +634,11 @@ export default function FinanceDashboard() {
               </label>
 
               <select
+                id="finance-dashboard-month"
                 value={month}
                 onChange={(event) =>
                   setMonth(
-                    Number(
-                      event.target.value
-                    )
+                    Number(event.target.value)
                   )
                 }
                 style={{
@@ -632,22 +647,18 @@ export default function FinanceDashboard() {
                   borderRadius: "8px",
                 }}
               >
-                {MONTHS.map(
-                  (item) => (
-                    <option
-                      key={
-                        item.value
-                      }
-                      value={
-                        item.value
-                      }
-                    >
-                      {item.label}
-                    </option>
-                  )
-                )}
+                {MONTHS.map((item) => (
+                  <option
+                    key={item.value}
+                    value={item.value}
+                  >
+                    {item.label}
+                  </option>
+                ))}
               </select>
             </div>
+
+            {/* ANNÉE */}
 
             <div
               style={{
@@ -655,6 +666,7 @@ export default function FinanceDashboard() {
               }}
             >
               <label
+                htmlFor="finance-dashboard-year"
                 style={{
                   display: "block",
                   marginBottom: "6px",
@@ -665,26 +677,26 @@ export default function FinanceDashboard() {
               </label>
 
               <input
+                id="finance-dashboard-year"
                 type="number"
                 min="2000"
                 max="2200"
                 value={year}
                 onChange={(event) =>
                   setYear(
-                    Number(
-                      event.target.value
-                    )
+                    Number(event.target.value)
                   )
                 }
                 style={{
                   width: "100%",
                   padding: "10px",
                   borderRadius: "8px",
-                  boxSizing:
-                    "border-box",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
+
+            {/* DEVISE */}
 
             <div
               style={{
@@ -692,6 +704,7 @@ export default function FinanceDashboard() {
               }}
             >
               <label
+                htmlFor="finance-dashboard-currency"
                 style={{
                   display: "block",
                   marginBottom: "6px",
@@ -702,9 +715,8 @@ export default function FinanceDashboard() {
               </label>
 
               <select
-                value={
-                  selectedCurrency
-                }
+                id="finance-dashboard-currency"
+                value={selectedCurrency}
                 onChange={(event) =>
                   setSelectedCurrency(
                     event.target.value
@@ -719,31 +731,28 @@ export default function FinanceDashboard() {
                   borderRadius: "8px",
                 }}
               >
-                {currencies.length ===
-                0 ? (
+                {currencies.length === 0 ? (
                   <option value="">
                     Aucune devise
                   </option>
                 ) : (
-                  currencies.map(
-                    (currency) => (
-                      <option
-                        key={
-                          currency
-                        }
-                        value={
-                          currency
-                        }
-                      >
-                        {currency}
-                      </option>
-                    )
-                  )
+                  currencies.map((currency) => (
+                    <option
+                      key={currency}
+                      value={currency}
+                    >
+                      {currency}
+                    </option>
+                  ))
                 )}
               </select>
             </div>
           </div>
         </div>
+
+        {/* ============================================= */}
+        {/* ABSENCE DE DEVISE */}
+        {/* ============================================= */}
 
         {!selectedCurrency ? (
           <div className="management-card">
@@ -757,26 +766,36 @@ export default function FinanceDashboard() {
               </h3>
 
               <p>
-                Crée d'abord un compte
-                financier pour commencer.
+                Crée d'abord un compte financier
+                pour commencer.
               </p>
             </div>
           </div>
         ) : (
           <>
+            {/* ====================================== */}
             {/* STATISTIQUES PRINCIPALES */}
+            {/* ====================================== */}
 
             <div className="management-stats-grid">
+
+              {/* SOLDE DISPONIBLE */}
+
               <div
-                  className="management-stat-card"
-                  role="button"
-                  tabIndex={0}
-                  style={clickableCardStyle}
-                  onClick={() => navigate("/finance/accounts")}
-                  onKeyDown={(event) =>
-                    handleCardKeyDown(event, "/finance/accounts")
-                  }
-                >
+                className="management-stat-card"
+                role="button"
+                tabIndex={0}
+                style={clickableCardStyle}
+                onClick={() =>
+                  navigate("/finance/accounts")
+                }
+                onKeyDown={(event) =>
+                  handleCardKeyDown(
+                    event,
+                    "/finance/accounts"
+                  )
+                }
+              >
                 <div className="management-stat-label">
                   Solde disponible
                 </div>
@@ -789,23 +808,34 @@ export default function FinanceDashboard() {
                 </div>
 
                 <div className="management-stat-description">
-                  {
-                    accountStats.activeAccounts
-                  }{" "}
+                  {accountStats.activeAccounts}{" "}
                   compte(s) actif(s)
                 </div>
               </div>
 
+              {/* ENTRÉES DU MOIS */}
+
               <div
-                  className="management-stat-card"
-                  role="button"
-                  tabIndex={0}
-                  style={clickableCardStyle}
-                  onClick={() => navigate(buildTransactionUrl({ type: "income" }))}
-                  onKeyDown={(event) =>
-                    handleCardKeyDown(event, buildTransactionUrl({ type: "income" }))
-                  }
-                >
+                className="management-stat-card"
+                role="button"
+                tabIndex={0}
+                style={clickableCardStyle}
+                onClick={() =>
+                  navigate(
+                    buildTransactionUrl({
+                      type: "income",
+                    })
+                  )
+                }
+                onKeyDown={(event) =>
+                  handleCardKeyDown(
+                    event,
+                    buildTransactionUrl({
+                      type: "income",
+                    })
+                  )
+                }
+              >
                 <div className="management-stat-label">
                   Entrées du mois
                 </div>
@@ -818,23 +848,34 @@ export default function FinanceDashboard() {
                 </div>
 
                 <div className="management-stat-description">
-                  {
-                    movementStats.incomeCount
-                  }{" "}
+                  {movementStats.incomeCount}{" "}
                   mouvement(s)
                 </div>
               </div>
 
+              {/* SORTIES DU MOIS */}
+
               <div
-                  className="management-stat-card"
-                  role="button"
-                  tabIndex={0}
-                  style={clickableCardStyle}
-                  onClick={() => navigate(buildTransactionUrl({ type: "expense" }))}
-                  onKeyDown={(event) =>
-                    handleCardKeyDown(event, buildTransactionUrl({ type: "expense" }))
-                  }
-                >
+                className="management-stat-card"
+                role="button"
+                tabIndex={0}
+                style={clickableCardStyle}
+                onClick={() =>
+                  navigate(
+                    buildTransactionUrl({
+                      type: "expense",
+                    })
+                  )
+                }
+                onKeyDown={(event) =>
+                  handleCardKeyDown(
+                    event,
+                    buildTransactionUrl({
+                      type: "expense",
+                    })
+                  )
+                }
+              >
                 <div className="management-stat-label">
                   Sorties du mois
                 </div>
@@ -847,25 +888,32 @@ export default function FinanceDashboard() {
                 </div>
 
                 <div className="management-stat-description">
-                  {
-                    movementStats.expenseCount
-                  }{" "}
+                  {movementStats.expenseCount}{" "}
                   mouvement(s)
                 </div>
               </div>
 
+              {/* SOLDE NET DU MOIS */}
+
               <div
-                  className="management-stat-card"
-                  role="button"
-                  tabIndex={0}
-                  style={clickableCardStyle}
-                  onClick={() => navigate(buildTransactionUrl())}
-                  onKeyDown={(event) =>
-                    handleCardKeyDown(event, buildTransactionUrl())
-                  }
-                >
+                className="management-stat-card"
+                role="button"
+                tabIndex={0}
+                style={clickableCardStyle}
+                onClick={() =>
+                  navigate(
+                    buildTransactionUrl()
+                  )
+                }
+                onKeyDown={(event) =>
+                  handleCardKeyDown(
+                    event,
+                    buildTransactionUrl()
+                  )
+                }
+              >
                 <div className="management-stat-label">
-                  Solde net du mois
+                  Solde des mouvements du mois
                 </div>
 
                 <div className="management-stat-value">
@@ -881,7 +929,9 @@ export default function FinanceDashboard() {
               </div>
             </div>
 
-            {/* ENTRÉES ÉGLISE */}
+            {/* ====================================== */}
+            {/* ENTRÉES DE L'ÉGLISE */}
+            {/* ====================================== */}
 
             <div
               className="management-card"
@@ -903,16 +953,32 @@ export default function FinanceDashboard() {
               </div>
 
               <div className="management-stats-grid">
+
+                {/* DÎMES */}
+
                 <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate(buildTransactionUrl({ type: "income", search: "Dîme" }))}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, buildTransactionUrl({ type: "income", search: "Dîme" }))
-                    }
-                  >
+                  className="management-stat-card"
+                  role="button"
+                  tabIndex={0}
+                  style={clickableCardStyle}
+                  onClick={() =>
+                    navigate(
+                      buildTransactionUrl({
+                        type: "income",
+                        search: "Dîme",
+                      })
+                    )
+                  }
+                  onKeyDown={(event) =>
+                    handleCardKeyDown(
+                      event,
+                      buildTransactionUrl({
+                        type: "income",
+                        search: "Dîme",
+                      })
+                    )
+                  }
+                >
                   <div className="management-stat-label">
                     Dîmes
                   </div>
@@ -925,23 +991,36 @@ export default function FinanceDashboard() {
                   </div>
 
                   <div className="management-stat-description">
-                    {
-                      movementStats.titheCount
-                    }{" "}
+                    {movementStats.titheCount}{" "}
                     mouvement(s)
                   </div>
                 </div>
 
+                {/* OFFRANDES */}
+
                 <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate(buildTransactionUrl({ type: "income", search: "Offrande" }))}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, buildTransactionUrl({ type: "income", search: "Offrande" }))
-                    }
-                  >
+                  className="management-stat-card"
+                  role="button"
+                  tabIndex={0}
+                  style={clickableCardStyle}
+                  onClick={() =>
+                    navigate(
+                      buildTransactionUrl({
+                        type: "income",
+                        search: "Offrande",
+                      })
+                    )
+                  }
+                  onKeyDown={(event) =>
+                    handleCardKeyDown(
+                      event,
+                      buildTransactionUrl({
+                        type: "income",
+                        search: "Offrande",
+                      })
+                    )
+                  }
+                >
                   <div className="management-stat-label">
                     Offrandes
                   </div>
@@ -954,23 +1033,36 @@ export default function FinanceDashboard() {
                   </div>
 
                   <div className="management-stat-description">
-                    {
-                      movementStats.offeringCount
-                    }{" "}
+                    {movementStats.offeringCount}{" "}
                     mouvement(s)
                   </div>
                 </div>
 
+                {/* DONS */}
+
                 <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate(buildTransactionUrl({ type: "income", search: "Don" }))}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, buildTransactionUrl({ type: "income", search: "Don" }))
-                    }
-                  >
+                  className="management-stat-card"
+                  role="button"
+                  tabIndex={0}
+                  style={clickableCardStyle}
+                  onClick={() =>
+                    navigate(
+                      buildTransactionUrl({
+                        type: "income",
+                        search: "Don",
+                      })
+                    )
+                  }
+                  onKeyDown={(event) =>
+                    handleCardKeyDown(
+                      event,
+                      buildTransactionUrl({
+                        type: "income",
+                        search: "Don",
+                      })
+                    )
+                  }
+                >
                   <div className="management-stat-label">
                     Dons
                   </div>
@@ -983,32 +1075,40 @@ export default function FinanceDashboard() {
                   </div>
 
                   <div className="management-stat-description">
-                    {
-                      movementStats.donationCount
-                    }{" "}
+                    {movementStats.donationCount}{" "}
                     mouvement(s)
                   </div>
                 </div>
 
+                {/* DONATEURS IDENTIFIÉS */}
+
                 <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate(buildTransactionUrl({ type: "income" }))}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, buildTransactionUrl({ type: "income" }))
-                    }
-                  >
+                  className="management-stat-card"
+                  role="button"
+                  tabIndex={0}
+                  style={clickableCardStyle}
+                  onClick={() =>
+                    navigate(
+                      buildTransactionUrl({
+                        type: "income",
+                      })
+                    )
+                  }
+                  onKeyDown={(event) =>
+                    handleCardKeyDown(
+                      event,
+                      buildTransactionUrl({
+                        type: "income",
+                      })
+                    )
+                  }
+                >
                   <div className="management-stat-label">
-                    Donateurs identifiés
+                    Contributeurs identifiés
                   </div>
 
                   <div className="management-stat-value">
-                    {
-                      movementStats.donorCount ||
-                      0
-                    }
+                    {movementStats.donorCount || 0}
                   </div>
 
                   <div className="management-stat-description">
@@ -1018,7 +1118,9 @@ export default function FinanceDashboard() {
               </div>
             </div>
 
-            {/* GRAPHIQUE */}
+            {/* ====================================== */}
+            {/* GRAPHIQUE D'ÉVOLUTION DU MOIS */}
+            {/* ====================================== */}
 
             <div
               className="management-card"
@@ -1039,15 +1141,14 @@ export default function FinanceDashboard() {
                 </div>
               </div>
 
-              {chartData.length === 0 ? (
+              {!hasChartMovements ? (
                 <div className="management-empty">
                   <div className="management-empty-icon">
                     📊
                   </div>
 
                   <p>
-                    Aucun mouvement sur
-                    cette période.
+                    Aucun mouvement sur cette période.
                   </p>
                 </div>
               ) : (
@@ -1062,23 +1163,17 @@ export default function FinanceDashboard() {
                     width="100%"
                     height="100%"
                   >
-                    <BarChart
-                      data={chartData}
-                    >
+                    <BarChart data={chartData}>
                       <CartesianGrid
                         strokeDasharray="3 3"
                       />
 
-                      <XAxis
-                        dataKey="jour"
-                      />
+                      <XAxis dataKey="jour" />
 
                       <YAxis />
 
                       <Tooltip
-                        formatter={(
-                          value
-                        ) =>
+                        formatter={(value) =>
                           formatCurrency(
                             value,
                             selectedCurrency
@@ -1103,293 +1198,291 @@ export default function FinanceDashboard() {
               )}
             </div>
 
-            {/* BUDGETS */}
+            {/* ====================================== */}
+            {/* SUITE : BUDGETS ET RAPPROCHEMENT */}
+            {/* ====================================== */}
+
+            {/* ====================================== */}
+            {/* SITUATION BUDGÉTAIRE */}
+            {/* ====================================== */}
 
             <div
               className="management-card"
               style={{
-                marginTop: "20px",
+                marginTop: 20,
               }}
             >
               <div className="management-card-header">
                 <div>
                   <h2 className="management-card-title">
-                    Situation budgétaire
+                    Suivi du budget de l’église
                   </h2>
 
                   <p className="page-subtitle">
-                    Suivi des budgets en{" "}
-                    {selectedCurrency}
+                    Prévisions et mouvements du mois
+                    en {selectedCurrency}
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    navigate("/finance/budgets")
+                  }
+                >
+                  Voir les budgets
+                </button>
               </div>
 
               <div className="management-stats-grid">
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/budgets")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/budgets")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
-                    Sorties prévues
+                    Dépenses prévues
                   </div>
 
                   <div className="management-stat-value">
                     {formatCurrency(
-                      budgetStats.budgetedExpense,
+                      budgetStats.budgetedExpense || 0,
                       selectedCurrency
                     )}
                   </div>
 
                   <div className="management-stat-description">
-                    Budget de sorties
+                    Prévisions des dépenses
                   </div>
                 </div>
 
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/budgets")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/budgets")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
-                    Sorties réalisées
+                    Dépenses effectuées
                   </div>
 
                   <div className="management-stat-value">
                     {formatCurrency(
-                      budgetStats.actualExpense,
+                      budgetStats.actualExpense || 0,
                       selectedCurrency
                     )}
                   </div>
 
                   <div className="management-stat-description">
-                    Sorties enregistrées
+                    Dépenses enregistrées dans le budget
                   </div>
                 </div>
 
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/budgets")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/budgets")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
-                    Alertes budget
+                    Entrées de fonds prévues
                   </div>
 
                   <div className="management-stat-value">
-                    {
-                      budgetStats.alertBudgets
-                    }
+                    {formatCurrency(
+                      budgetStats.budgetedIncome || 0,
+                      selectedCurrency
+                    )}
                   </div>
 
                   <div className="management-stat-description">
-                    Seuil atteint
+                    Prévisions des entrées de fonds
                   </div>
                 </div>
 
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/budgets")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/budgets")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
-                    Budgets dépassés
+                    Entrées de fonds enregistrées
                   </div>
 
                   <div className="management-stat-value">
-                    {
-                      budgetStats.exceededBudgets
-                    }
+                    {formatCurrency(
+                      budgetStats.actualIncome || 0,
+                      selectedCurrency
+                    )}
                   </div>
 
                   <div className="management-stat-description">
-                    Montant prévu dépassé
+                    Entrées enregistrées dans le budget
                   </div>
                 </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginTop: 20,
+                }}
+              >
+                <span className="status-badge">
+                  Budgets actifs :{" "}
+                  {budgetStats.activeBudgets || 0}
+                </span>
+
+                <span className="status-badge">
+                  Brouillons :{" "}
+                  {budgetStats.draftBudgets || 0}
+                </span>
+
+                <span className="status-badge">
+                  Alertes :{" "}
+                  {budgetStats.alertBudgets || 0}
+                </span>
+
+                <span className="status-badge">
+                  Dépassements :{" "}
+                  {budgetStats.exceededBudgets || 0}
+                </span>
               </div>
             </div>
 
-            {/* RAPPROCHEMENT */}
+            {/* ====================================== */}
+            {/* RAPPROCHEMENT FINANCIER */}
+            {/* ====================================== */}
 
             <div
               className="management-card"
               style={{
-                marginTop: "20px",
+                marginTop: 20,
               }}
             >
               <div className="management-card-header">
                 <div>
                   <h2 className="management-card-title">
-                    Contrôle des soldes
+                    Vérification des soldes
                   </h2>
 
                   <p className="page-subtitle">
-                    Rapprochement financier
+                    Contrôle de cohérence des soldes
+                    en {selectedCurrency}
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    navigate("/finance/reconciliation")
+                  }
+                >
+                  Voir la vérification des soldes
+                </button>
+              </div>
+
+              <div
+                style={{
+                  marginBottom: 20,
+                }}
+              >
+                <span
+                  className={`status-badge ${
+                    selectedCurrencyIsBalanced
+                      ? "status-active"
+                      : "status-inactive"
+                  }`}
+                >
+                  {selectedCurrencyIsBalanced
+                    ? "✓ Aucun écart calculé"
+                    : "⚠ Écart détecté"}
+                </span>
               </div>
 
               <div className="management-stats-grid">
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/reconciliation")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/reconciliation")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
-                    Solde théorique
+                    Solde calculé
                   </div>
 
                   <div className="management-stat-value">
                     {formatCurrency(
-                      reconciliationStats.theoreticalBalance,
+                      reconciliationStats.theoreticalBalance || 0,
                       selectedCurrency
                     )}
                   </div>
 
                   <div className="management-stat-description">
-                    Calculé depuis les
-                    mouvements
+                    Solde calculé à partir des mouvements
                   </div>
                 </div>
 
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/reconciliation")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/reconciliation")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
-                    Solde enregistré
+                    Solde comptabilisé
                   </div>
 
                   <div className="management-stat-value">
                     {formatCurrency(
-                      reconciliationStats.storedBalance,
+                      reconciliationStats.storedBalance || 0,
                       selectedCurrency
                     )}
                   </div>
 
                   <div className="management-stat-description">
-                    Solde actuel des comptes
+                    Solde comptabilisé dans les comptes
                   </div>
                 </div>
 
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/reconciliation")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/reconciliation")
-                    }
-                  >
+                <div className="management-stat-card">
                   <div className="management-stat-label">
                     Écart
                   </div>
 
                   <div className="management-stat-value">
                     {formatCurrency(
-                      reconciliationStats.difference,
+                      reconciliationStats.difference || 0,
                       selectedCurrency
                     )}
                   </div>
 
                   <div className="management-stat-description">
-                    Enregistré - théorique
-                  </div>
-                </div>
-
-                <div
-                    className="management-stat-card"
-                    role="button"
-                    tabIndex={0}
-                    style={clickableCardStyle}
-                    onClick={() => navigate("/finance/reconciliation")}
-                    onKeyDown={(event) =>
-                      handleCardKeyDown(event, "/finance/reconciliation")
-                    }
-                  >
-                  <div className="management-stat-label">
-                    État général
-                  </div>
-
-                  <div className="management-stat-value">
-                    {data?.reconciliation
-                      ?.isBalanced
-                      ? "✓ Équilibré"
-                      : "⚠ Écart"}
-                  </div>
-
-                  <div className="management-stat-description">
-                    {data?.reconciliation
-                      ?.discrepancyAccounts ||
-                      0}{" "}
-                    compte(s) avec écart
+                    Différence entre les soldes
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* COMPTES */}
+            {/* ====================================== */}
+            {/* COMPTES FINANCIERS */}
+            {/* ====================================== */}
 
             <div
               className="management-card"
               style={{
-                marginTop: "20px",
+                marginTop: 20,
               }}
             >
               <div className="management-card-header">
                 <div>
                   <h2 className="management-card-title">
-                    Comptes financiers
+                    Comptes et caisses de l’église
                   </h2>
 
                   <p className="page-subtitle">
-                    Comptes en{" "}
+                    Comptes et caisses enregistrés en{" "}
                     {selectedCurrency}
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    navigate("/finance/accounts")
+                  }
+                >
+                  Gérer les comptes
+                </button>
               </div>
 
-              {currencyAccounts.length ===
-              0 ? (
+              {currencyAccounts.length === 0 ? (
                 <div className="management-empty">
                   <div className="management-empty-icon">
-                    💰
+                    🏦
                   </div>
 
+                  <h3>Aucun compte financier</h3>
+
                   <p>
-                    Aucun compte dans cette
+                    Aucun compte enregistré pour cette
                     devise.
                   </p>
                 </div>
@@ -1398,134 +1491,113 @@ export default function FinanceDashboard() {
                   <table className="management-table">
                     <thead>
                       <tr>
-                        <th>
-                          Compte
-                        </th>
-
-                        <th>
-                          Type
-                        </th>
-
-                        <th>
-                          Solde initial
-                        </th>
-
-                        <th>
-                          Solde actuel
-                        </th>
-
-                        <th>
-                          État
-                        </th>
+                        <th>Compte</th>
+                        <th>Type</th>
+                        <th>Devise</th>
+                        <th>Solde</th>
+                        <th>Statut</th>
                       </tr>
                     </thead>
 
                     <tbody>
-                      {currencyAccounts.map(
-                        (account) => (
-                          <tr
-                            key={account._id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => navigate("/finance/accounts")}
-                            onKeyDown={(event) =>
-                              handleCardKeyDown(event, "/finance/accounts")
-                            }
-                            style={{ cursor: "pointer" }}
-                            title="Ouvrir les comptes financiers"
-                          >
-                            <td>
-                              <strong>
-                                {
-                                  account.name
-                                }
-                              </strong>
+                      {currencyAccounts.map((account) => (
+                        <tr key={account._id}>
+                          <td>
+                            <strong>
+                              {account.name || "—"}
+                            </strong>
+                          </td>
 
-                              {account.isDefault && (
-                                <div
-                                  style={{
-                                    fontSize:
-                                      "11px",
-                                    opacity:
-                                      0.7,
-                                    marginTop:
-                                      "3px",
-                                  }}
-                                >
-                                  Compte par
-                                  défaut
-                                </div>
-                              )}
-                            </td>
+                          <td>
+                            {ACCOUNT_TYPES[account.type] ||
+                              account.type ||
+                              "—"}
+                          </td>
 
-                            <td>
-                              {ACCOUNT_TYPES[
-                                account.type
-                              ] ||
-                                account.type}
-                            </td>
+                          <td>
+                            {account.currency ||
+                              selectedCurrency}
+                          </td>
 
-                            <td>
+                          <td>
+                            <strong>
                               {formatCurrency(
-                                account.openingBalance,
+                                account.currentBalance ??
+                                  account.balance ??
+                                  0,
                                 selectedCurrency
                               )}
-                            </td>
+                            </strong>
+                          </td>
 
-                            <td>
-                              <strong>
-                                {formatCurrency(
-                                  account.currentBalance,
-                                  selectedCurrency
-                                )}
-                              </strong>
-                            </td>
-
-                            <td>
-                              {account.isActive
+                          <td>
+                            <span
+                              className={`status-badge ${
+                                account.isActive !== false
+                                  ? "status-active"
+                                  : "status-inactive"
+                              }`}
+                            >
+                              {account.isActive !== false
                                 ? "Actif"
                                 : "Inactif"}
-                            </td>
-                          </tr>
-                        )
-                      )}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
 
+            {/* ====================================== */}
             {/* TRANSACTIONS RÉCENTES */}
+            {/* ====================================== */}
 
             <div
               className="management-card"
               style={{
-                marginTop: "20px",
+                marginTop: 20,
+                marginBottom: 24,
               }}
             >
               <div className="management-card-header">
                 <div>
                   <h2 className="management-card-title">
-                    Derniers mouvements
+                    Dernières transactions
                   </h2>
 
                   <p className="page-subtitle">
-                    Transactions confirmées
-                    récentes
+                    Opérations récentes en{" "}
+                    {selectedCurrency}
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    navigate(
+                      buildTransactionUrl()
+                    )
+                  }
+                >
+                  Voir toutes les transactions
+                </button>
               </div>
 
-              {recentTransactions.length ===
-              0 ? (
+              {recentTransactions.length === 0 ? (
                 <div className="management-empty">
                   <div className="management-empty-icon">
                     💳
                   </div>
 
+                  <h3>Aucune transaction récente</h3>
+
                   <p>
-                    Aucun mouvement récent
-                    dans cette devise.
+                    Aucune opération disponible pour
+                    cette devise.
                   </p>
                 </div>
               ) : (
@@ -1533,57 +1605,20 @@ export default function FinanceDashboard() {
                   <table className="management-table">
                     <thead>
                       <tr>
-                        <th>
-                          Date
-                        </th>
-
-                        <th>
-                          Libellé
-                        </th>
-
-                        <th>
-                          Type
-                        </th>
-
-                        <th>
-                          Catégorie
-                        </th>
-
-                        <th>
-                          Compte
-                        </th>
-
-                        <th>
-                          Montant
-                        </th>
+                        <th>Date</th>
+                        <th>Libellé</th>
+                        <th>Type</th>
+                        <th>Catégorie</th>
+                        <th>Compte</th>
+                        <th>Montant</th>
+                        <th>Statut</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {recentTransactions.map(
                         (transaction) => (
-                          <tr
-                            key={transaction._id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() =>
-                              navigate(
-                                buildTransactionUrl({
-                                  search: transaction.title || "",
-                                })
-                              )
-                            }
-                            onKeyDown={(event) =>
-                              handleCardKeyDown(
-                                event,
-                                buildTransactionUrl({
-                                  search: transaction.title || "",
-                                })
-                              )
-                            }
-                            style={{ cursor: "pointer" }}
-                            title="Voir dans l'historique des transactions"
-                          >
+                          <tr key={transaction._id}>
                             <td>
                               {formatDate(
                                 transaction.transactionDate
@@ -1592,9 +1627,7 @@ export default function FinanceDashboard() {
 
                             <td>
                               <strong>
-                                {
-                                  transaction.title
-                                }
+                                {transaction.title || "—"}
                               </strong>
                             </td>
 
@@ -1602,44 +1635,59 @@ export default function FinanceDashboard() {
                               {TRANSACTION_TYPES[
                                 transaction.type
                               ] ||
-                                transaction.type}
-                            </td>
-
-                            <td>
-                              {transaction
-                                .category
-                                ?.name ||
+                                transaction.type ||
                                 "—"}
                             </td>
 
                             <td>
-                              {transaction.type ===
-                              "transfer"
+                              {transaction.category?.name ||
+                                "—"}
+                            </td>
+
+                            <td>
+                              {transaction.type === "transfer"
                                 ? `${
-                                    transaction
-                                      .fromAccount
-                                      ?.name ||
-                                    "—"
+                                    transaction.fromAccount
+                                      ?.name || "—"
                                   } → ${
-                                    transaction
-                                      .toAccount
-                                      ?.name ||
-                                    "—"
+                                    transaction.toAccount
+                                      ?.name || "—"
                                   }`
-                                : transaction
-                                    .account
-                                    ?.name ||
+                                : transaction.account?.name ||
                                   "—"}
                             </td>
 
                             <td>
                               <strong>
                                 {formatCurrency(
-                                  transaction.amount,
-                                  transaction.currency
+                                  transaction.amount || 0,
+                                  transaction.currency ||
+                                    selectedCurrency
                                 )}
                               </strong>
                             </td>
+
+                            <td>
+                            <span
+                              className={`status-badge ${
+                                transaction.status === "confirmed"
+                                  ? "status-active"
+                                  : transaction.status === "draft"
+                                  ? "status-pending"
+                                  : transaction.status === "cancelled"
+                                  ? "status-inactive"
+                                  : ""
+                              }`}
+                            >
+                              {transaction.status === "confirmed"
+                                ? "Confirmée"
+                                : transaction.status === "draft"
+                                ? "Brouillon"
+                                : transaction.status === "cancelled"
+                                ? "Annulée"
+                                : transaction.status || "—"}
+                            </span>
+                          </td>
                           </tr>
                         )
                       )}
@@ -1648,8 +1696,10 @@ export default function FinanceDashboard() {
                 </div>
               )}
             </div>
+
           </>
         )}
+
       </div>
     </Layout>
   );

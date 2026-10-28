@@ -1828,13 +1828,13 @@ export default function FinanceTransactions() {
                 </button>
 
                 <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={closeForm}
-                  disabled={submitting}
-                >
-                  Annuler
-                </button>
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeForm}
+                disabled={submitting}
+              >
+                Annuler
+              </button>
               </div>
             </form>
           </div>
@@ -2106,20 +2106,18 @@ export default function FinanceTransactions() {
                         <td>
                           <span
                             className={`status-badge ${
-                              transaction.status ===
-                              "confirmed"
+                              transaction.status === "confirmed"
                                 ? "status-active"
-                                : transaction.status ===
-                                  "cancelled"
+                                : transaction.status === "draft"
+                                ? "status-pending"
+                                : transaction.status === "cancelled"
                                 ? "status-inactive"
                                 : ""
                             }`}
                           >
-                            {getStatusLabel(
-                              transaction.status
-                            )}
-                          </span>
-                        </td>
+                          {getStatusLabel(transaction.status)}
+                        </span>
+                       </td>
 
                         <td>
                           <div
@@ -2134,7 +2132,7 @@ export default function FinanceTransactions() {
                               <>
                                 <button
                                   type="button"
-                                  className="btn btn-secondary"
+                                  className="btn btn-edit"
                                   disabled={
                                     actionLoading ===
                                     transaction._id
@@ -2170,7 +2168,7 @@ export default function FinanceTransactions() {
                               "confirmed" && (
                               <button
                                 type="button"
-                                className="btn btn-secondary"
+                                className="btn btn-warning"
                                 disabled={
                                   actionLoading ===
                                   transaction._id
@@ -2181,13 +2179,14 @@ export default function FinanceTransactions() {
                                   )
                                 }
                               >
+                                <span aria-hidden="true">🚫</span>
                                 Annuler
                               </button>
                             )}
 
                             <button
                               type="button"
-                              className="btn btn-secondary"
+                              className="btn btn-danger"
                               disabled={
                                 actionLoading ===
                                 transaction._id
