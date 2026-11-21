@@ -553,3 +553,82 @@
       width: 100%;
     }
   }
+
+  /* ==========================================
+   ALERTES PASTORALES — AMÉLIORATIONS
+========================================== */
+
+/* Actions de l'en-tête */
+
+.pastoral-header-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pastoral-period-control {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pastoral-period-control span {
+  color: #606b80;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pastoral-period-control input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 11px;
+  background: white;
+  color: #252a38;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Informations complémentaires */
+
+.pastoral-alert-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin-top: 12px;
+  color: #687287;
+  font-size: 12px;
+}
+
+.pastoral-alert-details strong {
+  color: #343a49;
+}
+
+/* Contact pastoral */
+
+.pastoral-contact-info {
+  margin: 12px 0 0;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Adaptation mobile */
+
+@media (max-width: 850px) {
+  .pastoral-header-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pastoral-period-control {
+    width: 100%;
+  }
+
+  .pastoral-period-control input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
